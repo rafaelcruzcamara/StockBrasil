@@ -1,0 +1,1147 @@
+/* style.css - FINO, ELEGANTE E FUNCIONAL - DARK MODE REFINADO */
+
+/* * ======================================================================
+ * CORES E VARIÁVEIS GLOBAIS (Minimalista Dark Mode Refinado)
+ * ======================================================================
+ */
+:root {
+    /* Base Colors - Ultra Minimalist Dark */
+    --color-bg-primary: #0A0D12;       /* Fundo Principal (Mais escuro) */
+    --color-bg-secondary: #151920;     /* Fundo de Cards e Sidebar */
+    --color-bg-tertiary: #1E2329;      /* Fundo para elementos destacados */
+    --color-text-primary: #F5F7FA;     /* Texto Branco Suave */
+    --color-text-secondary: #8B95A1;   /* Texto Secundário/Desaturado */
+    --color-border: #2A3038;           /* Borda e divisória */
+    
+    /* Accent Colors - Modern/Electric */
+    --color-accent-blue: #0A84FF;      /* Azul mais vibrante */
+    --color-accent-green: #30D158;     /* Verde mais vibrante */
+    --color-accent-red: #FF453A;       /* Vermelho mais vibrante */
+    
+    /* Global Styling */
+    --border-radius-sm: 8px;
+    --border-radius-lg: 14px;
+    --transition-speed: 0.3s;
+    --transition-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+
+    /* Custom Landing Page Fonts */
+    --font-heading: 'Poppins', sans-serif;
+    --font-body: 'Inter', sans-serif; /* Para corpo e textos pequenos */
+    --shadow-card-hover: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* * ======================================================================
+ * RESET E TIPOGRAFIA
+ * ======================================================================
+ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-body); 
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    line-height: 1.7;
+    overflow-x: hidden;
+}
+
+a {
+    text-decoration: none;
+    color: var(--color-accent-blue);
+}
+
+h1, h2, h3 {
+    color: var(--color-text-primary);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    margin-bottom: 0.5rem;
+    font-family: var(--font-heading); /* Usa Poppins */
+}
+
+/* Utilidades */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 25px;
+}
+
+section {
+    padding: 100px 0;
+}
+
+.accent-text {
+    color: var(--color-accent-blue);
+}
+
+.section-title {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.section-subtitle {
+    font-size: 1.2rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+/* ========================================================== */
+/* 1. ANIMAÇÕES GLOBAIS (SCROLL REVEAL) */
+/* ========================================================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes floatImage {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+    100% { transform: translateY(0); }
+}
+
+@keyframes shimmer {
+    0% { left: -75%; }
+    100% { left: 100%; }
+}
+
+.animated-section, .animated-card {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1s var(--transition-smooth), transform 1s var(--transition-smooth);
+}
+
+.animated-section.reveal, .animated-card.reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ========================================================== */
+/* 2. HEADER E BOTÕES (NAVBAR FIXA E MINIMALISTA) - NOVO CONCEITO */
+/* ========================================================== */
+header {
+    /* Navbar Fixa e Minimalista */
+    position: fixed;
+    top: 0; 
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    
+    /* Efeito de Vidro Suave (Menos Invasivo) */
+    background-color: rgba(10, 13, 18, 0.9); /* Quase opaco para não atrapalhar */
+    backdrop-filter: blur(12px); /* Blur mais sutil */
+    
+    border-bottom: 1px solid var(--color-border); /* Borda inferior fina para definir limite */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); /* Sombra suave */
+    transition: all 0.4s var(--transition-smooth);
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 25px; /* Altura normalizada, menos invasiva */
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--color-text-primary);
+}
+
+.logo-pro {
+    color: var(--color-accent-blue);
+    margin-left: 2px;
+}
+
+.main-nav {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.main-nav .nav-link {
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    padding: 5px 0;
+    position: relative;
+    transition: color var(--transition-speed);
+}
+
+.main-nav .nav-link:hover {
+    color: var(--color-accent-blue);
+}
+
+/* Estilos dos Botões */
+.submit-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all var(--transition-speed) var(--transition-smooth);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+}
+
+.submit-btn.blue-btn {
+    background-color: var(--color-accent-blue);
+    color: var(--color-text-primary);
+    box-shadow: 0 4px 14px rgba(10, 132, 255, 0.3);
+}
+
+.submit-btn.blue-btn:hover {
+    background-color: #0077ED;
+}
+
+.submit-btn.green-btn {
+    background-color: var(--color-accent-green);
+    color: var(--color-bg-primary);
+    box-shadow: 0 4px 14px rgba(48, 209, 88, 0.3);
+}
+
+.submit-btn.green-btn:hover {
+    background-color: #28C748;
+}
+
+/* Ajuste no botão de Acesso na Navbar (Mais sutil) */
+.submit-btn.default-btn.btn-header {
+    background-color: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+}
+
+.submit-btn.default-btn.btn-header:hover {
+    background-color: var(--color-bg-tertiary); 
+    border-color: var(--color-accent-blue);
+    transform: translateY(-1px);
+}
+
+/* ANIMAÇÃO SHIMMER (DESTAQUE CTA) */
+.btn-shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -75%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.4) 50%, rgba(255, 255, 255, 0) 100%);
+    transform: skewX(-20deg);
+    animation: shimmer 1.5s infinite;
+}
+
+/* ========================================================== */
+/* 3. SEÇÃO HERO (DESTAQUE VISUAL) */
+/* ========================================================== */
+#hero {
+    padding-top: 150px; /* Reduzido para menos espaço no topo, dada a navbar mais fina */
+    padding-bottom: 120px;
+    background: var(--color-bg-primary);
+    background-image: radial-gradient(circle at center, var(--color-border) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.hero-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 60px;
+}
+
+.hero-text {
+    max-width: 550px;
+}
+
+.hero-text h1 {
+    font-size: 3.8rem;
+    margin-bottom: 25px;
+    line-height: 1.1;
+}
+
+.hero-text .subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 40px;
+    color: var(--color-text-secondary);
+}
+
+.hero-actions {
+    display: flex;
+    gap: 20px;
+}
+
+.hero-image-mockup {
+    position: relative;
+    max-width: 500px;
+    animation: floatImage 4s ease-in-out infinite;
+}
+
+.screen-border {
+    background: var(--color-bg-secondary);
+    border: 3px solid var(--color-accent-blue);
+    border-radius: 16px;
+    box-shadow: 0 15px 50px rgba(10, 132, 255, 0.25);
+    padding: 5px;
+    overflow: hidden;
+}
+
+.hero-image-mockup img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+}
+
+/* ========================================================== */
+/* 4. SEÇÃO DE PROVA SOCIAL E CONFIANÇA */
+/* ========================================================== */
+#trust-bar {
+    background-color: var(--color-bg-secondary);
+    padding: 60px 0;
+    text-align: center;
+}
+
+.trust-stats-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    max-width: 900px;
+    margin: 0 auto 50px auto;
+    gap: 30px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-item .number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--color-accent-green);
+    display: block;
+    line-height: 1;
+}
+
+.stat-item .label {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    margin-top: 5px;
+}
+
+.tech-logos {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 40px;
+    margin-top: 40px;
+    border-top: 1px solid var(--color-border);
+    padding-top: 30px;
+}
+
+.tech-logos i {
+    font-size: 2.5rem;
+    color: var(--color-text-secondary);
+    opacity: 0.6;
+    transition: opacity 0.3s, color 0.3s;
+}
+
+.tech-logos i:hover {
+    opacity: 1;
+    color: var(--color-text-primary);
+}
+
+
+/* ========================================================== */
+/* 5. POR QUE ESCOLHER A GENTE (BENEFÍCIOS) */
+/* ========================================================== */
+#why-choose {
+    background-color: var(--color-bg-primary);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.feature-card {
+    background-color: var(--color-bg-secondary);
+    padding: 30px;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+    transition: all var(--transition-speed) var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+    transform: translateY(0);
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-accent-blue);
+}
+
+.card-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background-color: rgba(10, 132, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    transition: background-color var(--transition-speed);
+}
+
+.feature-card:hover .card-icon-wrapper {
+    background-color: var(--color-accent-blue);
+}
+
+.feature-card .card-icon-wrapper i {
+    font-size: 2rem;
+    color: var(--color-accent-blue);
+    transition: color var(--transition-speed);
+}
+
+.feature-card:hover .card-icon-wrapper i {
+    color: var(--color-text-primary);
+}
+
+.feature-card h3 {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+}
+
+/* ========================================================== */
+/* 6. DEPOIMENTOS (SOCIAL PROOF) */
+/* ========================================================== */
+#depoimentos {
+    background-color: var(--color-bg-tertiary);
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.testimonial-card {
+    background-color: var(--color-bg-secondary);
+    padding: 30px;
+    border-radius: var(--border-radius-lg);
+    border-top: 5px solid var(--color-accent-green);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.rating i {
+    color: gold;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+}
+
+.quote {
+    font-style: italic;
+    font-size: 1.15rem;
+    color: var(--color-text-primary);
+    margin-bottom: 20px;
+}
+
+.client-info {
+    border-top: 1px solid var(--color-border);
+    padding-top: 15px;
+}
+
+.client-name {
+    font-weight: 600;
+    color: var(--color-accent-green);
+    display: block;
+}
+
+.client-role {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+/* ========================================================== */
+/* 7. PLANOS DE PREÇO (Estratégico) */
+/* ========================================================== */
+#planos {
+    background-color: var(--color-bg-primary);
+}
+
+.pricing-grid {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+}
+
+.plan-card {
+    background-color: var(--color-bg-secondary);
+    padding: 40px;
+    border-radius: var(--border-radius-lg);
+    text-align: center;
+    width: 350px;
+    border: 1px solid var(--color-border);
+    position: relative;
+    transition: transform 0.4s var(--transition-smooth), border-color var(--transition-speed), box-shadow 0.4s;
+}
+
+.plan-card:hover {
+    border-color: var(--color-accent-blue);
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-card-hover);
+}
+
+/* Destaque aprimorado para o plano Essencial */
+.plan-card.highlight {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-accent-green);
+    box-shadow: 0 0 50px rgba(48, 209, 88, 0.35);
+    transform: scale(1.06) translateY(-5px);
+    z-index: 10;
+}
+
+.plan-card.highlight h3 {
+    color: var(--color-accent-green);
+}
+
+.badge {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--color-accent-red);
+    color: var(--color-text-primary);
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: 0 4px 10px rgba(255, 69, 58, 0.4);
+}
+
+.price-type {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: -15px;
+}
+
+.price {
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: var(--color-text-primary);
+    display: block;
+    margin: 20px 0;
+}
+
+.price small {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+}
+
+.plan-card ul {
+    list-style: none;
+    text-align: left;
+    margin-bottom: 30px;
+    padding-top: 10px;
+}
+
+.plan-card ul li {
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--color-border);
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    transition: color 0.2s;
+}
+
+.plan-card ul li:hover {
+    color: var(--color-text-primary);
+}
+
+.plan-card ul li:last-child {
+    border-bottom: none;
+}
+
+.check-icon {
+    color: var(--color-accent-green);
+    margin-right: 12px;
+    font-size: 1.15rem;
+}
+
+.close-icon {
+    color: var(--color-accent-red);
+    margin-right: 12px;
+    font-size: 1.15rem;
+}
+
+.annual-pricing-note {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+    border-top: 1px solid var(--color-border);
+    padding-top: 30px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.annual-pricing-note strong {
+    color: var(--color-accent-green);
+    font-weight: 700;
+}
+
+/* ========================================================== */
+/* 8. SEÇÃO DE CONTATO (NOVA) */
+/* ========================================================== */
+#contato {
+    background-color: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border);
+}
+
+.contact-content {
+    display: flex;
+    justify-content: space-between;
+    gap: 50px;
+    align-items: center;
+    padding-top: 30px;
+}
+
+.contact-info {
+    max-width: 500px;
+}
+
+.contact-info h3 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: var(--color-accent-blue);
+}
+
+.contact-details {
+    margin-top: 30px;
+}
+
+.contact-details p {
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    color: var(--color-text-secondary);
+}
+
+.contact-details i {
+    color: var(--color-accent-green);
+    margin-right: 15px;
+    font-size: 1.3rem;
+}
+
+.contact-form-mockup {
+    background-color: var(--color-bg-tertiary);
+    padding: 35px;
+    border-radius: var(--border-radius-lg);
+    flex-grow: 1;
+    max-width: 500px;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.contact-form-mockup input[type="text"],
+.contact-form-mockup input[type="email"],
+.contact-form-mockup textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    background-color: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-primary);
+    transition: border-color 0.3s;
+}
+
+.contact-form-mockup input:focus,
+.contact-form-mockup textarea:focus {
+    outline: none;
+    border-color: var(--color-accent-blue);
+}
+
+.contact-form-mockup textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* ========================================================== */
+/* 9. FOOTER (Antiga 8) */
+/* ========================================================== */
+footer {
+    background-color: var(--color-bg-tertiary);
+    padding: 40px 0;
+    text-align: center;
+    border-top: 1px solid var(--color-border);
+}
+
+.footer-links a {
+    color: var(--color-text-secondary);
+    margin: 0 15px;
+    transition: color var(--transition-speed);
+}
+
+.footer-links a:hover {
+    color: var(--color-accent-blue);
+}
+
+footer p {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+
+/* ========================================================== */
+/* 10. RESPONSIVIDADE */
+/* ========================================================== */
+@media (max-width: 1024px) {
+    header {
+        border-radius: 0;
+    }
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .hero-text {
+        max-width: 100%;
+    }
+    .hero-image-mockup {
+        order: -1;
+        margin-bottom: 40px;
+    }
+    .hero-actions {
+        justify-content: center;
+    }
+    .pricing-grid {
+        flex-direction: column;
+        align-items: center;
+    }
+    .testimonials-grid {
+        grid-template-columns: 1fr;
+    }
+    .main-nav {
+        display: none;
+    }
+    .navbar {
+        justify-content: space-between;
+        padding: 15px 20px;
+    }
+    .trust-stats-grid {
+        flex-wrap: wrap;
+        padding: 0 20px;
+    }
+    .stat-item {
+        flex-basis: 40%;
+    }
+    .contact-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .contact-info, .contact-form-mockup {
+        max-width: 100%;
+    }
+    .contact-details p {
+        justify-content: center;
+    }
+}
+
+/* ESTILOS PARA GRÁFICO DE BARRAS - MODERNO */
+.chart-container-small {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    background: var(--color-bg-secondary);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--color-border);
+}
+
+#categoryChart {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Estilos específicos para o gráfico de barras */
+.bar-chart-container {
+    background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg-tertiary) 100%);
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .chart-container-small {
+        height: 350px;
+        padding: 15px;
+    }
+    
+    .bar-chart-container {
+        padding: 15px;
+    }
+}
+
+/* Animações suaves */
+@keyframes barRise {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+.chartjs-render-monitor .chartjs-bar {
+    animation: barRise 0.8s ease-out;
+}
+
+/* payment.css - CHECKOUT PREMIUM DARK MODE */
+
+/* * ======================================================================
+ * CORES E VARIÁVEIS GLOBAIS (Reutilizadas do Landing Page)
+ * ======================================================================
+ */
+:root {
+    /* Base Colors - Ultra Minimalist Dark */
+    --color-bg-primary: #0A0D12;       /* Fundo Principal (Mais escuro) */
+    --color-bg-secondary: #151920;     /* Fundo de Cards e Sidebar */
+    --color-bg-tertiary: #1E2329;      /* Fundo para elementos destacados */
+    --color-text-primary: #F5F7FA;     /* Texto Branco Suave */
+    --color-text-secondary: #8B95A1;   /* Texto Secundário/Desaturado */
+    --color-border: #2A3038;           /* Borda e divisória */
+    
+    /* Accent Colors - Modern/Electric */
+    --color-accent-blue: #0A84FF;      /* Azul mais vibrante */
+    --color-accent-green: #30D158;     /* Verde mais vibrante */
+    --color-accent-red: #FF453A;       /* Vermelho mais vibrante */
+    
+    /* Global Styling */
+    --border-radius-sm: 8px;
+    --border-radius-lg: 14px;
+    --transition-speed: 0.3s;
+    --font-heading: 'Poppins', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --shadow-medium: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* * ======================================================================
+ * RESET E TIPOGRAFIA
+ * ======================================================================
+ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-body); 
+}
+
+body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    color: var(--color-text-primary);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+}
+
+/* Utilitários */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 25px;
+}
+.accent-text { color: var(--color-accent-blue); }
+.success-text { color: var(--color-accent-green); }
+
+/* Botões Reutilizados (Estilo Dark Mode) */
+.submit-btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all var(--transition-speed);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.submit-btn.blue-btn {
+    background-color: var(--color-accent-blue);
+    color: var(--color-text-primary);
+}
+
+.submit-btn.blue-btn:hover {
+    background-color: #0077ED;
+    transform: translateY(-2px);
+}
+
+/* * ======================================================================
+ * 1. HEADER (TOPO DA PÁGINA)
+ * ======================================================================
+ */
+header {
+    padding: 2px 0;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-bg-primary);
+}
+
+.logo {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--color-text-primary);
+    text-decoration: none;
+}
+
+.logo-pro {
+    color: var(--color-accent-blue);
+    margin-left: 2px;
+}
+
+/* * ======================================================================
+ * 2. LAYOUT PRINCIPAL DO CHECKOUT
+ * ======================================================================
+ */
+.checkout-section {
+    padding: 80px 0;
+}
+
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 3fr 2fr; /* 60% Formulário | 40% Resumo */
+    gap: 40px;
+}
+
+/* * ======================================================================
+ * 3. FORMA DE PAGAMENTO (ESQUERDA)
+ * ======================================================================
+ */
+.payment-details {
+    padding-right: 20px;
+}
+
+.payment-details h2 {
+    font-size: 2.2rem;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group.two-cols {
+    display: flex;
+    gap: 20px;
+}
+
+.form-group.two-cols > div {
+    flex: 1;
+}
+
+label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-text-primary);
+}
+
+input[type="text"], input[type="email"], input[type="tel"], select {
+    width: 100%;
+    padding: 14px 18px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--color-accent-blue);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+}
+
+/* * ======================================================================
+ * 4. CARTÃO DE CRÉDITO (MOCKUP)
+ * ======================================================================
+ */
+.card-details-mockup {
+    margin-top: 15px;
+    background-color: var(--color-bg-secondary);
+    padding: 25px;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+.card-details-mockup h3 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+}
+
+.card-images {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--color-border);
+}
+.card-images i {
+    font-size: 1.8rem;
+    color: var(--color-text-secondary);
+}
+
+.security-lock {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    color: var(--color-accent-green);
+    margin-top: 20px;
+}
+
+.security-lock i {
+    font-size: 1.1rem;
+}
+
+
+/* * ======================================================================
+ * 5. RESUMO DO PEDIDO (DIREITA)
+ * ======================================================================
+ */
+.order-summary {
+    background-color: var(--color-bg-secondary);
+    padding: 35px;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-medium);
+}
+
+.order-summary h3 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 15px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    font-size: 1rem;
+    border-bottom: 1px dashed var(--color-border);
+    color: var(--color-text-secondary);
+}
+
+.summary-item:last-of-type {
+    border-bottom: none;
+    margin-bottom: 20px;
+}
+
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-top: 2px solid var(--color-border);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.summary-total .total-amount {
+    color: var(--color-accent-green);
+}
+
+/* Estilos para o plano escolhido no resumo */
+.plan-highlight {
+    background-color: var(--color-bg-tertiary);
+    padding: 15px;
+    border-radius: var(--border-radius-sm);
+    margin-bottom: 25px;
+    border: 1px solid var(--color-accent-blue);
+}
+
+.plan-highlight h4 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    color: var(--color-accent-blue);
+}
+
+.plan-highlight p {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+}
+
+/* * ======================================================================
+ * 6. FOOTER (RODAPÉ)
+ * ======================================================================
+ */
+footer {
+    padding: 25px 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-bg-tertiary);
+}
+
+
+/* * ======================================================================
+ * 7. RESPONSIVIDADE
+ * ======================================================================
+ */
+@media (max-width: 1024px) {
+    .checkout-grid {
+        grid-template-columns: 1fr;
+    }
+    .payment-details {
+        padding-right: 0;
+    }
+    .order-summary {
+        order: -1; /* Coloca o resumo acima do formulário no mobile */
+        margin-bottom: 30px;
+    }
+}
+
+@media (max-width: 600px) {
+    .form-group.two-cols {
+        flex-direction: column;
+        gap: 0;
+    }
+    .submit-btn {
+        width: 100%;
+    }
+}

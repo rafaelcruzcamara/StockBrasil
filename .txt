@@ -1,0 +1,68 @@
+gera 20 produtos: 
+
+// Cole este código no console do navegador (F12) para gerar 20 produtos
+(function() {
+    const categorias = ['Vestuário', 'Eletrônicos', 'Brindes', 'Serviços', 'Casa', 'Esportes', 'Beleza', 'Livros'];
+    const nomesProdutos = [
+        'Camiseta Básica', 'Smartphone', 'Caneca Personalizada', 'Fone de Ouvido', 'Mouse Gamer',
+        'Teclado Mecânico', 'Notebook', 'Tablet', 'Smartwatch', 'Cadeira Gamer', 'Mochila Executiva',
+        'Garrafa Térmica', 'Power Bank', 'Carregador Wireless', 'Capinha Protetora', 'Suporte para Celular',
+        'Caixa de Som Bluetooth', 'Fone Bluetooth', 'Webcam HD', 'Microfone USB', 'Monitor LED', 'Impressora',
+        'Scanner', 'HD Externo', 'Pendrive', 'Cartão Memória', 'Roteador Wi-Fi', 'Adaptador USB-C',
+        'Cabo HDMI', 'Carregador Rápido', 'Estabilizador', 'Nobreak', 'Ventilador', 'Aquecedor', 'Luminária LED'
+    ];
+    
+    const produtosExistentes = JSON.parse(localStorage.getItem('products')) || [];
+    const ultimoId = produtosExistentes.length > 0 ? Math.max(...produtosExistentes.map(p => p.id)) : 0;
+    
+    const novosProdutos = [];
+    
+    for (let i = 1; i <= 20; i++) {
+        const categoria = categorias[Math.floor(Math.random() * categorias.length)];
+        const nome = nomesProdutos[Math.floor(Math.random() * nomesProdutos.length)] + ' ' + (Math.random() > 0.5 ? 'Premium' : 'Standard');
+        const preco = Math.round((Math.random() * 500 + 10) * 100) / 100; // Entre R$ 10 e R$ 510
+        const custo = Math.round(preco * (0.3 + Math.random() * 0.4) * 100) / 100; // Custo entre 30% e 70% do preço
+        const quantidade = Math.floor(Math.random() * 100) + 1; // Entre 1 e 100 unidades
+        const minimo = Math.floor(Math.random() * 10) + 5; // Estoque mínimo entre 5 e 15
+        
+        const produto = {
+            id: ultimoId + i,
+            nome: nome,
+            categoria: categoria,
+            preco: preco,
+            custo: custo,
+            quantidade: quantidade,
+            minimo: minimo
+        };
+        
+        novosProdutos.push(produto);
+    }
+    
+    // Adiciona aos produtos existentes
+    const todosProdutos = [...produtosExistentes, ...novosProdutos];
+    localStorage.setItem('products', JSON.stringify(todosProdutos));
+    
+    console.log('🎉 20 produtos gerados com sucesso!');
+    console.log('📦 Produtos criados:');
+    novosProdutos.forEach(p => {
+        console.log(`#${p.id} - ${p.nome} | R$ ${p.preco.toFixed(2)} | Estoque: ${p.quantidade} | Categoria: ${p.categoria}`);
+    });
+    
+    console.log(`\n📊 Total de produtos no sistema: ${todosProdutos.length}`);
+    console.log('🔄 Recarregue a página para ver os novos produtos!');
+    
+    // Atualiza a página automaticamente
+    setTimeout(() => {
+        if(confirm('Produtos gerados! Deseja recarregar a página?')) {
+            location.reload();
+        }
+    }, 1000);
+    
+})();
+
+
+grafico nao funciona 
+pesquisa tambem 
+
+localStorage.removeItem('config');
+limpar 

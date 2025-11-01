@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockBrasil - Gerenciamento de Estoque e Vendas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="shortcut icon" href="./images/StockBrasilPRO-removebg-preview.png">
+</head>
+<body>
+
+    <div id="undo-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3><i class="fas fa-history"></i> Refazer Ação</h3>
+            <p>A ação **<span id="undo-action-type"></span>** sobre **<span id="undo-action-detail"></span>** foi selecionada.</p>
+            <p style="font-weight: bold; margin: 15px 0; color: var(--color-accent-red);">⚠️ Esta é uma simulação. Em um sistema real, essa ação requer lógica complexa de transações e acesso de administrador.</p>
+            <button class="submit-btn blue-btn" onclick="simulateUndoConfirmation()"><i class="fas fa-check-circle"></i> Simular Reversão</button>
+            <button class="submit-btn delete-btn" onclick="document.getElementById('undo-modal').style.display='none';"><i class="fas fa-times-circle"></i> Cancelar</button>
+        </div>
+    </div>
+    
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <!--<img src="/images/StockBrasilPRO-removebg-preview.png" alt="StockBrasil" id="pnglogo">-->
+            <h3>StockBrasil</h3>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#dashboard" class="nav-item active"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+            <a href="#produtos" class="nav-item"><i class="fas fa-boxes"></i> <span>Produtos</span></a>
+            <a href="#vendas" class="nav-item"><i class="fas fa-cash-register"></i> <span>Ponto de Venda</span></a>
+            <a href="#carrinhos-salvos" class="nav-item"><i class="fas fa-shopping-basket"></i> <span>Carrinhos Salvos</span></a>
+            <a href="#relatorios" class="nav-item"><i class="fas fa-chart-line"></i> <span>Relatórios</span></a>
+            <a href="#config" class="nav-item"><i class="fas fa-cogs"></i> <span>Configurações</span></a>
+        </nav>
+        <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
+    </aside>
+
+    <div class="main-content" id="main-content">
+        <header class="header top-header">
+            <div class="header-title">
+                <h1 id="current-page-title">Dashboard</h1>
+                <button class="toggle-btn-mobile menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+            </div>
+            
+            <div class="user-info">
+              <i class="fas fa-bell bell-icon" id="bell-icon" onclick="toggleAlertsWindow(event)" title="Alertas de Estoque Baixo"></i>
+                <div class="alerts-floating-window" id="alerts-floating-window">
+    <div class="alerts-header">
+        <h4><i class="fas fa-bell"></i> Alertas</h4>
+        <button class="clear-alerts-btn" onclick="clearAllAlerts()" title="Limpar todos">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </div>
+    <ul id="alerts-dropdown-list">
+        <!-- Alertas serão injetados aqui -->
+    </ul>
+</div>
+                <span>Usuário: Admin</span>
+                <div class="user-avatar">AD</div> 
+            </div>
+        </header>
+
+        <section id="dashboard" class="content-section">
+            <div class="metric-cards-container metrics-grid">
+                <div class="card metric-card green-card">
+                    <div class="card-content">
+                        <p class="card-label">Estoque Total de Itens</p>
+                        <span class="card-value" id="total-stock-items">0</span>
+                    </div>
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="card metric-card purple-card">
+                    <div class="card-content">
+                        <p class="card-label">Total de Produtos</p>
+                        <span class="card-value" id="total-products">0</span>
+                    </div>
+                    <i class="fas fa-box-open"></i>
+                </div>
+                <div class="card metric-card red-card">
+                    <div class="card-content">
+                        <p class="card-label">Produtos Estoque Baixo</p>
+                        <span class="card-value" id="low-stock-count">0</span>
+                    </div>
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="card metric-card blue-card">
+                    <div class="card-content">
+                        <p class="card-label">Vendas Hoje</p>
+                        <span class="card-value" id="sales-today">R$ 0,00</span>
+                    </div>
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+
+            <div class="dashboard-secondary-area charts-grid">
+                <div class="card chart-card">
+                    <h4 class="card-title">Análise de Vendas (Últimos 30 Dias)</h4>
+                    <div class="chart-container">
+                        <canvas id="daily-sales-chart"></canvas> 
+                    </div>
+                </div>
+                
+                <div class="card chart-card">
+                    <h4 class="card-title">Alerta de Estoque</h4>
+                    <ul class="alert-list" id="dashboard-alert-list">
+                        <li>Nenhum alerta de estoque baixo.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="produtos" class="content-section" style="display: none;">
+            <div class="tabs">
+                <button class="tab-button active" data-tab-content="product-list-tab"><i class="fas fa-clipboard-list"></i> Lista de Produtos</button>
+                <button class="tab-button" data-tab-content="product-form-tab"><i class="fas fa-plus-circle"></i> Cadastrar/Editar</button>
+                <button class="tab-button" data-tab-content="historico-tab"><i class="fas fa-history"></i> Histórico de Ações</button>
+            </div>
+
+            <div id="product-list-tab" class="tab-content active">
+                <div class="card">
+                    <h3 class="card-title">Estoque Atual</h3>
+                    <div class="table-responsive">
+                        <table class="data-table" id="product-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nome</th>
+                                    <th>Categoria</th>
+                                    <th>Preço (R$)</th>
+                                    <th>Estoque</th>
+                                    <th>Mínimo</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            
+
+            <div id="product-form-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title" id="form-title">Formulário de Cadastro de Produto</h3>
+                    <form class="product-form" onsubmit="handleProductForm(event)">
+                        <input type="hidden" id="product-id" name="id">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="nome">Nome do Produto</label>
+                                <input type="text" id="nome" name="nome" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="categoria">Categoria</label>
+                                <select id="categoria" name="categoria">
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="preco">Preço de Venda (R$)</label>
+                                <input type="number" id="preco" name="preco" step="0.01" min="0.01" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="custo">Custo (R$)</label>
+                                <input type="number" id="custo" name="custo" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="quantidade">Estoque Atual</label>
+                                <input type="number" id="quantidade" name="quantidade" min="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="minimo">Estoque Mínimo</label>
+                                <input type="number" id="minimo" name="minimo" min="0" required>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" id="submit-btn" class="submit-btn blue-btn"><i class="fas fa-plus-circle"></i> Cadastrar Produto</button>
+                            <button type="button" id="cancel-edit-btn" class="submit-btn delete-btn" style="display:none;" onclick="resetProductForm()"><i class="fas fa-times-circle"></i> Cancelar Edição</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            
+
+            <div id="historico-tab" class="tab-content" style="display: none;">
+                <div class="card">
+                    <h3 class="card-title">Log de Ações Recentes</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID do Log</th>
+                                    <th>Data/Hora</th>
+                                    <th>Ação</th>
+                                    <th>Detalhe</th>
+                            
+                                </tr>
+                            </thead>
+                            <tbody id="history-log-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="vendas" class="content-section" style="display: none;">
+            <div class="pdv-layout pdv-container">
+                <div class="pdv-left-panel">
+                    <div class="card pdv-card">
+                        <h3 class="card-title">Produtos</h3>
+                        <div class="pdv-search">
+                            <input type="text" id="pdv-search-input" placeholder="Buscar produto por nome ou ID..." class="search-input" onkeyup="filterPdvProducts()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="products-grid" id="products-grid">
+                        </div>
+                    </div>
+                </div>
+
+               <div class="pdv-right-panel" id="pdv-right-panel">
+    <div class="card cart-card">
+        <h3 class="card-title">Carrinho de Compras</h3>
+        
+        <ul class="cart-items-list" id="cart-items-list">
+        </ul>
+        
+        <!-- DIV CART-ACTIONS CORRETAMENTE FECHADA -->
+        <div class="cart-actions">
+            <button class="submit-btn delete-btn" onclick="clearCart()"><i class="fas fa-trash-alt"></i> Limpar</button>
+            <button class="submit-btn purple-btn" onclick="saveCurrentCart()"><i class="fas fa-save"></i> Salvar Carrinho</button>
+        </div>
+
+        <div class="cart-totals">
+            <p>Subtotal: <span id="cart-subtotal">R$ 0,00</span></p>
+            <p class="total">Total: <span id="cart-total">R$ 0,00</span></p>
+        </div>
+
+        <button class="submit-btn finaliza-venda-btn green-btn" onclick="checkout()"><i class="fas fa-check-circle"></i> Finalizar Venda</button>
+    </div>
+</div>
+            </div>
+        </section>
+
+        <section id="carrinhos-salvos" class="content-section saved-carts-section" style="display: none;">
+            <div class="card">
+                <h3 class="card-title">Carrinhos de Venda Salvos</h3>
+                <p style="color: var(--color-text-secondary); margin-bottom: 15px;">Carregue um carrinho salvo para o Ponto de Venda ou exclua o registro.</p>
+<div class="saved-carts-grid" id="saved-carts-list">
+	                </div>
+            </div>
+        </section>
+
+        <section id="relatorios" class="content-section" style="display: none;">
+            <div class="tabs">
+                <button class="tab-button active" data-tab-content="report-resumo"><i class="fas fa-chart-pie"></i> Análise Visual</button>
+                <button class="tab-button" data-tab-content="report-vendas"><i class="fas fa-table"></i> Detalhes de Vendas</button>
+            </div>
+
+            <div id="report-resumo" class="tab-content active">
+
+                
+    
+
+    <!-- MÉTRICAS -->
+<div class="metric-cards-container">
+    <div class="metric-card blue-card">
+        <div>
+            <span class="card-label">Total de Vendas</span>
+            <span class="card-value" id="report-total-sales">R$ 0,00</span>
+        </div>
+        <i class="fas fa-shopping-cart"></i>
+    </div>
+    
+    <div class="metric-card green-card">
+        <div>
+            <span class="card-label">Lucro Total</span>
+            <span class="card-value" id="report-total-profit">R$ 0,00</span>
+        </div>
+        <i class="fas fa-chart-line"></i>
+    </div>
+    
+    <div class="metric-card purple-card">
+        <div>
+            <span class="card-label">Produtos Vendidos</span>
+            <span class="card-value" id="report-products-sold">0</span>
+        </div>
+        <i class="fas fa-box"></i>
+    </div>
+    
+    <div class="metric-card red-card">
+        <div>
+            <span class="card-label">Ticket Médio</span>
+            <span class="card-value" id="report-average-ticket">R$ 0,00</span>
+        </div>
+        <i class="fas fa-receipt"></i>
+    </div>
+</div>
+
+    <!-- GRÁFICOS -->
+    <div class="charts-grid-2">
+        <!-- GRÁFICO DE DISTRIBUIÇÃO DE VENDAS POR CATEGORIA -->
+        <div class="card">
+            <div class="card-title">
+                <h3>Distribuição de Vendas por Categoria</h3>
+            </div>
+            <div class="chart-container-small">
+                <canvas id="categoryChart" style="max-height: 400px; width: 100%;"></canvas>
+
+            </div>
+        </div>
+        
+        <!-- TOP 5 PRODUTOS MAIS RENTÁVEIS -->
+        <div class="card">
+            <div class="card-title">
+                <h3>Top 5 Produtos Mais Rentáveis</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table top-selling-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Produto</th>
+                            <th>Lucro Total</th>
+                            <th>Qtd. Vendida</th>
+                        </tr>
+                    </thead>
+                    <tbody id="top-selling-table-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+            <div id="report-vendas" class="tab-content" style="display: none;">
+                <div class="card filter-card" style="margin-bottom: 25px;">
+                    <h3 class="card-title">Métricas Detalhadas do Período</h3>
+                    <div class="metrics-grid" id="sales-summary-metrics">
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title">Tabela de Vendas</h3>
+                    <div class="table-responsive">
+                        <table class="data-table" id="sales-report-table">
+                            <thead>
+                                <tr>
+                                    <th>ID Venda</th>
+                                    <th>Data</th>
+                                    <th>Total (R$)</th>
+                                    <th>Pagamento</th>
+                                    <th>Itens</th>
+                                    <th>Cliente</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="config" class="content-section" style="display: none;">
+    <div class="card">
+        <h3 class="card-title"><i class="fas fa-cogs"></i> Configurações do Sistema</h3>
+        
+        <div class="config-tabs">
+            <button class="config-tab-button active" data-config-tab="categories">
+                <i class="fas fa-tags"></i> Categorias
+            </button>
+            <button class="config-tab-button" data-config-tab="payments">
+                <i class="fas fa-credit-card"></i> Pagamentos
+            </button>
+            <!-- REMOVIDA A ABA GERAIS -->
+            <button class="config-tab-button" data-config-tab="backup">
+                <i class="fas fa-database"></i> Backup
+            </button>
+        </div>
+
+        <!-- ABA CATEGORIAS -->
+        <div id="categories-tab" class="config-tab-content active">
+            <div class="config-section">
+                <h4><i class="fas fa-tags"></i> Gerenciar Categorias</h4>
+                <p class="config-description">Adicione, edite ou remova categorias de produtos.</p>
+                
+                <div class="categories-manager">
+                    <div class="categories-list">
+                        <h5>Categorias Existentes</h5>
+                        <div class="categories-container" id="categories-container">
+                            <!-- Categorias serão injetadas aqui -->
+                        </div>
+                    </div>
+                    
+                    <div class="category-form">
+                        <h5>Adicionar Nova Categoria</h5>
+                        <div class="form-group">
+                            <input type="text" id="new-category-name" placeholder="Nome da categoria" maxlength="50">
+                            <button class="submit-btn blue-btn" onclick="addNewCategory()">
+                                <i class="fas fa-plus"></i> Adicionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA PAGAMENTOS -->
+        <div id="payments-tab" class="config-tab-content">
+            <div class="config-section">
+                <h4><i class="fas fa-credit-card"></i> Métodos de Pagamento</h4>
+                <p class="config-description">Gerencie as formas de pagamento aceitas no PDV.</p>
+                
+                <div class="payments-manager">
+                    <div class="payments-list">
+                        <h5>Métodos Ativos</h5>
+                        <div class="payments-container" id="payments-container">
+                            <!-- Métodos serão injetadas aqui -->
+                        </div>
+                    </div>
+                    
+                    <div class="payment-form">
+                        <h5>Adicionar Novo Método</h5>
+                        <div class="form-group">
+                            <input type="text" id="new-payment-name" placeholder="Nome do método" maxlength="30">
+                            <button class="submit-btn blue-btn" onclick="addNewPayment()">
+                                <i class="fas fa-plus"></i> Adicionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABA BACKUP CORRIGIDA -->
+        <div id="backup-tab" class="config-tab-content">
+        <div class="config-grid">
+        <div class="config-section">
+            <h4><i class="fas fa-download"></i> Exportar Dados</h4>
+            <p class="config-description">Faça backup de todos os dados do sistema.</p>
+            
+            <div class="backup-options">
+                <button class="submit-btn blue-btn" onclick="exportData('all')">
+                    <i class="fas fa-file-export"></i> Exportar Tudo (JSON)
+                </button>
+                <button class="submit-btn green-btn" onclick="exportData('products')">
+                    <i class="fas fa-boxes"></i> Apenas Produtos
+                </button>
+                <button class="submit-btn purple-btn" onclick="exportData('sales')">
+                    <i class="fas fa-chart-line"></i> Apenas Vendas
+                </button>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h4><i class="fas fa-upload"></i> Importar Dados</h4>
+            <p class="config-description">Restaure dados de um backup anterior.</p>
+            
+            <div class="import-options">
+                <div class="form-group">
+                    <label for="backup-file">Selecionar arquivo de backup</label>
+                    <input type="file" id="backup-file" accept=".json" class="config-input">
+                </div>
+                <button class="submit-btn blue-btn" onclick="importData()">
+                    <i class="fas fa-file-import"></i> Importar Dados
+                </button>
+            </div>
+            
+            <div class="import-info">
+                <small><i class="fas fa-info-circle"></i> Use arquivos JSON exportados deste sistema</small>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h4><i class="fas fa-file-pdf"></i> Relatórios em PDF</h4>
+            <p class="config-description">Gere relatórios profissionais em PDF.</p>
+            
+            <div class="pdf-options">
+    
+                <button class="submit-btn red-btn" onclick="generatePDF('sales-report')">
+        <i class="fas fa-file-pdf"></i> Relatório de Vendas
+    </button>
+    
+    <button class="submit-btn orange-btn" onclick="generatePDF('inventory-report')">
+        <i class="fas fa-clipboard-list"></i> Relatório de Estoque
+    </button>
+    <button class="submit-btn teal-btn" onclick="generatePDF('profit-report')">
+        <i class="fas fa-chart-bar"></i> Relatório de Lucros
+    </button>
+
+    
+</div>
+
+
+            
+            <div class="pdf-period" style="margin-top: 15px;">
+                <label for="pdf-period">Período do relatório:</label>
+                <select id="pdf-period" class="config-select">
+                    <option value="7">Últimos 7 dias</option>
+                    <option value="30" selected>Últimos 30 dias</option>
+                    <option value="90">Últimos 3 meses</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h4><i class="fas fa-trash"></i> Limpeza</h4>
+            <p class="config-description">Gerencie o espaço e performance do sistema.</p>
+            
+            <div class="cleanup-options">
+                <button class="submit-btn delete-btn" onclick="clearOldSales()">
+                    <i class="fas fa-broom"></i> Limpar Vendas Antigas
+                </button>
+                <button class="submit-btn red-btn" onclick="clearAllData()">
+                    <i class="fas fa-trash-alt"></i> Limpar Todos os Dados
+                </button>
+            </div>
+            
+            <div class="storage-info">
+                <h5>Uso de Armazenamento</h5>
+                <div class="storage-bar">
+                    <div class="storage-used" id="storage-used"></div>
+                </div>
+                <small id="storage-text">Calculando...</small>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+        </section>
+    </div>
+
+	    <script src="script.js"></script>
+		    
+		    <!-- Modal de Pagamento (Novo) -->
+		    <div id="payment-modal" class="modal-overlay" style="display:none;">
+		        <div class="modal-content payment-modal-content">
+		            <h3><i class="fas fa-credit-card"></i> Finalizar Venda</h3>
+		            <p>Total a Pagar: <span id="payment-total-display" class="total-amount">R$ 0,00</span></p>
+		            
+		            <div class="payment-options-container" id="payment-options-container">
+		                <!-- Opções de pagamento serão injetadas aqui pelo JS -->
+		            </div>
+		            <button class="submit-btn delete-btn" onclick="document.getElementById('payment-modal').style.display='none';"><i class="fas fa-times-circle"></i> Cancelar</button>
+		        </div>
+		    </div>
+	    <!-- O bloco de script abaixo foi removido (Inclusão Dupla de script.js) -->
+    <!-- Modal de Detalhes da Venda -->
+    <div id="sale-details-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content sale-details-modal">
+        <div class="modal-header">
+            <h3><i class="fas fa-receipt"></i> Detalhes da Venda</h3>
+            <button class="close-modal-btn" onclick="closeSaleDetails()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="sale-info">
+            <div class="sale-meta">
+                <div class="meta-item">
+                    <span class="meta-label">ID da Venda:</span>
+                    <span class="meta-value" id="detail-sale-id">#</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Data/Hora:</span>
+                    <span class="meta-value" id="detail-sale-date">-</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Pagamento:</span>
+                    <span class="meta-value" id="detail-sale-payment">-</span>
+                </div>
+                <div class="meta-item total-item">
+                    <span class="meta-label">Total:</span>
+                    <span class="meta-value total-amount" id="detail-sale-total">R$ 0,00</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="sale-items">
+            <h4><i class="fas fa-shopping-cart"></i> Itens da Venda</h4>
+            <div class="items-list" id="detail-sale-items">
+                <!-- Itens serão injetados aqui -->
+            </div>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="submit-btn blue-btn" onclick="closeSaleDetails()">
+                <i class="fas fa-times"></i> Fechar
+            </button>
+        </div>
+    </div>
+    </div>
+</body>
+</html>

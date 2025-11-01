@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout Seguro | StockBrasil PRO</title>
+    <link rel="stylesheet" href="./stilo.css">
+    <link rel="shortcut icon" href="./images/pngtree-send-payment-icon-vector-png-image_13275706-removebg-preview.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <a href="index.html" class="logo">StockBrasil<span class="logo-pro">PRO</span></a>
+        </div>
+    </header>
+
+    <section class="checkout-section">
+        <div class="container">
+            <div class="checkout-grid">
+                
+                <div class="payment-details">
+                    <h2><i class="fas fa-credit-card"></i> Pagamento <span class="accent-text">100% Seguro</span></h2>
+                    
+                    <form id="payment-form">
+                        
+                        <div class="form-group">
+                            <label for="full-name">Nome Completo</label>
+                            <input type="text" id="full-name" placeholder="Seu nome no cartão/cadastro" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">E-mail de Acesso</label>
+                            <input type="email" id="email" placeholder="email@seuempresa.com.br" required>
+                        </div>
+
+                        <div class="card-details-mockup">
+                            <h3><i class="fas fa-lock"></i> Dados do Cartão</h3>
+                            
+                            <div class="card-images">
+                                <i class="fab fa-cc-visa"></i>
+                                <i class="fab fa-cc-mastercard"></i>
+                                <i class="fab fa-cc-amex"></i>
+                                <i class="fab fa-cc-discover"></i>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="card-number">Número do Cartão</label>
+                                <input type="tel" id="card-number" placeholder="XXXX XXXX XXXX XXXX" required>
+                            </div>
+
+                            <div class="form-group two-cols">
+                                <div>
+                                    <label for="expiry">Validade (MM/AA)</label>
+                                    <input type="text" id="expiry" placeholder="MM/AA" required>
+                                </div>
+                                <div>
+                                    <label for="cvc">CVC</label>
+                                    <input type="text" id="cvc" placeholder="CVC" required>
+                                </div>
+                            </div>
+
+                            <div class="security-lock">
+                                <i class="fas fa-shield-alt"></i>
+                                <p>Transação criptografada (SSL). Seus dados estão protegidos.</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 40px;">
+                            <label for="installments">Parcelamento</label>
+                            <select id="installments" required>
+                                <option value="1">1x de R$ 89,00 (Sem juros)</option>
+                                <option value="3">3x de R$ 40,50 (Total: R$ 121,50)</option>
+                                <option value="6">6x de R$ 21,00 (Total: R$ 126,00)</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn blue-btn" style="width: 100%; margin-top: 30px;">
+                            <i class="fas fa-arrow-right"></i> Finalizar Assinatura (R$ 89,00)
+                        </button>
+                    </form>
+                </div>
+
+                <div class="order-summary">
+                    <h3><i class="fas fa-file-invoice"></i> Resumo do Pedido</h3>
+
+                    <div class="plan-highlight">
+                        <h4>Plano Essencial - Mensal</h4>
+                        <p>Acesso completo para até 5 usuários e relatórios avançados.</p>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>Valor do Plano (Mensal)</span>
+                        <span>R$ 112,80</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Desconto Anual (20%)</span>
+                        <span class="success-text">- R$ 23,80</span>
+                    </div>
+                    <div class="summary-item">
+                        <span>Taxa de Serviço/Setup</span>
+                        <span>R$ 0,00</span>
+                    </div>
+
+                    <div class="summary-total">
+                        <span>Total a Pagar Hoje</span>
+                        <span class="total-amount">R$ 89,00</span>
+                    </div>
+
+                    <p style="font-size: 0.9rem; color: var(--color-text-secondary); margin-top: 15px;">
+                        Você será cobrado R$ 89,00 hoje e a cada 30 dias a partir da data de ativação.
+                    </p>
+                </div>
+                
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 StockBrasil PRO. Todos os direitos reservados. Sua gestão no modo mais rápido.</p>
+    </footer>
+
+</body>
+</html>

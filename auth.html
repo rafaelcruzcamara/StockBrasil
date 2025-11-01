@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso StockBrasil PRO - Login e Cadastro</title>
+    <link rel="stylesheet" href="./stilo.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="shortcut icon" href="./images/StockBrasilPRO-removebg-preview.png">
+    <style>
+        /* CSS ESPECÍFICO PARA A TELA DE AUTENTICAÇÃO */
+        /* Mantendo o estilo Dark Mode do style.css */
+        
+        body {
+            /* Ocupa a tela inteira com o fundo escuro */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--color-bg-primary); 
+            /* Adiciona um efeito de fundo sutil de grade, como na HERO */
+            background-image: radial-gradient(circle at center, rgba(42, 48, 56, 0.5) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .auth-container {
+            background-color: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            padding: 50px 40px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInScale 0.8s forwards;
+        }
+        
+        @keyframes fadeInScale {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .logo-auth {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--color-text-primary);
+            margin-bottom: 30px;
+            display: block;
+        }
+
+        .logo-auth .logo-pro {
+            color: var(--color-accent-blue);
+        }
+
+        .form-title {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .form-subtitle {
+            color: var(--color-text-secondary);
+            margin-bottom: 30px;
+            font-size: 1rem;
+        }
+
+        /* Campos de Formulário */
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+            position: relative;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-sm);
+            background-color: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            font-size: 1rem;
+            transition: border-color var(--transition-speed);
+        }
+
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--color-accent-blue);
+            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
+        }
+        
+        .input-icon {
+            position: absolute;
+            top: 50%;
+            left: 15px;
+            transform: translateY(-50%);
+            color: var(--color-text-secondary);
+            transition: color var(--transition-speed);
+        }
+
+        .auth-input:focus + .input-icon {
+            color: var(--color-accent-blue);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 15px 20px;
+            font-size: 1.05rem;
+        }
+
+        /* Alternador de Formulário */
+        .form-toggle {
+            margin-top: 25px;
+            font-size: 0.95rem;
+            color: var(--color-text-secondary);
+        }
+
+        .form-toggle a {
+            color: var(--color-accent-green);
+            font-weight: 600;
+            cursor: pointer;
+            transition: color var(--transition-speed);
+        }
+
+        .form-toggle a:hover {
+            color: #28C748; /* Tom mais claro de verde */
+        }
+        
+        /* Ocultar/Exibir Formulários */
+        .form-section {
+            display: none;
+            animation: slideIn 0.5s forwards;
+            position: absolute;
+            top: 150px; /* Ajuste para centralizar o conteúdo dinâmico */
+            left: 40px;
+            right: 40px;
+        }
+        
+        .form-section.active {
+            display: block;
+            position: static;
+        }
+        
+        /* Animação para troca de formulário (slide) */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        /* Checkbox Lembrar Senha */
+        .remember-me {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-top: -5px;
+            margin-bottom: 25px;
+            color: var(--color-text-secondary);
+        }
+
+        .forgot-password {
+            color: var(--color-text-secondary);
+            transition: color var(--transition-speed);
+        }
+        
+        .forgot-password:hover {
+            color: var(--color-accent-blue);
+        }
+        
+        .remember-me label {
+            cursor: pointer;
+        }
+        
+        .remember-me input[type="checkbox"] {
+            margin-right: 8px;
+            accent-color: var(--color-accent-blue); /* Cor do checkbox */
+        }
+
+    </style>
+</head>
+<body>
+    
+    <script>
+        alert("No monento o Loguin e Cadstro não estão em funcionamento, clique em - StockBrsilPro - para proseguir. ");
+    </script>
+
+
+    <div class="auth-container">
+        <a href="https://sparkly-malasada-47156c.netlify.app/" class="logo-auth">StockBrasil<span class="logo-pro">PRO</span></a>
+
+        <div id="login-section" class="form-section active">
+            <h2 class="form-title">Bem-vindo de Volta!</h2>
+            <p class="form-subtitle">Acesse seu painel e continue a gestão do seu estoque.</p>
+
+            <form>
+                <div class="input-group">
+                    <input type="email" id="login-email" class="auth-input" placeholder="Seu e-mail profissional" required>
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                
+                <div class="input-group">
+                    <input type="password" id="login-password" class="auth-input" placeholder="Sua senha secreta" required>
+                    <i class="fas fa-lock input-icon"></i>
+                </div>
+                
+                <div class="remember-me">
+                    <div>
+                        <input type="checkbox" id="remember-me">
+                        <label for="remember-me">Lembrar de mim</label>
+                    </div>
+                    <a href="#" class="forgot-password">Esqueceu a senha?</a>
+                </div>
+
+                <button type="submit" class="submit-btn blue-btn btn-shimmer">
+                    <i class="fas fa-sign-in-alt"></i> Entrar na Conta
+                </button>
+            </form>
+
+            <p class="form-toggle">
+                Novo por aqui? <a href="#" onclick="toggleForm('register')">Crie sua Conta Grátis</a>
+            </p>
+        </div>
+
+        <div id="register-section" class="form-section">
+            <h2 class="form-title">Crie Sua Conta Grátis</h2>
+            <p class="form-subtitle">Comece seu teste de 7 dias e otimize sua gestão hoje mesmo.</p>
+
+            <form>
+                 <div class="input-group">
+                    <input type="text" id="register-name" class="auth-input" placeholder="Nome do seu Negócio" required>
+                    <i class="fas fa-store input-icon"></i>
+                </div>
+                
+                <div class="input-group">
+                    <input type="email" id="register-email" class="auth-input" placeholder="Seu melhor e-mail" required>
+                    <i class="fas fa-envelope input-icon"></i>
+                </div>
+                
+                <div class="input-group">
+                    <input type="password" id="register-password" class="auth-input" placeholder="Crie uma senha forte (mín. 6 caracteres)" required>
+                    <i class="fas fa-key input-icon"></i>
+                </div>
+                
+                <button type="submit" class="submit-btn green-btn">
+                    <i class="fas fa-user-plus"></i> Cadastrar e Iniciar Teste
+                </button>
+            </form>
+
+            <p class="form-toggle">
+                Já tem conta? <a href="#" onclick="toggleForm('login')">Fazer Login</a>
+            </p>
+        </div>
+        
+    </div>
+
+    <script>
+        function toggleForm(formType) {
+            const loginSection = document.getElementById('login-section');
+            const registerSection = document.getElementById('register-section');
+            const authContainer = document.querySelector('.auth-container');
+            
+            // Remove a classe 'active' para iniciar a animação de saída
+            loginSection.classList.remove('active');
+            registerSection.classList.remove('active');
+
+            // Determina qual seção ativar
+            if (formType === 'register') {
+                // Ajusta a altura do container dinamicamente se necessário (opcional)
+                // authContainer.style.height = 'auto'; 
+                setTimeout(() => {
+                    registerSection.classList.add('active');
+                }, 50); // Pequeno delay para a animação
+            } else {
+                setTimeout(() => {
+                    loginSection.classList.add('active');
+                }, 50);
+            }
+        }
+    </script>
+
+</body>
+</html>
