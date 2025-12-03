@@ -1,3 +1,11 @@
+//os erros no consele sumiram, mas ao reniciar a page os produtos ainda somem
+
+// =================================================================
+// NOVO: ENDEREÇO BASE DA API
+// =================================================================
+const API_BASE_URL = 'http://localhost:3000/api'; 
+// A porta 3000 deve ser a mesma que o seu Backend está rodando
+
 // =================================================================
 // 1. DADOS E INICIALIZAÇÃO
 // =================================================================
@@ -45,14 +53,38 @@ function safeLocalStorageParse(key, defaultValue) {
 
 function persistData() {
     try {
-        localStorage.setItem('products', JSON.stringify(products));
+        // localStorage.setItem('products', JSON.stringify(products)); // REMOVIDO!
         localStorage.setItem('salesHistory', JSON.stringify(salesHistory));
         localStorage.setItem('savedCarts', JSON.stringify(savedCarts));
         localStorage.setItem('logHistory', JSON.stringify(logHistory));
         localStorage.setItem('config', JSON.stringify(config));
+        localStorage.setItem('systemConfig', JSON.stringify(systemConfig));
+        // ... (Mantenha a persistência de outras variáveis locais)
     } catch (error) {
-        console.error('Erro ao salvar dados:', error);
-        alert('Erro ao salvar dados no navegador.');
+        console.error('❌ Erro ao persistir dados locais:', error);
+    }
+}
+
+async function loadAllData() {
+    try {
+        // 1. CARREGA PRODUTOS DA API (NOVO)
+        const response = await fetch(`${API_BASE_URL}/products`);
+        if (!response.ok) {
+            throw new Error(`Falha ao buscar produtos: ${response.statusText}`);
+        }
+        products = await response.json(); // Preenche a variável global 'products'
+
+        // 2. CARREGA DEMAIS DADOS DO LOCALSTORAGE (TEMPORÁRIO)
+        salesHistory = safeLocalStorageParse('salesHistory', []);
+        savedCarts = safeLocalStorageParse('savedCarts', []);
+        logHistory = safeLocalStorageParse('logHistory', []);
+        config = safeLocalStorageParse('config', config); // Usando valor default global
+        systemConfig = safeLocalStorageParse('systemConfig', systemConfig); // Usando valor default global
+
+        console.log('✅ Dados carregados. Produtos vieram da API.');
+    } catch (error) {
+        console.error('❌ FATAL: Erro ao carregar dados. Usando dados vazios.', error);
+        products = []; 
     }
 }
 
@@ -67,6 +99,86 @@ function logAction(type, detail) {
     if (logHistory.length > 50) logHistory.pop();
     renderHistoryLog();
     persistData();
+}
+
+// -------------------------------------------------------------
+// CRUD DE PRODUTOS (SALVAR) - AGORA ASSÍNCRONA VIA API!
+// -------------------------------------------------------------
+async function saveProduct() {
+    // Note: O id do MongoDB é uma string, não um número.
+    const isEditing = document.getElementById('product-id').value !== '';
+    const productId = document.getElementById('product-id').value;
+    
+    // ⚠️ Atenção: A validação e UI (mensagens de erro) não estão neste código, mas devem ser mantidas do seu código original.
+
+    const productData = {
+        nome: document.getElementById('product-name').value,
+        categoria: document.getElementById('product-category').value,
+        preco: parseFloat(document.getElementById('product-price').value),
+        custo: parseFloat(document.getElementById('product-cost').value || 0),
+        quantidade: parseInt(document.getElementById('product-quantity').value),
+        minimo: parseInt(document.getElementById('product-min-stock').value || 0)
+    };
+    
+    // Verificação de validação básica (mantenha a sua validação completa)
+    if (!productData.nome || isNaN(productData.preco) || isNaN(productData.quantidade)) {
+        alert("Por favor, preencha todos os campos obrigatórios (Nome, Preço, Quantidade).");
+        return;
+    }
+
+    try {
+        let response;
+        let method;
+        let url;
+
+        if (isEditing) {
+            // ATUALIZAÇÃO (PATCH) - Usa o ID do MongoDB
+            method = 'PATCH';
+            url = `${API_BASE_URL}/products/${productId}`; 
+            
+        } else {
+            // CRIAÇÃO (POST)
+            method = 'POST';
+            url = `${API_BASE_URL}/products`;
+        }
+        
+        // Faz a requisição HTTP para a API
+        response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(productData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao salvar o produto na API.');
+        }
+
+        const savedProduct = await response.json();
+
+        // 3. Atualiza a variável global 'products' e a UI:
+        if (isEditing) {
+            const index = products.findIndex(p => p._id === productId);
+            if (index > -1) {
+                products[index] = savedProduct;
+            }
+            logAction('Produto Atualizado', savedProduct.nome);
+        } else {
+            products.push(savedProduct);
+            logAction('Produto Adicionado', savedProduct.nome);
+        }
+        
+        alert(`✅ Produto ${isEditing ? 'atualizado' : 'adicionado'} com sucesso!`);
+        resetProductForm();
+        renderProductTable();
+        // Garante que o Front-end salve as outras variáveis locais (vendas, carrinho, etc.)
+        persistData(); 
+    } catch (error) {
+        console.error('❌ Erro ao salvar produto:', error);
+        alert(`❌ Erro ao salvar produto: ${error.message}`);
+    }
 }
 
 function sanitizeHTML(str) {
@@ -544,28 +656,35 @@ function editProduct(id) {
     }
 }
 
-function deleteProduct(id) {
-    if (!confirm("Tem certeza que deseja DELETAR este produto?")) return;
+
+// CRUD DE PRODUTOS (DELETAR) - AGORA ASSÍNCRONA VIA API!
+async function deleteProduct(productId, productName) {
+    if (!confirm(`Tem certeza que deseja DELETAR permanentemente o produto: ${productName}?`)) {
+        return;
+    }
     
     try {
-        const index = products.findIndex(p => p.id === id);
-        if (index === -1) {
-            alert('Produto não encontrado');
-            return;
+        // Faz a requisição HTTP DELETE
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao excluir o produto na API.');
         }
 
-        const [deletedProduct] = products.splice(index, 1);
-        logAction("Produto Deletado", deletedProduct.nome);
+        // Atualiza a variável global 'products' (Filtra o produto deletado)
+        products = products.filter(p => p._id !== productId);
         
+        logAction('Produto Deletado', productName);
+        alert(`✅ Produto "${productName}" excluído com sucesso!`);
         renderProductTable();
-        updateDashboardMetrics();
         persistData();
         
-        alert(`Produto ${deletedProduct.nome} deletado!`);
-        
     } catch (error) {
-        console.error('Erro ao deletar produto:', error);
-        alert('Erro ao deletar produto.');
+        console.error('❌ Erro ao deletar produto:', error);
+        alert(`❌ Erro ao deletar produto: ${error.message}`);
     }
 }
 
@@ -741,7 +860,10 @@ function initializeErrorHandling() {
 }
 
 // Inicialização quando o DOM estiver pronto
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // ⚠️ AGORA É ASYNC/AWAIT PARA ESPERAR O BANCO DE DADOS
+    await loadAllData();
+    
     initializeErrorHandling();
     loadInitialData();
     setupNavigation();
@@ -752,6 +874,11 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.style.display = 'none';
         }
     });
+
+    const elemento = document.getElementById('algum-id');
+    if (elemento) {
+    elemento.style.display = 'none'; // SÓ EXECUTA SE O ELEMENTO EXISTIR
+    }
 });
 
 // =================================================================
