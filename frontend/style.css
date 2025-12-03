@@ -3347,3 +3347,48 @@ input:focus, select:focus, textarea:focus {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
 }
+
+/* ================================================== */
+/* BOTÕES DE PAGAMENTO - CORRIGIDO PARA MODO ESCURO */
+/* ================================================== */
+
+/* 1. Botão NORMAL (Cinza Escuro do seu Tema) */
+.payment-option-btn {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 10px;
+    
+    /* AQUI ESTAVA O ERRO: Agora usa a cor do seu tema */
+    background-color: var(--color-bg-tertiary); 
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary); /* Texto branco */
+    
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 16px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 2. Hover (Passar o mouse) - Azul bem sutil */
+.payment-option-btn:hover {
+    border-color: var(--color-accent-blue);
+    background-color: rgba(10, 132, 255, 0.1); /* Leve toque azul */
+}
+
+/* 3. SELECIONADO (AZUL FORTE) */
+.payment-option-btn.selected {
+    background-color: var(--color-accent-blue); /* Azul do sistema (#0A84FF) */
+    border-color: var(--color-accent-blue);
+    color: #ffffff; /* Texto branco puro */
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(10, 132, 255, 0.4);
+}
+
+/* Garante que o ícone fique branco quando selecionado */
+.payment-option-btn.selected i {
+    color: #ffffff;
+}

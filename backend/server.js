@@ -17,9 +17,8 @@ app.use(express.json());
 app.use(cors());
 
 // 2. CONEXÃO COM O BANCO DE DADOS (MongoDB)
-// Substitua esta string pela sua própria URL de conexão do MongoDB
-// (Ex: 'mongodb+srv://<username>:<password>@clustername.mongodb.net/stockbrasilDB')
-const MONGODB_URI = 'mongodb+srv://stockbrasil:e.64iAG3JBv8KvU@stockbrasilcluster.ghth9gs.mongodb.net/?appName=StockBrasilCluster'; 
+// A sua URL de conexão atual (remova o appName e adicione o nome do DB)
+const MONGODB_URI = 'mongodb+srv://stockbrasil:e.64iAG3JBv8KvU@stockbrasilcluster.ghth9gs.mongodb.net/stockbrasilDB?retryWrites=true&w=majority'; 
 
 mongoose.connect(MONGODB_URI)
     .then(() => console.log('✅ Conectado ao MongoDB!'))
@@ -27,15 +26,12 @@ mongoose.connect(MONGODB_URI)
 
 
 const productSchema = new mongoose.Schema({
-    nome: { type: String, required: true, unique: true, trim: true },
+    nome: { type: String, required: true }, // Removi unique e trim para evitar erros agora
     categoria: { type: String, required: true },
-    // Preço e Quantidade devem ser required e min 0
-    preco: { type: Number, required: true, min: 0 },
-    quantidade: { type: Number, required: true, min: 0 },
-
-    // Custo e Mínimo são mais flexíveis, com default 0
-    custo: { type: Number, default: 0, min: 0 },
-    minimo: { type: Number, default: 0, min: 0 }, 
+    preco: { type: Number, required: true },
+    quantidade: { type: Number, required: true },
+    custo: { type: Number, default: 0 },
+    minimo: { type: Number, default: 0 }, 
 }, { timestamps: true });
 
 const Product = mongoose.model('Product', productSchema);
@@ -56,30 +52,25 @@ app.get('/api/products', async (req, res) => {
 
 // Rota POST: Criar um novo produto
 app.post('/api/products', async (req, res) => {
-    // 💡 LOG DE ENTRADA: O que o Front-end enviou?
-    console.log("-> DADOS RECEBIDOS DO FRONTEND:", req.body); 
+    console.log("-> DADOS RECEBIDOS (POST):", req.body); 
 
     try {
         const newProduct = new Product(req.body); 
-        await newProduct.save();
-
-        // 💡 LOG DE SUCESSO: Se chegou aqui, o MongoDB salvou.
-        console.log("<- PRODUTO SALVO COM SUCESSO. ID:", newProduct._id); 
-
+        await newProduct.save(); // TENTA SALVAR NO MONGO
+        
+        console.log("<- SUCESSO: Produto salvo. ID:", newProduct._id); 
         return res.status(201).json(newProduct); 
     } catch (error) {
-        // ❌ LOG DE FALHA CRÍTICA: Captura e loga o objeto ERROR completo.
+        // ❌ AQUI ESTÁ A CHAVE: Logamos o erro CRÍTICO que impede o salvamento
         console.error("❌ ERRO FATAL AO SALVAR PRODUTO:", error); 
-
-        // Log específico para validação e duplicidade
+        
         if (error.name === 'ValidationError') {
-            return res.status(400).json({ message: 'Falha de validação: Verifique os campos Preço e Quantidade.', details: error.message });
+            // Se for erro de validação (campo required faltando)
+            return res.status(400).json({ message: 'Falha de validação nos dados. Verifique todos os campos.', details: error.message });
         }
-        if (error.code === 11000) { // Duplicidade
-            return res.status(400).json({ message: 'Erro: Produto com este nome já existe.' });
-        }
-
-        return res.status(500).json({ message: 'Erro interno do servidor ao salvar produto.' });
+        
+        // Erro genérico (ex: Falha na conexão com o Atlas)
+        return res.status(500).json({ message: 'Erro interno do servidor: Falha de escrita no DB.' });
     }
 });
 
