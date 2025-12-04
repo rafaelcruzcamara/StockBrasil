@@ -878,7 +878,7 @@ p {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(-10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -3392,3 +3392,242 @@ input:focus, select:focus, textarea:focus {
 .payment-option-btn.selected i {
     color: #ffffff;
 }
+
+
+/* --- SIDEBAR BASE (FIXA) --- */
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+    z-index: 1000;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: var(--color-bg-secondary); /* Mantém sua cor */
+    border-right: 1px solid var(--color-border);
+}
+
+/* --- GRUPO DE PERFIL/DROPDOWN (TOPO) --- */
+.sidebar-profile-card {
+    /* É o cartão retangular */
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    margin: 5px 0 0 0; 
+    
+    /* Estilo e Posição */
+    border-radius: var(--border-radius-lg);
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    
+    /* Adiciona a posição relativa para ancorar o dropdown */
+    position: relative; 
+}
+
+/* --- DROPDOWN DENTRO DA SIDEBAR (SOLUÇÃO FINAL DE OVERLAP) --- */
+.sidebar-dropdown {
+    display: none; /* Começa oculto */
+    position: absolute !important;
+    
+    /* POSIÇÃO FIXA EM RELAÇÃO AO TOPO DA SIDEBAR */
+    top: 80px !important; 
+    left: 10px !important;
+    width: 240px !important; /* Largura fixa para não quebrar */
+    
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 99999 !important;
+    flex-direction: column;
+    padding: 5px;
+}
+
+.sidebar-dropdown.show {
+    display: flex !important;
+    animation: fadeIn 0.2s ease;
+}
+
+/* --- NAVEGAÇÃO E MARGEM (CORRIGINDO O "GRUDADO") --- */
+.sidebar-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    
+    /* CORREÇÃO: Adiciona margem no topo da navegação (Dashboard) */
+    margin-top: 30px; 
+    
+    padding: 0 5px;
+    gap: 5px;
+    overflow-y: auto;
+}
+
+/* --- ESTADOS RECOLHIDOS (BOLINHA) --- */
+
+/* Esconde textos e separadores */
+.sidebar.collapsed .sidebar-profile-info, 
+.sidebar.collapsed .arrow-icon,
+.sidebar.collapsed .sidebar-dropdown {
+    display: none !important;
+    opacity: 0;
+}
+
+/* Ajusta links recolhidos (CORRIGINDO ÍCONES ESCONDIDOS) */
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 15px 5px; /* Padding seguro */
+}
+.sidebar.collapsed .nav-item i {
+    opacity: 1 !important;
+    margin: 0;
+    width: auto;
+}
+
+/* --- CORREÇÃO FINAL: CARTÃO DE PERFIL --- */
+.sidebar-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    /* Espaçamento */
+    padding: 10px; /* Reduz padding lateral para não ficar esticado */
+    margin: 5px 0 20px 0; /* Desce o bloco e adiciona espaço antes do divisor */
+    
+    /* Estilo e Cor */
+    border-radius: var(--border-radius-lg);
+    background-color: var(--color-bg-tertiary); /* Fundo sutil, combina com o tema */
+    border: 1px solid var(--color-border);
+    
+    cursor: pointer;
+    transition: all 0.3s;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.sidebar-profile-card:hover {
+    border-color: var(--color-accent-blue);
+    background-color: var(--hover-bg); /* Highlight suave */
+}
+
+/* 1. ESTILO DA FOTO/ICONE */
+.sidebar-profile-card img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    /* Borda da foto escura */
+    border: 2px solid var(--color-bg-secondary); 
+    flex-shrink: 0;
+
+    /* CORREÇÃO VISUAL PARA FOTO QUEBRADA: Fundo do ícone será escuro */
+    background-color: var(--color-bg-primary); 
+    /* Adiciona um ícone de fallback caso o arquivo 404 persista */
+    content: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>');
+}
+
+/* 2. ESTILO DO TEXTO */
+.sidebar-profile-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    line-height: 1.2;
+    /* Garante que o texto use as cores do tema */
+    color: var(--color-text-primary); 
+}
+
+.sidebar-profile-info span { font-weight: 600; font-size: 0.95rem; }
+.sidebar-profile-info small { color: var(--color-text-secondary); font-size: 0.75rem; }
+
+/* --- AJUSTE FINAL: SEPARADOR (OPCIONAL, para garantir suavidade) --- */
+.sidebar-divider {
+    border: none;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1); 
+    margin: 15px 0 20px 0;
+}
+
+/* 4. Seta e Dropdown */
+.arrow-icon { 
+    color: var(--color-text-secondary); 
+    font-size: 0.8rem;
+    transition: 0.2s;
+}
+
+.sidebar-profile-card:hover .arrow-icon {
+    color: var(--color-accent-blue);
+}
+
+/* Dropdown de Perfil (Garante a cor do tema) */
+.sidebar-dropdown a {
+    padding: 12px 15px;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sidebar-dropdown a:hover {
+    background-color: var(--hover-bg);
+    color: var(--color-text-primary);
+}
+
+/* --- ESTADOS RECOLHIDOS (Bolinha) --- */
+
+.sidebar.collapsed .sidebar-profile-card {
+    background: transparent;
+    padding: 0;
+    justify-content: center;
+    margin: 20px 0; 
+}
+
+.sidebar.collapsed .sidebar-profile-card img {
+    width: 45px; 
+    height: 45px;
+}
+
+/* --- ESTILO PARA LINHA DIVISÓRIA SUAVE --- */
+.sidebar-divider {
+    /* Corrigimos a forma do elemento */
+    border: none;
+    height: 1px;
+    
+    /* CORREÇÃO: Altera a cor e a opacidade para suavizar */
+    background-color: rgba(255, 255, 255, 0.08); 
+    
+    /* Margem para espaçamento vertical */
+    margin: 10.5px 0 20px 0; 
+}
+
+/* Se você não tiver a classe "sidebar-divider", aplique no <hr> */
+hr {
+    border: none;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08); /* Fica um cinza quase transparente */
+    margin: 15px 0 20px 0;
+}
+
+/* --- CORREÇÃO DE FORÇA DE MARGEM (PARA EMPURRAR O BLOCO) --- */
+/* Target: A classe do cartão dentro do seu container sidebar */
+.sidebar .sidebar-profile-card {
+    /* Valor que empurra o bloco para baixo */
+    margin-top: 17px !important; 
+    
+    /* Mantém o espaçamento lateral e inferior */
+    margin-bottom: 20px; 
+    margin-left: 0;
+    margin-right: 0;
+    margin: 14px 0 3px 0;
+}
+
+
+

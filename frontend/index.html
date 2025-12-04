@@ -14,6 +14,8 @@
 </head>
 <body>
 
+
+
     <div id="undo-modal" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <h3><i class="fas fa-history"></i> Refazer Ação</h3>
@@ -24,46 +26,66 @@
         </div>
     </div>
     
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <!--<img src="/images/StockBrasilPRO-removebg-preview.png" alt="StockBrasil" id="pnglogo">-->
-            <h3>StockBrasil</h3>
+<div class="sidebar" id="sidebar">
+    
+    <div class="sidebar-profile-card" onclick="toggleSidebarProfileMenu()">
+        <img src="images/default-avatar.png" id="sidebar-user-photo" alt="Perfil">
+        <div class="sidebar-profile-info">
+            <span id="sidebar-user-name">Carregando...</span>
+            <small>Meu Perfil</small>
         </div>
-        <nav class="sidebar-nav">
+        <i class="fas fa-chevron-down arrow-icon"></i>
+    </div>
+
+    <div id="sidebar-profile-dropdown" class="sidebar-dropdown">
+        <a href="#" onclick="openProfileSettings()"><i class="fas fa-user-cog"></i> Editar</a>
+        <a href="#" onclick="logout()" style="color: #ff453a;"><i class="fas fa-sign-out-alt"></i> Sair</a>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <nav class="sidebar-nav">
             <a href="#dashboard" class="nav-item active"><i class="fas fa-home"></i> <span>Dashboard</span></a>
             <a href="#produtos" class="nav-item"><i class="fas fa-boxes"></i> <span>Produtos</span></a>
             <a href="#vendas" class="nav-item"><i class="fas fa-cash-register"></i> <span>Ponto de Venda</span></a>
             <a href="#carrinhos-salvos" class="nav-item"><i class="fas fa-shopping-basket"></i> <span>Carrinhos Salvos</span></a>
             <a href="#relatorios" class="nav-item"><i class="fas fa-chart-line"></i> <span>Relatórios</span></a>
             <a href="#config" class="nav-item"><i class="fas fa-cogs"></i> <span>Configurações</span></a>
-        </nav>
-        <button class="toggle-btn" onclick="toggleSidebar()"><i class="fas fa-chevron-left"></i></button>
-    </aside>
+    </nav>
 
-    <div class="main-content" id="main-content">
-        <header class="header top-header">
-            <div class="header-title">
-                <h1 id="current-page-title">Dashboard</h1>
-                <button class="toggle-btn-mobile menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-            </div>
-            
-            <div class="user-info">
-              <i class="fas fa-bell bell-icon" id="bell-icon" onclick="toggleAlertsWindow(event)" title="Alertas de Estoque Baixo"></i>
-                <div class="alerts-floating-window" id="alerts-floating-window">
-    <div class="alerts-header">
-        <h4><i class="fas fa-bell"></i> Alertas</h4>
-        <button class="clear-alerts-btn" onclick="clearAllAlerts()" title="Limpar todos">
-            <i class="fas fa-trash-alt"></i>
+    <div class="sidebar-footer">
+        <button class="toggle-btn" onclick="toggleSidebar()">
+            <i class="fas fa-chevron-left"></i>
         </button>
     </div>
-    <ul id="alerts-dropdown-list">
-        <!-- Alertas serão injetados aqui -->
-    </ul>
+
 </div>
-                <span>Usuário: Admin</span>
-                <div class="user-avatar">AD</div> 
+
+
+    <div class="main-content" id="main-content">
+        
+<header class="top-header">
+    <div class="header-left">
+        <div class="header-title">
+            <h1 id="current-page-title">Dashboard</h1>
+        </div>
+    </div>
+
+    <div class="header-right">
+        <div class="notification-container">
+            <i class="fas fa-bell bell-icon" id="bell-icon" onclick="toggleAlertsWindow(event)"></i>
+            <div class="alerts-floating-window" id="alerts-floating-window">
+                <div class="alerts-header">
+                    <h4>Notificações</h4>
+                    <button class="clear-alerts-btn" onclick="clearAllAlerts()">Limpar</button>
+                </div>
+                <ul id="alerts-dropdown-list"></ul>
             </div>
-        </header>
+        </div>
+    </div>
+</header>
+
+        
 
         <section id="dashboard" class="content-section">
             <div class="metric-cards-container metrics-grid">
@@ -251,8 +273,7 @@
         <section id="carrinhos-salvos" class="content-section saved-carts-section" style="display: none;">
             <div class="card">
                 <h3 class="card-title">Carrinhos de Venda Salvos</h3>
-                <p style="color: var(--color-text-secondary); margin-bottom: 15px;">Carregue um carrinho salvo para o Ponto de Venda ou exclua o registro.</p>
-<div class="saved-carts-grid" id="saved-carts-list">
+                    <div class="saved-carts-grid" id="saved-carts-list">
 	                </div>
             </div>
         </section>
@@ -539,7 +560,6 @@
         </section>
     </div>
 
-	    <script src="script.js"></script>
 		    
 		    <!-- Modal de Pagamento (Novo) -->
 		    <div id="payment-modal" class="modal-overlay" style="display:none;">
@@ -617,7 +637,10 @@
             </button>
         </div>
     </div>
-</div>
 
+    
+    
+</div>
+<script type="module" src="script.js"></script>
 </body>
 </html>

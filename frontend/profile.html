@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Perfil - StockBrasil</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="shortcut icon" href="./images/StockBrasilPRO-removebg-preview.png">
+    <style>
+        /* REUTILIZANDO O ESTILO DA TELA DE LOGIN PARA SIMPLICIDADE */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--color-bg-primary);
+            background-image: radial-gradient(circle at center, rgba(42, 48, 56, 0.5) 1px, transparent 1px);
+            background-size: 40px 40px;
+            padding: 20px;
+        }
+
+        .profile-container {
+            background-color: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            padding: 40px;
+            width: 100%;
+            max-width: 500px; /* Um pouco mais largo que o login */
+            text-align: center;
+            position: relative;
+            animation: fadeInScale 0.6s forwards;
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Avatar */
+        .profile-avatar-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+        }
+
+        .profile-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 3px solid var(--color-bg-tertiary);
+            object-fit: cover;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .profile-title {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: var(--color-text-primary);
+        }
+
+        .profile-email {
+            color: var(--color-text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        /* Inputs estilizados (Igual Login) */
+        .input-group {
+            margin-bottom: 15px;
+            text-align: left;
+            position: relative;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 5px;
+            display: block;
+            margin-left: 2px;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-sm);
+            background-color: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        .auth-input:focus {
+            outline: none;
+            border-color: var(--color-accent-blue);
+        }
+
+        .input-icon {
+            position: absolute;
+            top: 40px; /* Ajuste por causa do label */
+            left: 15px;
+            color: var(--color-text-tertiary);
+        }
+        
+        .divider {
+            height: 1px;
+            background-color: var(--color-border);
+            margin: 25px 0;
+            position: relative;
+        }
+        
+        .divider span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--color-bg-secondary);
+            padding: 0 10px;
+            color: var(--color-text-tertiary);
+            font-size: 0.8rem;
+        }
+
+        /* Botão Voltar */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .back-btn:hover { color: var(--color-accent-blue); }
+
+        /* Botão Salvar */
+        .save-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--color-accent-blue);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        .save-btn:hover { background-color: #0066CC; }
+
+        /* Botão Sair */
+        .logout-link {
+            display: block;
+            margin-top: 20px;
+            color: var(--color-accent-red);
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .logout-link:hover { text-decoration: underline; }
+
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i> Voltar</a>
+
+    <div class="profile-container">
+        
+        <div class="profile-avatar-wrapper">
+            <img src="images/default-avatar.png" class="profile-avatar" alt="Avatar">
+        </div>
+
+        <h2 class="profile-title" id="display-name-header">Carregando...</h2>
+        <p class="profile-email" id="display-email-header">...</p>
+
+        <form id="profile-form" onsubmit="handleProfileUpdate(event)">
+            
+            <div class="input-group">
+                <label>Nome do Negócio</label>
+                <input type="text" id="edit-business-name" class="auth-input" required>
+                <i class="fas fa-store input-icon"></i>
+            </div>
+
+            <div class="divider"><span>Segurança</span></div>
+
+            <div class="input-group">
+                <label>Nova Senha (Opcional)</label>
+                <input type="password" id="new-password" class="auth-input" placeholder="Deixe em branco para manter">
+                <i class="fas fa-lock input-icon"></i>
+            </div>
+
+            <button type="submit" class="save-btn">Salvar Alterações</button>
+        </form>
+
+        <a onclick="logout()" class="logout-link"><i class="fas fa-sign-out-alt"></i> Sair da Conta</a>
+    </div>
+
+    <script type="module" src="script.js"></script>
+    
+    <script type="module">
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        
+        // REINICIA FIREBASE PARA ESTA PÁGINA (Configuração deve ser igual ao script.js)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        
+        // --- SUAS CREDENCIAIS AQUI (As mesmas do script.js) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYHAyzwUgvRJ_AP9ZV9MMrtpPb3s3ENIc",
+            authDomain: "stockbrasil-e06ff.firebaseapp.com",
+            projectId: "stockbrasil-e06ff",
+            storageBucket: "stockbrasil-e06ff.firebasestorage.app",
+            messagingSenderId: "796401246692",
+            appId: "1:796401246692:web:1570c40124165fcef227f1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Preenche email
+                document.getElementById('display-email-header').textContent = user.email;
+                
+                // Busca nome no banco
+                const docRef = doc(db, "users", user.uid);
+                const docSnap = await getDoc(docRef);
+                
+                let businessName = "Usuário";
+                if (docSnap.exists()) {
+                    businessName = docSnap.data().businessName || user.email.split('@')[0];
+                }
+
+                document.getElementById('display-name-header').textContent = businessName;
+                document.getElementById('edit-business-name').value = businessName;
+            } else {
+                // Se não estiver logado, manda pro login
+                window.location.href = 'auth.html';
+            }
+        });
+    </script>
+</body>
+</html>

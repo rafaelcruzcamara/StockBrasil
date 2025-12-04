@@ -1,31 +1,92 @@
-//os erros no consele sumiram, mas ao reniciar a page os produtos ainda somem
 
 // =================================================================
-// NOVO: ENDEREÇO BASE DA API
+// 1. CONFIGURAÇÃO E CONEXÃO COM FIREBASE
 // =================================================================
-const API_BASE_URL = "http://localhost:3000/api";
-// A porta 3000 deve ser a mesma que o seu Backend está rodando
+// Importa as funções do Google (Versão Web)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+    getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// Sua configuração (Copiada do seu projeto)
+const firebaseConfig = {
+  apiKey: "AIzaSyBYHAyzwUgvRJ_AP9ZV9MMrtpPb3s3ENIc",
+  authDomain: "stockbrasil-e06ff.firebaseapp.com",
+  projectId: "stockbrasil-e06ff",
+  storageBucket: "stockbrasil-e06ff.firebasestorage.app",
+  messagingSenderId: "796401246692",
+  appId: "1:796401246692:web:1570c40124165fcef227f1"
+};
+
+// Inicia o Banco de Dados
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // =================================================================
-// 1. DADOS E INICIALIZAÇÃO
+// MONITORAMENTO DE USUÁRIO (CORREÇÃO DO "CARREGANDO...")
 // =================================================================
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
+const auth = getAuth(app);
 
-// Variáveis Globais (Garanta que elas existam no topo do seu arquivo)
-let produtos = [];
-let vendas = [];
-let clientes = [];
+onAuthStateChanged(auth, async (user) => {
+    const nomeEl = document.getElementById("sidebar-user-name");
+    
+    if (user) {
+        console.log("Usuário conectado:", user.email);
+        
+        // 1. Define um nome provisório (Email) caso a busca falhe
+        let nomeFinal = user.email.split('@')[0];
 
+        // 2. Busca o nome real no Banco de Dados (Firestore)
+        try {
+            // Busca o documento do usuário pelo ID (uid)
+            const docRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(docRef);
 
+            if (docSnap.exists()) {
+                const dados = docSnap.data();
+                // Tenta pegar 'businessName' (usado no registro) ou 'nome'
+                if (dados.businessName) {
+                    nomeFinal = dados.businessName;
+                } else if (dados.nome) {
+                    nomeFinal = dados.nome;
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao buscar nome do usuário:", error);
+        }
+        
+        // 3. Atualiza a tela com o nome correto
+        if(nomeEl) {
+            nomeEl.textContent = nomeFinal;
+            nomeEl.style.color = "var(--color-text-primary)";
+            // Remove o efeito de piscar/carregando
+            nomeEl.style.opacity = "1";
+        }
+        
+        // Carrega os dados do sistema
+        loadAllData();
 
+    } else {
+        // Usuário Deslogado
+        console.log("Nenhum usuário logado.");
+        if(nomeEl) nomeEl.textContent = "Visitante";
+        
+        // Se quiser forçar login:
+        // window.location.href = "auth.html";
+    }
+});
 
-
+// Variáveis Globais (Mantivemos para o resto do site funcionar)
 let products = [];
-
 let cart = [];
 let salesHistory = [];
 let savedCarts = [];
 let logHistory = [];
+let produtos = [];
+let vendas = [];
+let clientes = [];
 
 let config = {
   categories: ["Vestuário", "Eletrônicos", "Brindes", "Serviços", "Outros"],
@@ -73,61 +134,50 @@ function persistData() {
     }
 }
 
+
+
+// =================================================================
+// CARREGAR DADOS DA NUVEM (FIREBASE)
+// =================================================================
+
 async function loadAllData() {
     try {
-        console.log("📂 Carregando dados do LocalStorage...");
+        console.log("☁️ Buscando dados no Firebase e LocalStorage...");
 
-        // 1. Carrega Produtos
-        const storedProducts = localStorage.getItem("products"); // Usa a chave correta
-        if (storedProducts) {
-            products = JSON.parse(storedProducts).map(p => ({
-                ...p,
-                id: p.id || p._id || Date.now(), // Garante que SEMPRE tem ID
-                preco: parseFloat(p.preco) || 0,
-                quantidade: parseInt(p.quantidade) || 0
-            }));
-        } else {
-            products = [];
-        }
+        // 1. Busca Produtos e Vendas (FIREBASE)
+        const queryProdutos = await getDocs(collection(db, "products"));
+        products = []; 
+        queryProdutos.forEach((doc) => {
+            products.push({ id: doc.id, ...doc.data() });
+        });
 
-        // 2. Carrega Configurações
-        const savedConfig = localStorage.getItem("config");
-        if (savedConfig) config = JSON.parse(savedConfig);
-        
-        const savedSystemConfig = localStorage.getItem("systemConfig");
-        if (savedSystemConfig) systemConfig = JSON.parse(savedSystemConfig);
+        const queryVendas = await getDocs(collection(db, "sales"));
+        salesHistory = [];
+        queryVendas.forEach((doc) => {
+            salesHistory.push({ id: doc.id, ...doc.data() });
+        });
+        salesHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        // 3. Carrega Histórico e Vendas (Unificando variáveis)
-        const savedSales = localStorage.getItem("salesHistory");
-        if (savedSales) {
-            salesHistory = JSON.parse(savedSales).map(s => ({
-                ...s,
-                // Corrige datas antigas para objetos Date reais
-                timestamp: s.timestamp || s.date,
-                // Garante que o total é número
-                total: parseFloat(s.total) || 0
-            }));
-        } else {
-            salesHistory = [];
-        }
 
-        // 4. Carrega Clientes e Carrinhos
-        savedCarts = JSON.parse(localStorage.getItem("savedCarts")) || [];
-        logHistory = JSON.parse(localStorage.getItem("logHistory")) || [];
-        clients = JSON.parse(localStorage.getItem("clients")) || [];
-        
-        console.log(`✅ Dados carregados: ${products.length} produtos, ${salesHistory.length} vendas.`);
+        // 2. CARREGA DADOS LOCAIS (HISTÓRICO E CONFIGS)
+        logHistory = safeLocalStorageParse("logHistory", []); // <-- CORREÇÃO CRÍTICA AQUI!
+        savedCarts = safeLocalStorageParse("savedCarts", []);
+        clients = safeLocalStorageParse("clients", []);
+        config = safeLocalStorageParse("config", config);
+        systemConfig = safeLocalStorageParse("systemConfig", systemConfig);
 
-        // 5. Renderiza tudo
-        renderProductTable();
-        updateDashboardMetrics();
-        renderPdvProducts();
-        updateCategorySelect();
-        renderCategoriesManager();
-        renderPaymentsManager();
-        
+        console.log(`✅ Carregado: ${products.length} produtos, ${salesHistory.length} vendas, ${logHistory.length} logs.`);
+
+        // 3. Atualiza a tela (Mantém suas funções de renderização)
+        if(typeof renderProductTable === 'function') renderProductTable();
+        if(typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+        if(typeof renderPdvProducts === 'function') renderPdvProducts();
+        if(typeof updateCategorySelect === 'function') updateCategorySelect();
+        if(typeof renderHistoryLog === 'function') renderHistoryLog(); // Garante que a renderização seja chamada aqui
+
     } catch (error) {
-        console.error("❌ Erro fatal ao carregar dados:", error);
+        console.error("❌ Erro ao carregar do Firebase:", error);
+        alert("Erro de conexão com o banco de dados! Verifique o console.");
     }
 }
 
@@ -140,8 +190,14 @@ function logAction(type, detail) {
   };
   logHistory.unshift(action);
   if (logHistory.length > 50) logHistory.pop();
-  renderHistoryLog();
-  persistData();
+  
+  persistData(); // Primeiro salva
+  
+  if (typeof renderHistoryLog === 'function') {
+      renderHistoryLog(); // Depois renderiza
+  } else {
+      console.warn("renderHistoryLog não está acessível.");
+  }
 }
 
 // -------------------------------------------------------------
@@ -342,58 +398,7 @@ function updateDashboardMetrics() {
 }
 
 // CORREÇÃO: Alertas do Dashboard
-function updateAlerts() {
-  try {
-    const lowStockProducts = products.filter(
-      (p) => (parseInt(p.quantidade) || 0) <= (parseInt(p.minimo) || 0)
-    );
 
-    const dashboardAlertList = document.getElementById("dashboard-alert-list");
-    const bellIcon = document.getElementById("bell-icon");
-
-    // CORREÇÃO: Alertas no dashboard
-    if (dashboardAlertList) {
-      dashboardAlertList.innerHTML = "";
-
-      if (lowStockProducts.length === 0) {
-        dashboardAlertList.innerHTML = `
-                    <li>
-                        <i class="fas fa-check-circle" style="color: var(--color-accent-green); margin-right: 5px;"></i> 
-                        Estoque saudável.
-                    </li>
-                `;
-      } else {
-        lowStockProducts.slice(0, 5).forEach((p) => {
-          const li = document.createElement("li");
-          li.innerHTML = `
-                        <i class="fas fa-exclamation-triangle" style="color: var(--color-accent-red); margin-right: 5px;"></i> 
-                        ${sanitizeHTML(p.nome)} (${p.quantidade} und.)
-                    `;
-          dashboardAlertList.appendChild(li);
-        });
-
-        if (lowStockProducts.length > 5) {
-          const li = document.createElement("li");
-          li.innerHTML = `<small>... e mais ${
-            lowStockProducts.length - 5
-          } produtos</small>`;
-          dashboardAlertList.appendChild(li);
-        }
-      }
-    }
-
-    // CORREÇÃO: Sino de alertas
-    if (bellIcon) {
-      if (lowStockProducts.length > 0) {
-        bellIcon.classList.add("has-alerts");
-      } else {
-        bellIcon.classList.remove("has-alerts");
-      }
-    }
-  } catch (error) {
-    console.error("Erro ao atualizar alertas:", error);
-  }
-}
 function updateAlerts() {
   try {
     const lowStockProducts = products.filter((p) => p.quantidade <= p.minimo);
@@ -508,59 +513,50 @@ function validateProductForm(data) {
   return errors;
 }
 
+// =================================================================
+// SALVAR / EDITAR PRODUTO (FIREBASE)
+// =================================================================
 async function handleProductForm(event) {
-    event.preventDefault(); 
+    event.preventDefault();
 
     const idInput = document.getElementById('product-id').value;
     const isEditing = idInput && idInput !== '';
 
+    // Mapeamento dos dados do formulário
     const productData = {
-        id: isEditing ? idInput : Date.now().toString(), // Gera ID se for novo
-        nome: document.getElementById('nome').value, 
+        nome: document.getElementById('nome').value,
         categoria: document.getElementById('categoria').value,
-        preco: parseFloat(document.getElementById('preco').value || 0), 
+        preco: parseFloat(document.getElementById('preco').value || 0),
         custo: parseFloat(document.getElementById('custo').value || 0),
         quantidade: parseInt(document.getElementById('quantidade').value || 0),
         minimo: parseInt(document.getElementById('minimo').value || 0)
     };
-
-    if (!productData.nome || isNaN(productData.preco)) {
+    
+    // ATENÇÃO: Se o Back-end retornar um erro 400, é por aqui.
+    if (!productData.nome || isNaN(productData.preco) || productData.preco <= 0) {
         alert("Preencha o nome e o preço corretamente.");
         return;
     }
 
     try {
         if (isEditing) {
-            // EDITA NA LISTA LOCAL
-            const index = products.findIndex(p => (p.id == idInput) || (p._id == idInput));
-            if (index !== -1) {
-                products[index] = { ...products[index], ...productData };
-                alert("✅ Produto atualizado com sucesso!");
-            } else {
-                alert("❌ Erro: Produto original não encontrado.");
-                return;
-            }
+            // EDITAR: Atualiza o documento existente no Firebase
+            await updateDoc(doc(db, "products", idInput), productData);
+            alert("✅ Produto atualizado na nuvem!");
         } else {
-            // CRIA NOVO NA LISTA LOCAL
-            products.push(productData);
-            alert("✅ Produto cadastrado com sucesso!");
+            // NOVO: Cria um novo documento no Firebase
+            await addDoc(collection(db, "products"), productData);
+            alert("✅ Produto cadastrado na nuvem!");
         }
 
-        // SALVA TUDO NO LOCALSTORAGE
-        localStorage.setItem("products", JSON.stringify(products));
-
-        logAction(isEditing ? "Produto Editado" : "Produto Criado", productData.nome);
+        // Recarrega os dados para atualizar a tela
         resetProductForm();
-        
-        // Atualiza as telas
-        renderProductTable();
-        renderPdvProducts();
-        updateDashboardMetrics();
+        await loadAllData(); 
         showTab('product-list-tab');
 
     } catch (error) {
-        console.error("Erro ao salvar:", error);
-        alert("Erro ao salvar produto.");
+        console.error("❌ Erro ao salvar no Firebase:", error);
+        alert("Erro ao salvar no banco de dados.");
     }
 }
 
@@ -577,6 +573,7 @@ function editProduct(id) {
     // Preenche o campo oculto com o ID REAL (_id)
     document.getElementById('product-id').value = product._id || product.id;
     
+    // ATENÇÃO: Usando os IDs exatos do HTML (nome, categoria, etc.)
     document.getElementById('nome').value = product.nome; 
     document.getElementById('categoria').value = product.categoria;
     document.getElementById('preco').value = product.preco;
@@ -592,34 +589,23 @@ function editProduct(id) {
     showTab('product-form-tab');
 }
 
-// CRUD DE PRODUTOS (DELETAR) - AGORA ASSÍNCRONA VIA API!
+// função deleteProduct inteira 
 async function deleteProduct(id) {
-    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+    if (!confirm("Tem certeza que deseja excluir este produto da nuvem?")) return;
 
     try {
-        // Filtra removendo o produto com esse ID (aceita string ou numero)
-        const initialLength = products.length;
-        products = products.filter(p => (p.id != id) && (p._id != id));
-
-        if (products.length === initialLength) {
-            alert("Erro: Produto não encontrado para exclusão.");
-            return;
-        }
-
-        // Salva a nova lista
-        localStorage.setItem("products", JSON.stringify(products));
+        // DELETAR: Remove o documento pelo ID do Firebase
+        await deleteDoc(doc(db, "products", id));
         
-        alert("Produto excluído!");
-        logAction("Produto Excluído", `ID: ${id}`);
-        
-        renderProductTable();
-        renderPdvProducts();
-        updateDashboardMetrics();
+        alert("🗑️ Produto excluído!");
+        await loadAllData(); // Atualiza a tela
 
     } catch (error) {
-        console.error("Erro ao deletar:", error);
+        console.error("❌ Erro ao deletar:", error);
+        alert("Erro ao excluir produto.");
     }
 }
+
 function resetProductForm() {
   const form = document.querySelector(".product-form");
   if (form) {
@@ -714,33 +700,6 @@ function renderHistoryLog() {
     console.error("Erro ao renderizar histórico:", error);
   }
 }
-function renderHistoryLog() {
-  try {
-    const tbody = document.getElementById("history-log-tbody");
-    if (!tbody) return;
-
-    tbody.innerHTML = "";
-
-    if (logHistory.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhuma ação registrada</td></tr>';
-      return;
-    }
-
-    logHistory.forEach((log) => {
-      const row = tbody.insertRow();
-      row.innerHTML = `
-                <td>#${log.id}</td>
-                <td>${sanitizeHTML(log.timestamp)}</td>
-                <td>${sanitizeHTML(log.type)}</td>
-                <td>${sanitizeHTML(log.detail)}</td>
-                <!-- BOTÃO REMOVIDO -->
-            `;
-    });
-  } catch (error) {
-    console.error("Erro ao renderizar histórico:", error);
-  }
-}
 
 function showUndoModal(type, detail, logId) {
   document.getElementById("undo-action-type").textContent = type;
@@ -759,36 +718,6 @@ function simulateUndoConfirmation() {
 // 6. INICIALIZAÇÃO PRINCIPAL
 // =================================================================
 
-function loadInitialData() {
-  try {
-    products = safeLocalStorageParse("products", products);
-    salesHistory = safeLocalStorageParse("salesHistory", salesHistory);
-    savedCarts = safeLocalStorageParse("savedCarts", savedCarts);
-    logHistory = safeLocalStorageParse("logHistory", logHistory);
-    config = safeLocalStorageParse("config", config);
-
-    // Renderizações iniciais
-    renderProductTable();
-    updateDashboardMetrics();
-    updateReportMetrics(); // ✅ NOVA LINHA ADICIONADA
-    renderHistoryLog();
-    updateAlerts();
-    renderPdvProducts();
-    updateCategorySelect();
-    renderConfigFields();
-    initializeDashboardCharts();
-    renderSavedCarts();
-    renderCart();
-
-    console.log("Dados carregados com sucesso");
-  } catch (error) {
-    console.error("Erro ao carregar dados iniciais:", error);
-    alert(
-      "Erro ao carregar dados. Algumas funcionalidades podem não estar disponíveis."
-    );
-  }
-}
-
 function initializeErrorHandling() {
   window.addEventListener("error", (e) => {
     console.error("Erro global:", e.error);
@@ -801,26 +730,46 @@ function initializeErrorHandling() {
 }
 
 // Inicialização quando o DOM estiver pronto
+// Substitua o bloco document.addEventListener("DOMContentLoaded", async () => { ... }) inteiro
+
 document.addEventListener("DOMContentLoaded", async () => {
-  // ⚠️ AGORA É ASYNC/AWAIT PARA ESPERAR O BANCO DE DADOS
-  await loadAllData();
+    // 1. CHAMA O CARREGAMENTO PRINCIPAL E ESPERA O FIREBASE
+    await loadAllData(); 
 
-  initializeErrorHandling();
-  loadInitialData();
-  setupNavigation();
+    // 2. INICIALIZAÇÃO DE UI E UTILIDADES (O que não depende de dados)
+    
+    initializeErrorHandling();
+    setupNavigation();
+    
+    // Configurações de campo
+    if(typeof initSystemConfig === 'function') initSystemConfig();
+    if(typeof applySystemConfig === 'function') applySystemConfig();
+    if(typeof setupCartClientAutocomplete === 'function') setupCartClientAutocomplete();
+    if(typeof setupSaleDetailsStyles === 'function') setupSaleDetailsStyles();
+    
+    // Inicia os gráficos
+    if(typeof initializeDashboardCharts === 'function') initializeDashboardCharts();
+    if(typeof inicializarGraficoCategoria === 'function') inicializarGraficoCategoria();
+    
+    // 3. FECHA MODAIS (Comportamento UI)
+    document.addEventListener("click", (e) => {
+        if (e.target.classList.contains("modal-overlay")) {
+            e.target.style.display = "none";
+        }
+    });
 
-  // Fecha modais ao clicar fora
-  document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("modal-overlay")) {
-      e.target.style.display = "none";
+    const elemento = document.getElementById("algum-id");
+    if (elemento) {
+        elemento.style.display = "none";
     }
-  });
-
-  const elemento = document.getElementById("algum-id");
-  if (elemento) {
-    elemento.style.display = "none"; // SÓ EXECUTA SE O ELEMENTO EXISTIR
-  }
+    
+    console.log("✅ Inicialização do DOM concluída e funções de renderização chamadas!");
 });
+
+
+// ⚠️ IMPORTANTE: Você deve remover a função loadInitialData() inteira
+// Procure e exclua a função loadInitialData() completa do seu script.js.
+// O novo loadAllData já assume todas as responsabilidades.
 
 // =================================================================
 // 7. PONTO DE VENDA (PDV) - CORRIGIDO
@@ -1370,78 +1319,96 @@ function renderPaymentOptions() {
     container.appendChild(row);
 }
 
+
+
 async function processSale(paymentType) {
+    // Busca o botão de confirmação para travar/destravar
+    const btnConfirm = document.getElementById("btn-finalizar-venda");
+    
+    // A função try/finally garante que o botão seja destravado em caso de erro
     try {
-        // Pega o nome digitado na janela nova
+        // Pega o nome do cliente do modal
         const inputNome = document.getElementById("modal-client-name");
         const clientName = inputNome ? inputNome.value.trim() : "";
 
-        // Trava botão para não clicar 2 vezes
-        const btnConfirm = document.getElementById("btn-finalizar-venda");
+        // 1. TRAVA E CONFIGURAÇÃO
         if(btnConfirm) {
             btnConfirm.disabled = true;
             btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
         }
 
         const { total } = calculateTotals();
-        const itemsToUpdate = [];
-
-        // 1. Verifica Estoque
+        
+        // 2. VERIFICA ESTOQUE E PREPARA ATUALIZAÇÕES
+        const updates = [];
         for (const cartItem of cart) {
-            const product = products.find((p) => (p._id || p.id) == cartItem.id);
-            if (product && product.categoria !== "Serviços") {
-                const novaQuantidade = product.quantidade - cartItem.quantity;
+            // CRÍTICO: Buscar o produto original na lista de produtos carregada
+            const product = products.find((p) => p.id === cartItem.id); 
+            
+            if (!product) {
+                console.error(`Produto ID ${cartItem.id} não encontrado na lista atual.`);
+                throw new Error("Produto não encontrado no estoque atual. Recarregue.");
+            }
+            
+            // Só checa estoque se não for 'Serviços'
+            if (product.categoria !== "Serviços") {
+                const novaQuantidade = (product.quantidade || 0) - cartItem.quantity;
+                
                 if (novaQuantidade < 0) {
                     alert(`Estoque insuficiente para: ${product.nome}`);
-                    // Destrava botão se der erro
-                    if(btnConfirm) {
-                        btnConfirm.disabled = false;
-                        btnConfirm.innerHTML = '<i class="fas fa-check"></i> CONFIRMAR VENDA';
-                    }
-                    return;
+                    throw new Error("Estoque insuficiente.");
                 }
-                itemsToUpdate.push({ id: product._id || product.id, novaQtd: novaQuantidade });
+                
+                // Prepara o objeto para atualização do Firebase
+                updates.push({ id: product.id, novaQtd: novaQuantidade });
             }
         }
 
-        // 2. Atualiza Banco de Dados
-        for (const item of itemsToUpdate) {
-            await fetch(`${API_BASE_URL}/products/${item.id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ quantidade: item.novaQtd })
+        // 3. ATUALIZA ESTOQUE NO FIREBASE (Bulk Update)
+        for (const item of updates) {
+            // O ERRO OCORRIA AQUI. Agora, garantimos que item.id é o ID do documento.
+            await updateDoc(doc(db, "products", item.id), { 
+                quantidade: item.novaQtd 
             });
         }
 
-        // 3. Salva a Venda
+        // 4. SALVA A VENDA NO FIREBASE
         const newSale = {
-            id: Date.now(),
             timestamp: new Date().toISOString(),
             items: JSON.parse(JSON.stringify(cart)),
             total: total,
             payment: paymentType,
-            client: clientName, // Salva o nome
+            client: clientName,
         };
-        salesHistory.unshift(newSale);
-        if (salesHistory.length > 1000) salesHistory.pop();
-        persistData();
-
-        // 4. Limpa tudo e Fecha
+        
+        // Adiciona um novo documento na coleção "sales"
+        await addDoc(collection(db, "sales"), newSale);
+        
+        // 5. LIMPEZA E FINALIZAÇÃO
+        salesHistory.unshift({ id: Date.now(), ...newSale }); 
+        persistData(); // Salva histórico local e configs
+        
         cart = [];
         renderCart();
         document.getElementById("payment-modal").style.display = "none";
         
         alert(`✅ Venda Finalizada!\nCliente: ${clientName || "Não informado"}\nValor: R$ ${total.toFixed(2)}`);
         
-        await loadAllData();
+        // Recarrega os dados do Firebase para atualizar a tela e o dashboard
+        await loadAllData(); 
 
     } catch (error) {
-        console.error(error);
-        alert("Erro ao processar venda.");
-        location.reload();
+        console.error("❌ ERRO FATAL NO PROCESSO DE VENDA:", error);
+        alert(`Erro crítico ao processar venda: ${error.message || "Verifique o console."}`);
+        
+    } finally {
+        // GARANTE QUE O BOTÃO VOLTE AO NORMAL
+        if(btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.innerHTML = 'Finalizar';
+        }
     }
 }
-
 // =================================================================
 // 11. CONFIGURAÇÕES - CORRIGIDO
 // =================================================================
@@ -1888,26 +1855,29 @@ function renderSalesDetailsTable(sales) {
       const itemsCount = sale.items ? sale.items.length : 0;
       const client = sale.client || "";
 
-      row.innerHTML = `
-                <td>#${saleId}</td>
-                <td>${sanitizeHTML(timestamp)}</td>
-                <td>${total.toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                })}</td>
-                <td>${sanitizeHTML(payment)}</td>
-                <td>${itemsCount} item(s)</td>
-                <td>${
-                  client
-                    ? sanitizeHTML(client)
-                    : '<em style="color: var(--color-text-tertiary);">Não informado</em>'
-                }</td>
-                <td>
-                    <button class="action-btn view-btn" onclick="viewSaleDetails(${saleId})" title="Ver detalhes da venda">
-                        <i class="fas fa-eye"></i> Detalhes
-                    </button>
-                </td>
-            `;
+      // --- TRECHO CORRIGIDO ---
+
+row.innerHTML = `
+    <td>#${saleId}</td>
+    <td>${sanitizeHTML(timestamp)}</td>
+    <td>${total.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    })}</td>
+    <td>${sanitizeHTML(payment)}</td>
+    <td>${itemsCount} item(s)</td>
+    <td>${
+      client
+        ? sanitizeHTML(client)
+        : '<em style="color: var(--color-text-tertiary);">Não informado</em>'
+    }</td>
+    <td>
+        <button class="action-btn view-btn" onclick="viewSaleDetails('${saleId}')" title="Ver detalhes da venda">
+            <i class="fas fa-eye"></i> Detalhes
+        </button>
+    </td>
+`;
+
     });
 
     console.log(
@@ -1975,15 +1945,6 @@ function initializeDashboardCharts() {
     } catch (e) { console.error("Erro Gráfico:", e); }
 }
 
-// CORREÇÃO: Função para forçar recriação do gráfico (útil para debug)
-function recriarGraficoVendas() {
-  if (window.dailySalesChart) {
-    window.dailySalesChart.destroy();
-    window.dailySalesChart = null;
-  }
-  initializeDashboardCharts();
-}
-
 // CORREÇÃO: Verificar se o canvas existe no DOM
 function verificarElementosDashboard() {
   const canvas = document.getElementById("daily-sales-chart");
@@ -2046,9 +2007,9 @@ document.head.appendChild(style);
 
 // Função para recriar o gráfico (use no console se necessário)
 function recriarGraficoVendas() {
-  if (dailySalesChart) {
-    dailySalesChart.destroy();
-    dailySalesChart = null;
+  if (window.dailySalesChart) {
+    window.dailySalesChart.destroy();
+    window.dailySalesChart = null;
   }
   initializeDashboardCharts();
 }
@@ -2058,82 +2019,6 @@ function recriarGraficoVendas() {
 // Variável para controlar alertas ocultos
 let hiddenAlerts = JSON.parse(localStorage.getItem("hiddenAlerts")) || [];
 
-function updateAlerts() {
-  try {
-    // Filtra produtos com estoque baixo, exceto os ocultos
-    const lowStockProducts = products.filter(
-      (p) => p.quantidade <= p.minimo && !hiddenAlerts.includes(p.id)
-    );
-
-    const alertListDropdown = document.getElementById("alerts-dropdown-list");
-    const dashboardAlertList = document.getElementById("dashboard-alert-list");
-    const bellIcon = document.getElementById("bell-icon");
-
-    // Renderiza dropdown do sino
-    if (alertListDropdown) {
-      alertListDropdown.innerHTML = "";
-
-      if (lowStockProducts.length === 0) {
-        alertListDropdown.innerHTML = `
-                    <div class="no-alerts">
-                        <i class="fas fa-check-circle"></i>
-                        <p>Estoque saudável</p>
-                        <small>Nenhum alerta</small>
-                    </div>
-                `;
-      } else {
-        lowStockProducts.forEach((p) => {
-          const li = document.createElement("li");
-          li.innerHTML = `
-                        <div class="alert-content">
-                            <i class="fas fa-exclamation-triangle alert-icon"></i>
-                            <span class="alert-text">
-                                <strong>${sanitizeHTML(p.nome)}</strong><br>
-                                <small>Estoque: ${p.quantidade} (mín: ${
-            p.minimo
-          })</small>
-                            </span>
-                        </div>
-                        <button class="remove-alert-btn" onclick="hideAlert(${
-                          p.id
-                        })" title="Ocultar alerta">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    `;
-          alertListDropdown.appendChild(li);
-        });
-      }
-    }
-
-    // Renderiza lista do dashboard (sem botões de remover)
-    if (dashboardAlertList) {
-      dashboardAlertList.innerHTML = "";
-
-      if (lowStockProducts.length === 0) {
-        dashboardAlertList.innerHTML = `<li><i class="fas fa-check-circle" style="color: var(--color-accent-green); margin-right: 5px;"></i> Estoque saudável.</li>`;
-      } else {
-        lowStockProducts.forEach((p) => {
-          const li = document.createElement("li");
-          li.innerHTML = `<i class="fas fa-exclamation-triangle" style="color: var(--color-accent-red); margin-right: 5px;"></i> ${sanitizeHTML(
-            p.nome
-          )} (${p.quantidade} und.)`;
-          dashboardAlertList.appendChild(li);
-        });
-      }
-    }
-
-    // Atualiza estado do sino
-    if (bellIcon) {
-      if (lowStockProducts.length > 0) {
-        bellIcon.classList.add("has-alerts");
-      } else {
-        bellIcon.classList.remove("has-alerts");
-      }
-    }
-  } catch (error) {
-    console.error("Erro ao atualizar alertas:", error);
-  }
-}
 
 // Função para ocultar alerta individual
 function hideAlert(productId) {
@@ -2718,7 +2603,7 @@ async function clearAllData() {
     const senha = prompt("Digite '192837' para confirmar:");
     if (senha !== "192837") return;
 
-    // CSS Flexbox para centralizar tudo
+    // Mensagem de loading
     document.body.innerHTML = `
         <div style="
             display: flex; 
@@ -2739,23 +2624,38 @@ async function clearAllData() {
     `;
 
     try {
+        // 1. Limpa LocalStorage (Configurações e Histórico Local)
         localStorage.clear();
-        const response = await fetch(`${API_BASE_URL}/products`);
-        const lista = await response.json();
 
-        for (const p of lista) {
-            const id = p._id || p.id;
-            if (id) await fetch(`${API_BASE_URL}/products/${id}`, { method: 'DELETE' });
+        // 2. Limpa Produtos no Firebase
+        const productsQuery = await getDocs(collection(db, "products"));
+        for (const docSnapshot of productsQuery.docs) {
+            await deleteDoc(doc(db, "products", docSnapshot.id));
         }
 
+        // 3. Limpa Vendas no Firebase
+        const salesQuery = await getDocs(collection(db, "sales"));
+        for (const docSnapshot of salesQuery.docs) {
+            await deleteDoc(doc(db, "sales", docSnapshot.id));
+        }
+        
+        // 4. Limpa Histórico de Logs (Se for uma coleção separada)
+        // Se você tiver uma coleção chamada 'logHistory', adicione a limpeza aqui:
+        // const logsQuery = await getDocs(collection(db, "logHistory"));
+        // for (const docSnapshot of logsQuery.docs) {
+        //     await deleteDoc(doc(db, "logHistory", docSnapshot.id));
+        // }
+
+
         setTimeout(() => {
-            alert("Sistema zerado!");
+            alert("✅ Sistema zerado! Reiniciando.");
             location.reload();
         }, 1000);
 
     } catch (error) {
-        alert("Erro ao limpar.");
-        location.reload();
+        console.error("❌ ERRO FATAL AO LIMPAR DADOS:", error);
+        alert("Erro crítico ao limpar dados. Verifique suas regras de segurança do Firebase.");
+        location.reload(); // Tenta recarregar mesmo com erro
     }
 }
 
@@ -3173,66 +3073,7 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
 // ATUALIZAR FUNÇÃO generatePDF PARA USAR A VERSÃO CORRIGIDA
 // =================================================================
 
-function generatePDF(type) {
-  console.log(`📊 Gerando PDF: ${type}`);
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const period = document.getElementById("pdf-period").value;
-  let startDate, endDate;
-
-  // Define o período
-  if (period === "custom") {
-    const startInput = prompt("Data início (DD/MM/AAAA):");
-    const endInput = prompt("Data fim (DD/MM/AAAA):");
-
-    if (!startInput || !endInput) return;
-
-    // Converte DD/MM/AAAA para Date
-    const [dayStart, monthStart, yearStart] = startInput.split("/").map(Number);
-    const [dayEnd, monthEnd, yearEnd] = endInput.split("/").map(Number);
-
-    startDate = new Date(yearStart, monthStart - 1, dayStart);
-    endDate = new Date(yearEnd, monthEnd - 1, dayEnd);
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      alert("Datas inválidas! Use o formato DD/MM/AAAA.");
-      return;
-    }
-  } else {
-    const days = parseInt(period);
-    endDate = new Date();
-    startDate = new Date();
-    startDate.setDate(endDate.getDate() - days);
-  }
-
-  // Configurações do documento
-  doc.setFont("helvetica");
-
-  switch (type) {
-    case "sales-report":
-      generateSalesPDF(doc, startDate, endDate); // ✅ AGORA COM CLIENTE
-      break;
-    case "inventory-report":
-      generateInventoryPDF(doc, startDate, endDate);
-      break;
-    case "profit-report":
-      generateProfitPDF(doc, startDate, endDate);
-      break;
-    case "detailed-sales": // ✅ NOVA OPÇÃO DETALHADA
-      generateDetailedSalesPDF(doc, startDate, endDate);
-      break;
-  }
-
-  // Salva o PDF
-  const filename = `relatorio_${type}_${
-    new Date().toISOString().split("T")[0]
-  }.pdf`;
-  doc.save(filename);
-
-  alert(`📄 PDF gerado com sucesso: ${filename}`);
-}
 
 // =================================================================
 // ATUALIZAR OPÇÕES DE PDF NO HTML (OPCIONAL)
@@ -4080,68 +3921,6 @@ function resetReportMetrics() {
   });
 }
 
-// ==========================================
-// FUNÇÃO BLINDADA DE CORREÇÃO DE DATAS
-// ==========================================
-function parseDataSegura(input) {
-    if (!input) return null;
-
-    // 1. Se já for um objeto Date válido
-    if (input instanceof Date && !isNaN(input.getTime())) return input;
-
-    // 2. Se for String
-    if (typeof input === 'string') {
-        // CORREÇÃO DE FUSO: Se for data simples YYYY-MM-DD (comum em imports)
-        // Adicionamos "T12:00:00" para forçar o meio-dia e evitar que o fuso horário jogue para o dia anterior
-        if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
-            return new Date(input + "T12:00:00");
-        }
-
-        // Se for formato brasileiro DD/MM/AAAA
-        if (input.includes('/')) {
-            const partes = input.split(' ')[0].split('/');
-            if (partes.length === 3) {
-                // Cria a data usando o construtor local: ano, mes-1, dia
-                return new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
-            }
-        }
-        
-        // Tenta converter formato ISO completo
-        const d = new Date(input);
-        if (!isNaN(d.getTime())) return d;
-    }
-
-    return null;
-}
-
-// ==========================================
-// FUNÇÃO MÁGICA PARA CORRIGIR DATAS
-// ==========================================
-function parseDataSegura(input) {
-    if (!input) return null;
-    
-    // 1. Se já for data
-    if (input instanceof Date && !isNaN(input.getTime())) return input;
-
-    // 2. Tenta ler String
-    if (typeof input === 'string') {
-        // Se for data simples YYYY-MM-DD (comum em imports)
-        if (/^\d{4}-\d{2}-\d{2}$/.test(input)) return new Date(input + "T12:00:00");
-        
-        // Se for formato BR DD/MM/AAAA
-        if (input.includes('/')) {
-            const partes = input.split(' ')[0].split('/');
-            if (partes.length === 3) {
-                return new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
-            }
-        }
-
-        // Se for ISO do MongoDB (2023-12-03T15:30:00.000Z)
-        const d = new Date(input);
-        if (!isNaN(d.getTime())) return d;
-    }
-    return null;
-}
 
 // ==========================================
 // 1. FUNÇÃO SIMPLIFICADA DE DATAS
@@ -4240,55 +4019,6 @@ function normalizarData(input) {
     }
 
     return null;
-}
-
-// =================================================================
-// 1. IMPORTAÇÃO (CORRIGIDA PARA LER O INPUT CERTO)
-// =================================================================
-async function importData() {
-    // Busca o elemento pelo ID exato que colocamos no HTML
-    const input = document.getElementById('arquivo-backup-input');
-    
-    if (!input) {
-        alert("ERRO DE CÓDIGO: Não achei o input com id 'arquivo-backup-input'. Verifique o HTML.");
-        return;
-    }
-
-    if (!input.files || input.files.length === 0) {
-        alert("⚠️ Selecione o arquivo JSON no botão acima antes de clicar em Carregar.");
-        return;
-    }
-
-    const file = input.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(event) {
-        try {
-            const data = JSON.parse(event.target.result);
-
-            if (!confirm(`Arquivo lido! Contém ${Object.keys(data).length} tipos de dados.\n\nDeseja APAGAR tudo o que está na tela e substituir por este backup?`)) {
-                return;
-            }
-
-            // Limpa tudo para garantir
-            localStorage.clear();
-
-            // Salva tudo do backup
-            Object.keys(data).forEach(key => {
-                const valor = typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key];
-                localStorage.setItem(key, valor);
-            });
-
-            alert("✅ Backup restaurado! A página vai recarregar agora.");
-            window.location.reload();
-
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao ler o arquivo. Ele não é um JSON válido.");
-        }
-    };
-
-    reader.readAsText(file);
 }
 
 // =================================================================
@@ -4541,77 +4271,6 @@ function normalizarDataParaFiltro(input) {
     if (input instanceof Date && !isNaN(input)) return input;
     
     return null;
-}
-
-// 3. GERAÇÃO DE PDF (Com filtro corrigido)
-function generatePDF(type) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    // Pega o valor do select
-    const periodSelect = document.getElementById("pdf-period");
-    const periodValue = periodSelect ? periodSelect.value : "30";
-    
-    let startDate, endDate;
-    endDate = new Date(); // Hoje
-
-    // Lógica do filtro
-    if (periodValue === "custom") {
-        // Pergunta as datas se for personalizado
-        const startInput = prompt("Data INICIAL (DD/MM/AAAA):", "01/01/2023");
-        const endInput = prompt("Data FINAL (DD/MM/AAAA):", new Date().toLocaleDateString("pt-BR"));
-        
-        if (!startInput || !endInput) return;
-
-        startDate = normalizarDataParaFiltro(startInput);
-        endDate = normalizarDataParaFiltro(endInput);
-    } else {
-        // Dias fixos (7, 30, 90)
-        const days = parseInt(periodValue);
-        startDate = new Date();
-        startDate.setDate(endDate.getDate() - days);
-    }
-
-    if (!startDate || isNaN(startDate)) {
-        alert("Data inválida.");
-        return;
-    }
-
-    // Ajusta horas para pegar o dia todo
-    startDate.setHours(0,0,0,0);
-    endDate.setHours(23,59,59,999);
-
-    console.log(`Filtrando de ${startDate.toLocaleDateString()} até ${endDate.toLocaleDateString()}`);
-
-    if (type === 'sales-report' || type === 'detailed-sales') {
-        // Filtra as vendas
-        const vendasFiltradas = salesHistory.filter(v => {
-            const dataVenda = normalizarDataParaFiltro(v.timestamp || v.date);
-            return dataVenda && dataVenda >= startDate && dataVenda <= endDate;
-        });
-
-        if (vendasFiltradas.length === 0) {
-            alert(`Nenhuma venda encontrada entre ${startDate.toLocaleDateString()} e ${endDate.toLocaleDateString()}.`);
-            return;
-        }
-
-        // Gera o PDF (Reaproveitando sua lógica visual)
-        if (typeof generateSalesPDF === 'function') {
-            generateSalesPDF(doc, startDate, endDate); 
-        } else {
-            // Fallback simples se sua função estiver quebrada
-            doc.text(`Relatório de Vendas (${vendasFiltradas.length} registros)`, 10, 10);
-            let y = 20;
-            vendasFiltradas.forEach(v => {
-                doc.text(`${v.timestamp || v.date} - R$ ${v.total}`, 10, y);
-                y += 10;
-            });
-        }
-        doc.save(`relatorio_vendas.pdf`);
-    } else {
-        // Outros relatórios...
-        alert("Funcionalidade em manutenção. Use o relatório de vendas.");
-    }
 }
 
 // =================================================================
@@ -4998,3 +4657,137 @@ function imprimirRelatorioLucro(startDate, endDate) {
     doc.save("Lucros.pdf");
 }
 
+
+
+// Função para abrir o perfil ao clicar no retângulo
+function openProfileSettings() {
+    // Redireciona para Configurações
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    
+    const configLink = document.querySelector('a[href="#config"]');
+    if(configLink) configLink.classList.add('active');
+    
+    const configSection = document.getElementById('config');
+    if (configSection) {
+        configSection.style.display = 'block';
+        showConfigTab('categories');
+        document.getElementById('current-page-title').textContent = "Configurações";
+    }
+    document.getElementById('sidebar-profile-dropdown').classList.remove('show');
+}
+// Pendura a função no window para o HTML enxergar
+window.openProfileSettings = openProfileSettings;
+
+
+
+// =================================================================
+// 6. EXPORTAÇÃO GLOBAL (FUNÇÕES ONCLICK DO HTML)
+// =================================================================
+
+window.loadAllData = loadAllData;
+window.handleProductForm = handleProductForm;
+window.deleteProduct = deleteProduct;
+window.editProduct = editProduct;
+window.resetProductForm = resetProductForm;
+window.showTab = showTab;
+window.toggleSidebar = toggleSidebar;
+window.toggleAlertsWindow = toggleAlertsWindow;
+window.clearAllAlerts = clearAllAlerts;
+
+// Funções de Vendas/PDV/Carrinho
+window.addToCart = addToCart;
+window.updateCartQuantity = updateCartQuantity; // FUNÇÃO QUE ESTAVA FALTANDO
+window.removeItemFromCart = removeItemFromCart;
+window.clearCart = clearCart;
+window.checkout = checkout; // FUNÇÃO QUE ESTAVA FALTANDO
+window.saveCurrentCart = saveCurrentCart; // FUNÇÃO QUE ESTAVA FALTANDO
+window.confirmSaveCart = confirmSaveCart;
+window.loadSavedCart = loadSavedCart;
+window.deleteSavedCart = deleteSavedCart;
+window.setupNavigation = setupNavigation; // Para o DOMContentLoaded
+
+// Funções de Relatórios/Configurações
+window.generatePDF = generatePDF; // FUNÇÃO QUE ESTAVA FALTANDO (Erro Principal)
+window.viewSaleDetails = viewSaleDetails;
+window.closeSaleDetails = closeSaleDetails;
+window.renderCategoriesManager = renderCategoriesManager;
+window.addNewCategory = addNewCategory;
+window.editCategory = editCategory;
+window.deleteCategory = deleteCategory;
+window.renderPaymentsManager = renderPaymentsManager;
+window.addNewPayment = addNewPayment;
+window.editPayment = editPayment;
+window.deletePayment = deletePayment;
+window.clearAllData = clearAllData;
+window.exportData = exportData;
+window.importData = importData;
+window.updateReportMetrics = updateReportMetrics;
+window.imprimirRelatorioVendas = imprimirRelatorioVendas;
+window.imprimirRelatorioEstoque = imprimirRelatorioEstoque;
+window.imprimirRelatorioLucro = imprimirRelatorioLucro;
+window.resetProductForm = resetProductForm; 
+window.logout = logout;
+window.openProfileSettings = openProfileSettings;
+window.toggleSidebarProfileMenu = toggleSidebarProfileMenu;
+// -----------------------------------------------------------
+
+// ... o resto das suas exportações globais
+
+// --- NO SEU script.js (ADICIONE ESTA FUNÇÃO SE ELA ESTIVER FALTANDO) ---
+
+// =================================================================
+// FUNÇÃO CORRIGIDA: MENU DE PERFIL LATERAL
+// =================================================================
+function toggleSidebarProfileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    const menu = document.getElementById('sidebar-profile-dropdown');
+    const arrow = document.querySelector('.sidebar-profile-card .arrow-icon'); // Pega a setinha
+
+    if (!sidebar || !menu) return;
+
+    // 1. Se a sidebar estiver colapsada (fechada), abre ela primeiro
+    if (sidebar.classList.contains('collapsed')) {
+        sidebar.classList.remove('collapsed');
+        const mainContent = document.getElementById('main-content');
+        if(mainContent) mainContent.classList.remove('expanded');
+        
+        // Espera 300ms (tempo da animação) para abrir o menu
+        setTimeout(() => {
+            menu.style.display = 'block';
+            menu.classList.add('show');
+            if(arrow) arrow.style.transform = 'rotate(180deg)'; // Gira a seta
+        }, 300);
+    } 
+    // 2. Se a sidebar já estiver aberta, apenas alterna o menu
+    else {
+        // Verifica se está visível (checa display ou classe)
+        const isVisible = menu.style.display === 'block' || menu.classList.contains('show');
+
+        if (isVisible) {
+            // Esconde
+            menu.style.display = 'none';
+            menu.classList.remove('show');
+            if(arrow) arrow.style.transform = 'rotate(0deg)'; // Volta a seta ao normal
+        } else {
+            // Mostra
+            menu.style.display = 'block';
+            menu.classList.add('show');
+            if(arrow) arrow.style.transform = 'rotate(180deg)'; // Gira a seta
+        }
+    }
+}
+
+async function logout() {
+    // Certifique-se de que 'auth' e 'signOut' estejam importados no topo
+    try {
+        await signOut(auth);
+        console.log("Usuário deslogado com sucesso.");
+    } catch (error) {
+        console.error("Erro ao fazer logout:", error);
+        alert("Erro ao sair da conta. Verifique a conexão.");
+    }
+}
+
+
+
+//--------------------- seta do perfil ---------------------

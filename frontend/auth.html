@@ -3,291 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acesso StockBrasil PRO - Login e Cadastro</title>
-    <link rel="stylesheet" href="./stilo.css">
+    <title>Acesso StockBrasil PRO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="shortcut icon" href="./images/StockBrasilPRO-removebg-preview.png">
     <style>
-        /* CSS ESPECÍFICO PARA A TELA DE AUTENTICAÇÃO */
-        /* Mantendo o estilo Dark Mode do style.css */
-        
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #3498db;
+            --accent-green: #2ecc71;
+            --border-color: #333;
+            --input-bg: #252525;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+
         body {
-            /* Ocupa a tela inteira com o fundo escuro */
+            background-color: var(--bg-color);
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: var(--color-bg-primary); 
-            /* Adiciona um efeito de fundo sutil de grade, como na HERO */
-            background-image: radial-gradient(circle at center, rgba(42, 48, 56, 0.5) 1px, transparent 1px);
-            background-size: 40px 40px;
+            background-image: radial-gradient(#2a2a2a 1px, transparent 1px);
+            background-size: 30px 30px;
         }
 
-        .auth-container {
-            background-color: var(--color-bg-secondary);
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius-lg);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-            padding: 50px 40px;
-            width: 90%;
+        /* Container Principal */
+        .auth-wrapper {
+            background: var(--card-bg);
+            width: 100%;
             max-width: 450px;
+            padding: 3rem; /* Mais espaço interno */
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        /* Cabeçalho */
+        .auth-header {
             text-align: center;
-            position: relative;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInScale 0.8s forwards;
+            margin-bottom: 2.5rem; /* Espaço abaixo do título */
         }
-        
-        @keyframes fadeInScale {
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .logo-auth {
+
+        .logo {
             font-size: 2rem;
-            font-weight: 900;
-            color: var(--color-text-primary);
-            margin-bottom: 30px;
-            display: block;
+            font-weight: 800;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: 1px;
+        }
+        .logo span { color: var(--accent-blue); }
+
+        .subtitle {
+            color: var(--text-secondary);
+            margin-top: 10px;
+            font-size: 0.95rem;
         }
 
-        .logo-auth .logo-pro {
-            color: var(--color-accent-blue);
-        }
+        /* Formulários */
+        .form-section { display: none; animation: fadeIn 0.4s ease; }
+        .form-section.active { display: block; }
 
-        .form-title {
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .form-subtitle {
-            color: var(--color-text-secondary);
-            margin-bottom: 30px;
-            font-size: 1rem;
-        }
-
-        /* Campos de Formulário */
+        /* Inputs - AQUI ESTÁ O ESPAÇAMENTO */
         .input-group {
-            margin-bottom: 20px;
-            text-align: left;
             position: relative;
+            margin-bottom: 1.5rem; /* Espaço entre um campo e outro */
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            pointer-events: none; /* Garante que o clique passe pelo ícone */
         }
 
         .auth-input {
             width: 100%;
-            padding: 14px 15px 14px 45px;
-            border: 1px solid var(--color-border);
-            border-radius: var(--border-radius-sm);
-            background-color: var(--color-bg-primary);
-            color: var(--color-text-primary);
+            padding: 16px 15px 16px 50px; /* 50px na esquerda para afastar do ícone */
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
             font-size: 1rem;
-            transition: border-color var(--transition-speed);
+            transition: 0.3s;
         }
 
         .auth-input:focus {
+            border-color: var(--accent-blue);
             outline: none;
-            border-color: var(--color-accent-blue);
-            box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
-        }
-        
-        .input-icon {
-            position: absolute;
-            top: 50%;
-            left: 15px;
-            transform: translateY(-50%);
-            color: var(--color-text-secondary);
-            transition: color var(--transition-speed);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
 
-        .auth-input:focus + .input-icon {
-            color: var(--color-accent-blue);
-        }
-        
+        /* Botão */
         .submit-btn {
             width: 100%;
-            margin-top: 10px;
-            padding: 15px 20px;
-            font-size: 1.05rem;
-        }
-
-        /* Alternador de Formulário */
-        .form-toggle {
-            margin-top: 25px;
-            font-size: 0.95rem;
-            color: var(--color-text-secondary);
-        }
-
-        .form-toggle a {
-            color: var(--color-accent-green);
+            padding: 16px;
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: color var(--transition-speed);
+            transition: 0.3s;
+            margin-top: 10px;
         }
 
-        .form-toggle a:hover {
-            color: #28C748; /* Tom mais claro de verde */
-        }
-        
-        /* Ocultar/Exibir Formulários */
-        .form-section {
-            display: none;
-            animation: slideIn 0.5s forwards;
-            position: absolute;
-            top: 150px; /* Ajuste para centralizar o conteúdo dinâmico */
-            left: 40px;
-            right: 40px;
-        }
-        
-        .form-section.active {
-            display: block;
-            position: static;
-        }
-        
-        /* Animação para troca de formulário (slide) */
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        /* Checkbox Lembrar Senha */
-        .remember-me {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .submit-btn:hover { background: #2980b9; transform: translateY(-2px); }
+        .submit-btn:disabled { background: #555; cursor: not-allowed; transform: none; }
+
+        /* Link de troca */
+        .toggle-link {
+            text-align: center;
+            margin-top: 25px;
+            color: var(--text-secondary);
             font-size: 0.9rem;
-            margin-top: -5px;
-            margin-bottom: 25px;
-            color: var(--color-text-secondary);
         }
-
-        .forgot-password {
-            color: var(--color-text-secondary);
-            transition: color var(--transition-speed);
-        }
-        
-        .forgot-password:hover {
-            color: var(--color-accent-blue);
-        }
-        
-        .remember-me label {
+        .toggle-link a {
+            color: var(--accent-green);
+            text-decoration: none;
+            font-weight: bold;
             cursor: pointer;
         }
-        
-        .remember-me input[type="checkbox"] {
-            margin-right: 8px;
-            accent-color: var(--color-accent-blue); /* Cor do checkbox */
+
+        /* --- NOTIFICAÇÕES (TOAST) --- */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
+
+        .toast {
+            background: #2c3e50;
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            min-width: 300px;
+            animation: slideIn 0.3s ease;
+            border-left: 5px solid transparent;
+        }
+        
+        .toast.error { border-left-color: #e74c3c; }
+        .toast.success { border-left-color: #2ecc71; }
+        .toast i { margin-right: 12px; font-size: 1.2rem; }
+
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateY(-20px); } }
 
     </style>
 </head>
 <body>
-    
-    <script>
-        alert("No monento o Loguin e Cadstro não estão em funcionamento, clique em - StockBrsilPro - para proseguir. ");
-    </script>
 
+    <div id="toast-container"></div>
 
-    <div class="auth-container">
-        <a href="https://sparkly-malasada-47156c.netlify.app/" class="logo-auth">StockBrasil<span class="logo-pro">PRO</span></a>
+    <div class="auth-wrapper">
+        <div class="auth-header">
+            <div class="logo">StockBrasil<span>PRO</span></div>
+            <div class="subtitle">Gestão inteligente para o seu negócio</div>
+        </div>
 
         <div id="login-section" class="form-section active">
-            <h2 class="form-title">Bem-vindo de Volta!</h2>
-            <p class="form-subtitle">Acesse seu painel e continue a gestão do seu estoque.</p>
-
-            <form>
+            <form id="login-form">
                 <div class="input-group">
-                    <input type="email" id="login-email" class="auth-input" placeholder="Seu e-mail profissional" required>
                     <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" id="login-email" class="auth-input" placeholder="E-mail" required>
                 </div>
                 
                 <div class="input-group">
-                    <input type="password" id="login-password" class="auth-input" placeholder="Sua senha secreta" required>
                     <i class="fas fa-lock input-icon"></i>
-                </div>
-                
-                <div class="remember-me">
-                    <div>
-                        <input type="checkbox" id="remember-me">
-                        <label for="remember-me">Lembrar de mim</label>
-                    </div>
-                    <a href="#" class="forgot-password">Esqueceu a senha?</a>
+                    <input type="password" id="login-password" class="auth-input" placeholder="Senha" required>
                 </div>
 
-                <button type="submit" class="submit-btn blue-btn btn-shimmer">
-                    <i class="fas fa-sign-in-alt"></i> Entrar na Conta
-                </button>
+                <button type="submit" class="submit-btn">Entrar</button>
             </form>
 
-            <p class="form-toggle">
-                Novo por aqui? <a href="#" onclick="toggleForm('register')">Crie sua Conta Grátis</a>
-            </p>
+            <div class="toggle-link">
+                Não tem conta? <a onclick="showRegister()">Criar conta grátis</a>
+            </div>
         </div>
 
         <div id="register-section" class="form-section">
-            <h2 class="form-title">Crie Sua Conta Grátis</h2>
-            <p class="form-subtitle">Comece seu teste de 7 dias e otimize sua gestão hoje mesmo.</p>
-
-            <form>
-                 <div class="input-group">
-                    <input type="text" id="register-name" class="auth-input" placeholder="Nome do seu Negócio" required>
+            <form id="register-form">
+                <div class="input-group">
                     <i class="fas fa-store input-icon"></i>
+                    <input type="text" id="register-name" class="auth-input" placeholder="Nome da Empresa" required>
                 </div>
-                
+
                 <div class="input-group">
-                    <input type="email" id="register-email" class="auth-input" placeholder="Seu melhor e-mail" required>
                     <i class="fas fa-envelope input-icon"></i>
+                    <input type="email" id="register-email" class="auth-input" placeholder="E-mail" required>
                 </div>
                 
                 <div class="input-group">
-                    <input type="password" id="register-password" class="auth-input" placeholder="Crie uma senha forte (mín. 6 caracteres)" required>
                     <i class="fas fa-key input-icon"></i>
+                    <input type="password" id="register-password" class="auth-input" placeholder="Senha (mín. 6 dígitos)" required>
                 </div>
-                
-                <button type="submit" class="submit-btn green-btn">
-                    <i class="fas fa-user-plus"></i> Cadastrar e Iniciar Teste
-                </button>
+
+                <button type="submit" class="submit-btn" style="background-color: var(--accent-green);">Cadastrar</button>
             </form>
 
-            <p class="form-toggle">
-                Já tem conta? <a href="#" onclick="toggleForm('login')">Fazer Login</a>
-            </p>
+            <div class="toggle-link">
+                Já tem conta? <a onclick="showLogin()">Fazer Login</a>
+            </div>
         </div>
-        
     </div>
 
     <script>
-        function toggleForm(formType) {
-            const loginSection = document.getElementById('login-section');
-            const registerSection = document.getElementById('register-section');
-            const authContainer = document.querySelector('.auth-container');
-            
-            // Remove a classe 'active' para iniciar a animação de saída
-            loginSection.classList.remove('active');
-            registerSection.classList.remove('active');
-
-            // Determina qual seção ativar
-            if (formType === 'register') {
-                // Ajusta a altura do container dinamicamente se necessário (opcional)
-                // authContainer.style.height = 'auto'; 
-                setTimeout(() => {
-                    registerSection.classList.add('active');
-                }, 50); // Pequeno delay para a animação
-            } else {
-                setTimeout(() => {
-                    loginSection.classList.add('active');
-                }, 50);
-            }
+        function showRegister() {
+            document.getElementById('login-section').classList.remove('active');
+            document.getElementById('register-section').classList.add('active');
+        }
+        function showLogin() {
+            document.getElementById('register-section').classList.remove('active');
+            document.getElementById('login-section').classList.add('active');
         }
     </script>
+
+    <script type="module" src="auth.js"></script>
 
 </body>
 </html>
