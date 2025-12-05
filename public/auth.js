@@ -78,7 +78,7 @@ async function handleGoogleLogin() {
         }
 
         showToast("Login com Google realizado!", "success");
-        setTimeout(() => window.location.href = "index.html", 1000);
+        setTimeout(() => window.location.href = "app.html", 1000);
 
     } catch (error) {
         console.error("Erro Google:", error);
@@ -109,7 +109,7 @@ if (loginForm) {
             await signInWithEmailAndPassword(auth, email, password);
             
             showToast("Login realizado com sucesso!", "success");
-            setTimeout(() => window.location.href = "index.html", 1000);
+            setTimeout(() => window.location.href = "app.html", 1000);
 
         } catch (error) {
             btn.innerHTML = 'Entrar';
@@ -160,7 +160,7 @@ if (registerForm) {
             });
 
             showToast("Conta criada com sucesso!", "success");
-            setTimeout(() => window.location.href = "index.html", 1500);
+            setTimeout(() => window.location.href = "app.html", 1500);
 
         } catch (error) {
             btn.innerHTML = 'Cadastrar';

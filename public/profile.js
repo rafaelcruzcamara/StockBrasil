@@ -53,7 +53,7 @@ function showToast(message, type = 'info') {
 
 // Redireciona de volta ao dashboard
 function goToDashboard() {
-    window.location.href = 'index.html';
+    window.location.href = 'app.html';
 }
 
 // =================================================================
