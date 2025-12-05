@@ -1289,10 +1289,6 @@ input:focus, select:focus, textarea:focus {
     padding-left: 10px;
 }
 
-.alert-list li::before {
-    content: '⚠️';
-    font-size: 0.8rem;
-}
 
 /*
  * ======================================================================
@@ -3433,26 +3429,32 @@ input:focus, select:focus, textarea:focus {
 
 /* --- DROPDOWN DENTRO DA SIDEBAR (SOLUÇÃO FINAL DE OVERLAP) --- */
 .sidebar-dropdown {
-    display: none; /* Começa oculto */
-    position: absolute !important;
+    /* Posição e Layout */
+    position: absolute; 
+    top: 100%;
+    left: 15px;
+    width: calc(100% - 30px);
+    z-index: 2000;
+    margin-top: 5px;
+
+    /* VISIBILIDADE (Começa invisível) */
+    display: none; 
+    opacity: 0;
     
-    /* POSIÇÃO FIXA EM RELAÇÃO AO TOPO DA SIDEBAR */
-    top: 80px !important; 
-    left: 10px !important;
-    width: 240px !important; /* Largura fixa para não quebrar */
-    
+    /* Transições e Estilo Visual */
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out;
     background-color: var(--color-bg-tertiary);
     border: 1px solid var(--color-border);
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 99999 !important;
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     flex-direction: column;
-    padding: 5px;
 }
 
 .sidebar-dropdown.show {
-    display: flex !important;
-    animation: fadeIn 0.2s ease;
+    /* FORÇA O DISPLAY para resolver conflitos (A CORREÇÃO CRÍTICA) */
+    display: flex !important; 
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* --- NAVEGAÇÃO E MARGEM (CORRIGINDO O "GRUDADO") --- */
@@ -3629,5 +3631,543 @@ hr {
     margin: 14px 0 3px 0;
 }
 
+/* ================================================== */
+/* EMPTY STATES (TELAS VAZIAS BONITAS) */
+/* ================================================== */
+.empty-state-container {
+    text-align: center;
+    padding: 60px 20px;
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--border-radius-lg);
+    border: 1px dashed var(--color-border);
+    margin-top: 20px;
+}
 
+.empty-state-icon {
+    font-size: 4rem;
+    color: var(--color-text-secondary);
+    opacity: 0.2;
+    margin-bottom: 20px;
+}
 
+.empty-state-title {
+    font-size: 1.2rem;
+    color: var(--color-text-primary);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.empty-state-description {
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    max-width: 400px;
+    margin: 0 auto 25px;
+}
+
+/* Ajuste para quando o empty state está dentro de uma tabela */
+tr.empty-row td {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* ================================================== */
+/* LOADING SKELETONS (Animação de Carregamento) */
+/* ================================================== */
+
+/* Classe base para o efeito pulsante */
+.skeleton {
+    background-color: var(--color-bg-tertiary);
+    /* O gradiente que cria o brilho passando */
+    background-image: linear-gradient(
+        90deg, 
+        var(--color-bg-tertiary) 0px, 
+        var(--color-border) 60px, 
+        var(--color-bg-tertiary) 120px
+    );
+    background-size: 500px;
+    animation: shimmer 1.5s infinite linear;
+    
+    /* Esconde o texto real enquanto carrega */
+    color: transparent !important;
+    border-radius: 4px;
+    pointer-events: none; /* Impede cliques enquanto carrega */
+    min-height: 1em;
+    display: inline-block;
+    width: 100%;
+}
+
+/* Animação do brilho */
+@keyframes shimmer {
+    0% { background-position: -500px 0; }
+    100% { background-position: 500px 0; }
+}
+
+/* Ajuste específico para textos do Dashboard */
+.metric-card .skeleton {
+    height: 30px;
+    width: 60%;
+    margin-top: 5px;
+    opacity: 0.7;
+}
+
+/* Ajuste para células da tabela */
+.skeleton-cell {
+    height: 20px;
+    width: 100%;
+}
+
+.chart-container.skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-bg-tertiary);
+    /* Mantém a animação de brilho */
+    background-image: linear-gradient(
+        90deg, 
+        var(--color-bg-tertiary) 0px, 
+        var(--color-border) 60px, 
+        var(--color-bg-tertiary) 120px
+    );
+    background-size: 500px;
+    animation: shimmer 1.5s infinite linear;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--color-border);
+}
+
+/* Esconde o canvas (desenho) enquanto carrega para não ficar sobreposto */
+.chart-container.skeleton canvas {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Garante que o container tenha altura mesmo vazio */
+.chart-container {
+    min-height: 300px; /* Altura padrão dos seus gráficos */
+    transition: all 0.3s ease;
+}
+
+/* Borda e fundo vermelho quando der erro */
+.input-error {
+    border-color: var(--color-accent-red) !important;
+    background-color: rgba(255, 69, 58, 0.05) !important;
+    animation: shake 0.3s; /* Treme um pouquinho para chamar atenção */
+}
+
+/* Texto de erro pequeno embaixo do input */
+.error-message {
+    color: var(--color-accent-red);
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: none; /* Escondido por padrão */
+    font-weight: 500;
+}
+
+.error-message i {
+    margin-right: 5px;
+}
+
+/* Animação de "Tremer" (Shake) */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-5px); }
+    100% { transform: translateX(0); }
+}
+
+/* Centraliza APENAS o título do alerta (Sucesso/Erro) */
+#alert-title {
+    text-align: center !important;
+    width: 100% !important;
+    display: block !important;
+}
+
+/* ================================================== */
+/* FORÇAR CENTRALIZAÇÃO DO MODAL DE DATAS */
+/* ================================================== */
+
+/* Centraliza o Título (Ex: Data Inicial) */
+#prompt-title {
+    text-align: center !important;
+    width: 100% !important;
+    justify-content: center !important;
+    display: flex !important;
+}
+
+/* Centraliza a mensagem explicativa */
+#prompt-message {
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* Centraliza o texto DENTRO da caixinha de digitar */
+#prompt-input {
+    text-align: center !important;
+    font-size: 1.3rem !important; /* Aumenta um pouco a letra pra ficar bonito */
+    letter-spacing: 2px; /* Espaça um pouco os números da data */
+}
+
+/* 1. CONTAINER ANCORA (POSIÇÃO RELATIVA E MARGENS) */
+.profile-menu-container {
+    position: relative; /* <--- ESSENCIAL! ANCORA O DROPDOWN */
+    padding: 0 15px; /* Padding lateral da sidebar */
+    margin-bottom: 20px; /* Espaço antes do divisor */
+}
+
+/* 2. CARD DO PERFIL (Adapta-se ao novo container) */
+.sidebar-profile-card {
+    /* Mantém o flex, mas remove margens externas que podem conflitar */
+    margin: 0; 
+    padding: 10px; /* Mantém o padding interno */
+    width: 100%;
+    /* ... (restante do seu CSS de card) ... */
+}
+
+/* 3. DROPDOWN (GARANTE VISIBILIDADE FORÇADA) */
+.sidebar-dropdown {
+    position: absolute; 
+    top: 100%; /* Posiciona logo abaixo do card */
+    left: 15px;
+    width: calc(100% - 30px);
+    z-index: 2000;
+    
+    display: none; 
+    opacity: 0;
+    margin-top: 5px;
+    /* ... (restante do seu CSS de dropdown) ... */
+}
+
+/* CLASSE QUE ATIVA */
+.sidebar-dropdown.show {
+    display: flex !important; /* <--- FORÇA A VISIBILIDADE */
+    opacity: 1;
+}
+
+/* ================================================== */
+/* CSS EXTRA - CORREÇÃO DO SKELETON DA TABELA */
+/* ================================================== */
+
+/* Garante que a linha de carregamento não colapse */
+.skeleton-row td {
+    padding: 15px 12px !important; /* Espaçamento interno */
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+}
+
+/* Garante que a barra brilhante dentro da célula seja visível */
+.skeleton-row .skeleton {
+    display: block;
+    background-color: var(--color-bg-tertiary); /* Cor base */
+    width: 100%;
+    min-height: 20px; /* Altura mínima garantida */
+    border-radius: 4px;
+}
+
+/* Remove hover da linha enquanto carrega */
+.skeleton-row:hover {
+    background-color: transparent !important;
+    cursor: wait;
+}
+
+/* ================================================== */
+/* BADGES E ETIQUETAS (Visual Profissional) */
+/* ================================================== */
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Cores por Tipo */
+.badge-success {
+    background-color: rgba(48, 209, 88, 0.15);
+    color: #30D158;
+    border: 1px solid rgba(48, 209, 88, 0.2);
+}
+
+.badge-warning {
+    background-color: rgba(255, 159, 10, 0.15);
+    color: #FF9F0A;
+    border: 1px solid rgba(255, 159, 10, 0.2);
+}
+
+.badge-danger {
+    background-color: rgba(255, 69, 58, 0.15);
+    color: #FF453A;
+    border: 1px solid rgba(255, 69, 58, 0.2);
+}
+
+.badge-info {
+    background-color: rgba(10, 132, 255, 0.15);
+    color: #0A84FF;
+    border: 1px solid rgba(10, 132, 255, 0.2);
+}
+
+.badge-purple {
+    background-color: rgba(191, 90, 242, 0.15);
+    color: #BF5AF2;
+    border: 1px solid rgba(191, 90, 242, 0.2);
+}
+
+.badge-gray {
+    background-color: rgba(142, 142, 147, 0.15);
+    color: #98989d;
+    border: 1px solid rgba(142, 142, 147, 0.2);
+}
+
+/* ========================================= */
+/* POLIMENTO FINAL UX/UI */
+/* ========================================= */
+
+/* 1. Rolagem Suave e Bonita (Scrollbar) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--color-bg-primary); 
+}
+::-webkit-scrollbar-thumb {
+    background: var(--color-border); 
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary); 
+}
+
+/* 2. Remove outline feio ao clicar */
+button:focus, input:focus, select:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-accent-blue);
+}
+
+/* 3. Transições Suaves em Tudo */
+.card, .btn, .input-group input, .sidebar-item {
+    transition: all 0.2s ease-in-out;
+}
+
+/* 4. Tabela Zebrada Sutil (Melhora leitura) */
+tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Botão em estado de carregamento */
+.submit-btn.loading {
+    position: relative;
+    color: transparent !important;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.submit-btn.loading::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: btn-spin 0.8s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes btn-spin {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ================================================== */
+/* TOASTS PREMIUM (COM ANIMAÇÃO E BARRA DE TEMPO) */
+/* ================================================== */
+
+#toast-container {
+    position: fixed !important;
+    top: 20px;
+    right: 20px;
+    z-index: 2147483647 !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: auto;
+    max-width: 380px;
+    pointer-events: none; /* Permite clicar através do container vazio */
+}
+
+.toast {
+    position: relative;
+    pointer-events: auto;
+    overflow: hidden; /* Importante para a barra de progresso */
+    
+    /* Visual "Glassmorphism" Dark */
+    background: rgba(21, 25, 32, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    
+    color: #F5F7FA;
+    padding: 14px 20px 16px 20px; /* Um pouco mais de espaço embaixo para a barra */
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    
+    /* Animação de Entrada (Elasticidade) */
+    animation: toastSlideIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    transform: translateX(120%); /* Começa fora da tela */
+}
+
+/* Ícone */
+.toast i {
+    font-size: 1.2rem;
+}
+
+/* Cores e Bordas */
+.toast.success { border-left: 4px solid #30D158; }
+.toast.success i { color: #30D158; }
+
+.toast.error { border-left: 4px solid #FF453A; }
+.toast.error i { color: #FF453A; }
+
+.toast.info { border-left: 4px solid #0A84FF; }
+.toast.info i { color: #0A84FF; }
+
+/* Classe para Saída (Adicionada via JS) */
+.toast.hide {
+    animation: toastSlideOut 0.4s forwards;
+}
+
+/* BARRA DE PROGRESSO (TEMPO) */
+.toast::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background-color: currentColor; /* Pega a cor do texto/ícone */
+    opacity: 0.3;
+    animation: timeBar 3.5s linear forwards; /* Sincronizado com o JS */
+}
+
+/* --- KEYFRAMES (ANIMAÇÕES) --- */
+
+/* Entrada com efeito de mola */
+@keyframes toastSlideIn {
+    0% { opacity: 0; transform: translateX(120%); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Saída suave para a direita */
+@keyframes toastSlideOut {
+    0% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(120%); }
+}
+
+/* Barra de tempo diminuindo */
+@keyframes timeBar {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* ================================================== */
+/* TELA DE CARREGAMENTO (LOADING SCREEN) */
+/* ================================================== */
+
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(10, 13, 18, 0.9); /* Fundo bem escuro */
+    backdrop-filter: blur(10px); /* Efeito de vidro */
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 99999; /* Acima de tudo mesmo */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* O círculo giratório */
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid #0A84FF; /* Azul do seu tema */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px rgba(10, 132, 255, 0.3);
+}
+
+.loading-text {
+    font-family: sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.loading-subtext {
+    font-size: 0.9rem;
+    color: #8B95A1;
+    margin-top: 5px;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ================================================== */
+/* INDICADOR DE ESTOQUE BAIXO (MINIMALISTA) */
+/* ================================================== */
+
+.product-card {
+    position: relative;
+}
+
+.low-stock-indicator {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    
+    /* Visual Minimalista */
+    color: #FF453A; /* Vermelho do sistema */
+    font-size: 1.1rem; 
+    
+    /* Fundo discreto apenas para contraste se a imagem for escura */
+    background: rgba(0, 0, 0, 0.5); 
+    backdrop-filter: blur(2px);
+    
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    cursor: help;
+    
+    /* Sem animação, apenas transição suave ao passar o mouse */
+    transition: all 0.2s ease;
+}
+
+.low-stock-indicator:hover {
+    transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.8);
+    color: #ff6b61;
+}

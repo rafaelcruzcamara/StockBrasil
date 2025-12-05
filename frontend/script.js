@@ -1,14 +1,11 @@
 
-// =================================================================
-// 1. CONFIGURAÇÃO E CONEXÃO COM FIREBASE
-// =================================================================
-// Importa as funções do Google (Versão Web)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// Sua configuração (Copiada do seu projeto)
+
+
 const firebaseConfig = {
   apiKey: "AIzaSyBYHAyzwUgvRJ_AP9ZV9MMrtpPb3s3ENIc",
   authDomain: "stockbrasil-e06ff.firebaseapp.com",
@@ -18,16 +15,127 @@ const firebaseConfig = {
   appId: "1:796401246692:web:1570c40124165fcef227f1"
 };
 
-// Inicia o Banco de Dados
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-// =================================================================
-// MONITORAMENTO DE USUÁRIO (CORREÇÃO DO "CARREGANDO...")
-// =================================================================
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut,
+    updatePassword,
+    GoogleAuthProvider, 
+    signInWithPopup     
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const auth = getAuth(app);
+function setBtnLoading(btn, isLoading) {
+    if (!btn) return;
+    if (isLoading) {
+        if (!btn.dataset.originalText) btn.dataset.originalText = btn.innerHTML;
+        btn.classList.add('loading');
+        btn.disabled = true;
+    } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
+    }
+}
+
+// =================================================================
+// 🚨 FUNÇÕES DE CARREGAMENTO (IMPORTANTE: MANTENHA NO TOPO)
+// =================================================================
+
+// Cria a função no escopo global
+window.showLoadingScreen = function(message = "Processando...", submessage = "Aguarde...") {
+    let overlay = document.getElementById('loading-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loading-text">${message}</div>
+            <div class="loading-subtext" id="loading-subtext">${submessage}</div>
+        `;
+        document.body.appendChild(overlay);
+    } else {
+        const txt = document.getElementById('loading-text');
+        const sub = document.getElementById('loading-subtext');
+        if (txt) txt.textContent = message;
+        if (sub) sub.textContent = submessage;
+    }
+};
+
+window.updateLoadingMessage = function(message, submessage = "") {
+    const txt = document.getElementById('loading-text');
+    const sub = document.getElementById('loading-subtext');
+    if (txt) txt.textContent = message;
+    if (sub) sub.textContent = submessage;
+};
+
+window.hideLoadingScreen = function() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.remove(), 300);
+    }
+};
+
+function showToast(message, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Define o ícone baseado no tipo
+    let iconClass = 'fa-info-circle';
+    if (type === 'success') iconClass = 'fa-check-circle';
+    if (type === 'error') iconClass = 'fa-times-circle'; // Corrigido para times-circle
+    
+    toast.innerHTML = `<i class="fas ${iconClass}"></i> <span>${message}</span>`;
+    
+    // Adiciona ao DOM (A animação CSS 'toastSlideIn' roda automaticamente)
+    container.appendChild(toast);
+
+    // Espera 3.5 segundos e começa a saída
+    setTimeout(() => {
+        toast.classList.add('hide'); // Adiciona classe que dispara 'toastSlideOut'
+        
+        // Espera a animação de saída (0.4s) terminar para remover do HTML
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        });
+    }, 3500);
+}
+
+// Garante que está global
+window.showToast = showToast;
+window.setBtnLoading = setBtnLoading;
+
+// FUNÇÃO ESSENCIAL: Cria o caminho de dados isolado (users/UID/collectionName)
+function getUserCollectionRef(collectionName) {
+    const user = auth.currentUser;
+    if (!user) {
+        // Proteção contra chamadas sem usuário logado
+        throw new Error("Usuário não autenticado. Não é possível acessar coleções.");
+    }
+    // Retorna a referência da subcoleção isolada: users/{UID}/products ou users/{UID}/sales
+    return collection(db, "users", user.uid, collectionName);
+}
+
+// Função auxiliar para obter a referência completa do documento de um item
+function getUserDocumentRef(collectionName, documentId) {
+    const user = auth.currentUser;
+    if (!user) {
+        throw new Error("Usuário não autenticado (sessão perdida).");
+    }
+    return doc(db, "users", user.uid, collectionName, documentId);
+}
 
 onAuthStateChanged(auth, async (user) => {
     const nomeEl = document.getElementById("sidebar-user-name");
@@ -35,18 +143,14 @@ onAuthStateChanged(auth, async (user) => {
     if (user) {
         console.log("Usuário conectado:", user.email);
         
-        // 1. Define um nome provisório (Email) caso a busca falhe
         let nomeFinal = user.email.split('@')[0];
 
-        // 2. Busca o nome real no Banco de Dados (Firestore)
         try {
-            // Busca o documento do usuário pelo ID (uid)
             const docRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(docRef);
 
             if (docSnap.exists()) {
                 const dados = docSnap.data();
-                // Tenta pegar 'businessName' (usado no registro) ou 'nome'
                 if (dados.businessName) {
                     nomeFinal = dados.businessName;
                 } else if (dados.nome) {
@@ -57,33 +161,25 @@ onAuthStateChanged(auth, async (user) => {
             console.error("Erro ao buscar nome do usuário:", error);
         }
         
-        // 3. Atualiza a tela com o nome correto
         if(nomeEl) {
             nomeEl.textContent = nomeFinal;
             nomeEl.style.color = "var(--color-text-primary)";
-            // Remove o efeito de piscar/carregando
             nomeEl.style.opacity = "1";
         }
         
-        // Carrega os dados do sistema
         loadAllData();
 
     } else {
-        // Usuário Deslogado
         console.log("Nenhum usuário logado.");
         if(nomeEl) nomeEl.textContent = "Visitante";
         
-        // Se quiser forçar login:
-        // window.location.href = "auth.html";
     }
 });
 
-// Variáveis Globais (Mantivemos para o resto do site funcionar)
 let products = [];
 let cart = [];
 let salesHistory = [];
 let savedCarts = [];
-let logHistory = [];
 let produtos = [];
 let vendas = [];
 let clientes = [];
@@ -104,9 +200,134 @@ let systemConfig = {
   compactMode: false,
 };
 
+
+
+
+
+
+async function saveConfigToFirebase() {
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // Salva na pasta: users/{UID}/settings/general
+        const docRef = doc(db, "users", user.uid, "settings", "general");
+        
+        await setDoc(docRef, { 
+            categories: config.categories, 
+            paymentTypes: config.paymentTypes 
+        }, { merge: true });
+
+        console.log("✅ Configurações salvas na nuvem.");
+    } catch (error) {
+        console.error("❌ Erro ao salvar configs:", error);
+    }
+}
+
 // =================================================================
-// 2. FUNÇÕES UTILITÁRIAS E PERSISTÊNCIA
+// SISTEMA DE MODAIS (COM MÁSCARA DE DATA AUTOMÁTICA)
 // =================================================================
+
+var _safeConfirmCallback = null;
+var _safePromptCallback = null;
+
+// 1. Alert e 2. Confirm (Mantidos iguais, mas incluídos para garantir que não quebre nada)
+window.customAlert = function(message, type = 'info') {
+    const modal = document.getElementById('custom-alert');
+    if(!modal) return alert(message); 
+    const title = document.getElementById('alert-title');
+    const msg = document.getElementById('alert-message');
+    const icon = document.getElementById('alert-icon');
+    msg.textContent = message;
+    modal.style.display = 'flex';
+    if (type === 'success') {
+        icon.innerHTML = '<i class="fas fa-check-circle" style="color: var(--color-accent-green);"></i>';
+        if(title) title.textContent = "Sucesso!";
+    } else if (type === 'error') {
+        icon.innerHTML = '<i class="fas fa-times-circle" style="color: var(--color-accent-red);"></i>';
+        if(title) title.textContent = "Erro";
+    } else {
+        icon.innerHTML = '<i class="fas fa-info-circle" style="color: var(--color-accent-blue);"></i>';
+        if(title) title.textContent = "Informação";
+    }
+}
+window.closeCustomAlert = () => { document.getElementById('custom-alert').style.display = 'none'; }
+
+window.customConfirm = function(message, callback) {
+    const modal = document.getElementById('custom-confirm');
+    if(!modal) return callback(); 
+    document.getElementById('confirm-message').textContent = message;
+    modal.style.display = 'flex';
+    _safeConfirmCallback = callback;
+    document.getElementById('btn-confirm-yes').onclick = function() {
+        if (_safeConfirmCallback) _safeConfirmCallback();
+        window.closeCustomConfirm();
+    };
+}
+window.closeCustomConfirm = () => {
+    document.getElementById('custom-confirm').style.display = 'none';
+    _safeConfirmCallback = null;
+}
+
+// 3. Prompt (AGORA COM MÁSCARA DE DATA E VALOR PADRÃO)
+// 3. Prompt (CORRIGIDO: Fecha antes de executar para não travar janelas em sequência)
+window.customPrompt = function(title, message, callback, defaultValue = "") {
+    const modal = document.getElementById('custom-prompt');
+    
+    // Fallback se não tiver HTML
+    if(!modal) {
+        const result = prompt(message, defaultValue);
+        if(result) callback(result);
+        return;
+    }
+
+    const t = document.getElementById('prompt-title');
+    const m = document.getElementById('prompt-message');
+    const inp = document.getElementById('prompt-input');
+    const btn = document.getElementById('btn-prompt-confirm');
+
+    t.textContent = title;
+    m.textContent = message;
+    inp.value = defaultValue; 
+    modal.style.display = 'flex';
+    
+    // Guarda o callback na variável global segura
+    _safePromptCallback = callback;
+    
+    // Lógica da Máscara de Data (Barras automáticas)
+    inp.oninput = function() {
+        if (title.toLowerCase().includes("data")) {
+            let v = this.value.replace(/\D/g, ""); 
+            if (v.length > 2) v = v.replace(/^(\d{2})(\d)/, "$1/$2"); 
+            if (v.length > 5) v = v.replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3"); 
+            if (v.length > 10) v = v.substr(0, 10); 
+            this.value = v;
+        }
+    };
+
+    setTimeout(() => {
+        inp.focus();
+        if(defaultValue) inp.select(); 
+    }, 100);
+
+    // --- A CORREÇÃO ESTÁ AQUI ---
+    btn.onclick = function() {
+        const valorDigitado = inp.value; // 1. Guarda o valor
+        const acaoSalva = _safePromptCallback; // 2. Guarda a ação
+        
+        window.closeCustomPrompt(); // 3. FECHA A JANELA PRIMEIRO
+        
+        if (acaoSalva) acaoSalva(valorDigitado); // 4. DEPOIS EXECUTA (que pode abrir outra janela)
+    };
+}
+
+
+
+window.closeCustomPrompt = () => {
+    const m = document.getElementById('custom-prompt');
+    if(m) m.style.display = 'none';
+    _safePromptCallback = null;
+}
 
 function safeLocalStorageParse(key, defaultValue) {
   try {
@@ -120,13 +341,12 @@ function safeLocalStorageParse(key, defaultValue) {
 
 function persistData() {
     try {
-        // NÃO SALVAMOS PRODUTOS (eles vêm do Backend)
         localStorage.setItem("salesHistory", JSON.stringify(salesHistory));
         localStorage.setItem("savedCarts", JSON.stringify(savedCarts));
-        localStorage.setItem("logHistory", JSON.stringify(logHistory));
         
-        // SALVA AS CONFIGURAÇÕES
-        localStorage.setItem("config", JSON.stringify(config));
+        // 🛑 ESSENCIAL: Persistir o objeto config que contém as categorias
+        localStorage.setItem("config", JSON.stringify(config)); 
+        
         localStorage.setItem("systemConfig", JSON.stringify(systemConfig));
         localStorage.setItem("clients", JSON.stringify(clients));
     } catch (error) {
@@ -136,73 +356,246 @@ function persistData() {
 
 
 
+
+
+
 // =================================================================
-// CARREGAR DADOS DA NUVEM (FIREBASE)
+// CARREGAMENTO DE DADOS (COM SKELETONS E ANIMAÇÕES)
 // =================================================================
 
-async function loadAllData() {
-    try {
-        console.log("☁️ Buscando dados no Firebase e LocalStorage...");
+// 1. Função auxiliar para desenhar os "esqueletos" de carregamento
+// =================================================================
+// FUNÇÃO DE SKELETON (Visual de Carregamento) - ATUALIZADA
+// =================================================================
+function showLoadingState() {
+    console.log("⏳ Ativando modo Skeleton...");
 
-        // 1. Busca Produtos e Vendas (FIREBASE)
-        const queryProdutos = await getDocs(collection(db, "products"));
-        products = []; 
-        queryProdutos.forEach((doc) => {
-            products.push({ id: doc.id, ...doc.data() });
-        });
+    // 1. MÉTRICAS (Cards do topo)
+    document.querySelectorAll('.card-value').forEach(el => {
+        el.classList.add('skeleton');
+        el.style.color = 'transparent'; 
+    });
 
-        const queryVendas = await getDocs(collection(db, "sales"));
-        salesHistory = [];
-        queryVendas.forEach((doc) => {
-            salesHistory.push({ id: doc.id, ...doc.data() });
-        });
-        salesHistory.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // 2. GRÁFICOS
+    document.querySelectorAll('.chart-container').forEach(el => {
+        el.classList.add('skeleton');
+        const canvas = el.querySelector('canvas');
+        if (canvas) canvas.style.opacity = '0';
+    });
 
+    // 3. GRADE DO PDV (Ponto de Venda)
+    const pdvGrid = document.getElementById('products-grid');
+    if (pdvGrid) {
+        pdvGrid.innerHTML = ''; 
+        for (let i = 0; i < 8; i++) {
+            const div = document.createElement('div');
+            div.className = 'product-card'; 
+            // Inline style para garantir visibilidade mesmo sem CSS externo
+            div.innerHTML = `
+                <div class="skeleton" style="height: 15px; width: 40px; margin: 0 auto 10px auto; border-radius: 4px; background: #222;"></div>
+                <div class="skeleton" style="height: 20px; width: 80%; margin: 0 auto 10px auto; border-radius: 4px; background: #222;"></div>
+                <div class="skeleton" style="height: 15px; width: 50%; margin: 0 auto 15px auto; border-radius: 4px; background: #222;"></div>
+                <div class="skeleton" style="height: 40px; width: 100%; border-radius: 6px; margin-top: 10px; background: #222;"></div>
+            `;
+            pdvGrid.appendChild(div);
+        }
+    }
 
-        // 2. CARREGA DADOS LOCAIS (HISTÓRICO E CONFIGS)
-        logHistory = safeLocalStorageParse("logHistory", []); // <-- CORREÇÃO CRÍTICA AQUI!
-        savedCarts = safeLocalStorageParse("savedCarts", []);
-        clients = safeLocalStorageParse("clients", []);
-        config = safeLocalStorageParse("config", config);
-        systemConfig = safeLocalStorageParse("systemConfig", systemConfig);
-
-        console.log(`✅ Carregado: ${products.length} produtos, ${salesHistory.length} vendas, ${logHistory.length} logs.`);
-
-        // 3. Atualiza a tela (Mantém suas funções de renderização)
-        if(typeof renderProductTable === 'function') renderProductTable();
-        if(typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
-        if(typeof renderPdvProducts === 'function') renderPdvProducts();
-        if(typeof updateCategorySelect === 'function') updateCategorySelect();
-        if(typeof renderHistoryLog === 'function') renderHistoryLog(); // Garante que a renderização seja chamada aqui
-
-    } catch (error) {
-        console.error("❌ Erro ao carregar do Firebase:", error);
-        alert("Erro de conexão com o banco de dados! Verifique o console.");
+    // 4. TABELA DE PRODUTOS (AQUI ESTÁ A CORREÇÃO)
+    const table = document.getElementById('product-table');
+    if (table) {
+        // Tenta pegar o tbody, se não existir, cria um
+        let tbody = table.querySelector('tbody');
+        if (!tbody) {
+            tbody = document.createElement('tbody');
+            table.appendChild(tbody);
+        }
+        
+        tbody.innerHTML = ''; // Limpa tabela
+        
+        // Cria 5 linhas de carregamento
+        for (let i = 0; i < 5; i++) {
+            const tr = document.createElement('tr');
+            tr.className = 'skeleton-row';
+            
+            // Usamos style inline backgroundColor para garantir que apareça mesmo se o CSS falhar
+            const skeletonStyle = "height: 20px; width: 100%; background: #1E2329; display: block; border-radius: 4px; opacity: 0.5;";
+            
+            tr.innerHTML = `
+                <td><div class="skeleton" style="${skeletonStyle} width: 40px;"></div></td>
+                <td><div class="skeleton" style="${skeletonStyle} width: 150px;"></div></td>
+                <td><div class="skeleton" style="${skeletonStyle} width: 80px;"></div></td>
+                <td><div class="skeleton" style="${skeletonStyle} width: 60px;"></div></td>
+                <td><div class="skeleton" style="${skeletonStyle} width: 40px;"></div></td>
+                <td><div class="skeleton" style="${skeletonStyle} width: 40px;"></div></td>
+                <td><div class="skeleton" style="${skeletonStyle} width: 70px;"></div></td>
+            `;
+            tbody.appendChild(tr);
+        }
     }
 }
 
-function logAction(type, detail) {
-  const action = {
-    id: Date.now(),
-    timestamp: new Date().toLocaleString("pt-BR"),
-    type: type,
-    detail: detail,
-  };
-  logHistory.unshift(action);
-  if (logHistory.length > 50) logHistory.pop();
-  
-  persistData(); // Primeiro salva
-  
-  if (typeof renderHistoryLog === 'function') {
-      renderHistoryLog(); // Depois renderiza
-  } else {
-      console.warn("renderHistoryLog não está acessível.");
-  }
+// --- AUXILIARES VISUAIS (BADGES) ---
+
+function getEstoqueBadge(qtd, minimo, categoria) {
+    if (categoria === "Serviços") {
+        return `<span class="badge badge-info"><i class="fas fa-tools"></i> Serviço</span>`;
+    }
+    
+    const quantidade = parseInt(qtd);
+    const min = parseInt(minimo);
+
+    if (quantidade <= 0) {
+        return `<span class="badge badge-danger"><i class="fas fa-times-circle"></i> Esgotado</span>`;
+    } else if (quantidade <= min) {
+        return `<span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Baixo (${quantidade})</span>`;
+    } else {
+        return `<span class="badge badge-success"><i class="fas fa-check-circle"></i> Normal (${quantidade})</span>`;
+    }
 }
 
-// -------------------------------------------------------------
-// CRUD DE PRODUTOS (SALVAR) - AGORA ASSÍNCRONA VIA API!
-// -------------------------------------------------------------
+function getPagamentoBadge(metodo) {
+    const m = metodo.toLowerCase();
+    if (m.includes('pix')) return `<span class="badge badge-success"><i class="fa-brands fa-pix"></i> Pix</span>`;
+    if (m.includes('crédito') || m.includes('credito')) return `<span class="badge badge-info"><i class="fas fa-credit-card"></i> Crédito</span>`;
+    if (m.includes('débito') || m.includes('debito')) return `<span class="badge badge-info"><i class="fas fa-credit-card"></i> Débito</span>`;
+    if (m.includes('dinheiro')) return `<span class="badge badge-success"><i class="fas fa-money-bill-wave"></i> Dinheiro</span>`;
+    return `<span class="badge badge-gray">${metodo}</span>`;
+}
+
+
+async function loadAllData() {
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // 1. BUSCA TUDO DE UMA VEZ (Produtos, Vendas e CONFIGURAÇÕES)
+        const [produtosSnap, vendasSnap, settingsSnap] = await Promise.all([
+            getDocs(getUserCollectionRef("products")),
+            getDocs(getUserCollectionRef("sales")),
+            getDoc(doc(db, "users", user.uid, "settings", "general"))
+        ]);
+
+        // Processa Produtos
+        products = [];
+        produtosSnap.forEach((doc) => products.push({ id: doc.id, ...doc.data() }));
+
+        // Processa Vendas
+        salesHistory = [];
+        vendasSnap.forEach((doc) => salesHistory.push({ id: doc.id, ...doc.data() }));
+        salesHistory.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+
+        // 2. RECUPERA AS CONFIGURAÇÕES SALVAS (Categorias e Pagamentos)
+        if (settingsSnap.exists()) {
+            const dadosConfig = settingsSnap.data();
+            // Aqui ele substitui os dados padrão (Fantasmas) pelos dados reais
+            if (dadosConfig.categories) config.categories = dadosConfig.categories;
+            if (dadosConfig.paymentTypes) config.paymentTypes = dadosConfig.paymentTypes;
+        }
+
+        // Carrega dados locais (backup e configs visuais)
+        savedCarts = safeLocalStorageParse("savedCarts", []);
+        clients = safeLocalStorageParse("clients", []);
+        systemConfig = safeLocalStorageParse("systemConfig", systemConfig);
+
+        if (document.body) document.body.setAttribute('data-theme', systemConfig.theme || 'dark');
+
+        // Remove Skeletons (Animação de carga)
+        document.querySelectorAll('.skeleton').forEach(el => {
+            el.classList.remove('skeleton');
+            el.style.color = '';
+        });
+        document.querySelectorAll('.skeleton-row').forEach(row => row.remove());
+        document.querySelectorAll('.chart-container canvas').forEach(el => el.style.opacity = '1'); 
+
+        // 3. ATUALIZA A TELA IMEDIATAMENTE (AQUI ESTAVA FALTANDO COISA)
+        if(typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
+        if(typeof renderProductTable === 'function') renderProductTable();
+        
+        // Atualiza os menus suspensos (Criar Produto)
+        if(typeof updateCategorySelect === 'function') updateCategorySelect(); 
+        
+        // === AS LINHAS MÁGICAS PARA REMOVER O FANTASMA: ===
+        if(typeof renderCategoriesManager === 'function') renderCategoriesManager(); // <--- Atualiza a lista visual de categorias
+        if(typeof renderPaymentsManager === 'function') renderPaymentsManager();     // <--- Atualiza a lista visual de pagamentos
+        if(typeof renderConfigFields === 'function') renderConfigFields();           // <--- Atualiza os campos de texto
+        
+        if(typeof initializeDashboardCharts === 'function') initializeDashboardCharts();
+
+    } catch (error) {
+        console.error("❌ ERRO ao carregar dados:", error);
+        document.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
+    }
+}
+
+/**
+ * Envia uma coleção de itens (com IDs originais) para o Firebase.
+ * @param {string} collectionName - Nome da coleção ('products' ou 'sales').
+ * @param {Array<Object>} items - Array de itens do arquivo de backup.
+ */
+async function importCollection(collectionName, items) {
+    console.log(`📥 Iniciando lote: ${collectionName} (${items.length} itens)`);
+    
+    // Processa em lotes de 50 para não travar o navegador
+    const BATCH_SIZE = 50;
+    
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const chunk = items.slice(i, i + BATCH_SIZE);
+        const promises = chunk.map(async (item) => {
+            try {
+                // Tenta pegar um ID, ou gera um se não tiver
+                const originalId = item.id || item._id || Date.now().toString() + Math.random();
+                
+                // Limpa o objeto (remove IDs duplicados internos)
+                const dataToSave = { ...item };
+                delete dataToSave.id;
+                delete dataToSave._id;
+
+                // Salva no caminho do usuário
+                const docRef = getUserDocumentRef(collectionName, String(originalId));
+                await setDoc(docRef, dataToSave);
+            } catch (e) {
+                console.error(`Erro ao importar item em ${collectionName}:`, e);
+                // Não damos throw aqui para não parar o loop inteiro
+            }
+        });
+
+        // Espera esse lote terminar antes de ir para o próximo
+        await Promise.all(promises);
+        
+        // Atualiza a mensagem na tela para o usuário saber que não travou
+        if(window.updateLoadingMessage) {
+            window.updateLoadingMessage(`Processando ${collectionName}...`, `${Math.min(i + BATCH_SIZE, items.length)} de ${items.length} concluídos`);
+        }
+    }
+    
+    console.log(`✅ Lote ${collectionName} finalizado.`);
+}
+
+/**
+ * Deleta todos os documentos de uma coleção do Firebase.
+ * @param {string} collectionName - O nome da coleção ('products' ou 'sales').
+ */
+
+async function clearCollection(collectionName) {
+    try {
+        // CORREÇÃO: Usa a referência do usuário, não a global
+        const snapshot = await getDocs(getUserCollectionRef(collectionName));
+        
+        const deletePromises = [];
+        snapshot.forEach((docEntry) => {
+            // CORREÇÃO: Deleta do caminho do usuário
+            deletePromises.push(deleteDoc(getUserDocumentRef(collectionName, docEntry.id)));
+        });
+
+        await Promise.all(deletePromises);
+        console.log(`✅ Coleção '${collectionName}' do usuário limpa.`);
+    } catch (error) {
+        console.error(`❌ Erro ao limpar '${collectionName}':`, error);
+        throw error; // Lança o erro para parar a importação se falhar
+    }
+}
+
 
 
 function sanitizeHTML(str) {
@@ -212,9 +605,6 @@ function sanitizeHTML(str) {
   return div.innerHTML;
 }
 
-// =================================================================
-// 3. NAVEGAÇÃO E LAYOUT
-// =================================================================
 
 function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
@@ -226,17 +616,14 @@ function setupNavigation() {
       e.preventDefault();
       const targetSectionId = item.getAttribute("href").substring(1);
 
-      // Remove classe ativa de todos
       navItems.forEach((i) => i.classList.remove("active"));
       item.classList.add("active");
 
-      // Esconde todas as seções
       sections.forEach((sec) => {
         sec.style.display = "none";
         sec.style.opacity = "0";
       });
 
-      // Mostra a seção alvo
       const targetSection = document.getElementById(targetSectionId);
       if (targetSection) {
         targetSection.style.display = "block";
@@ -244,10 +631,8 @@ function setupNavigation() {
           targetSection.style.opacity = "1";
         }, 50);
 
-        // Atualiza título
         titleElement.textContent = item.querySelector("span").textContent;
 
-        // Ações específicas por seção - CORREÇÃO AQUI
         switch (targetSectionId) {
           case "vendas":
             renderPdvProducts();
@@ -259,10 +644,9 @@ function setupNavigation() {
             renderConfigFields();
             break;
           case "relatorios":
-            // CORREÇÃO: Renderiza relatório automaticamente
             setTimeout(() => {
               renderSalesReport();
-              updateReportMetrics(); // ✅ GARANTE QUE AS MÉTRICAS SÃO ATUALIZADAS
+              updateReportMetrics(); //
               showTab("report-resumo");
             }, 100);
             break;
@@ -271,7 +655,6 @@ function setupNavigation() {
             break;
         }
 
-        // Fecha sidebar no mobile
         if (window.innerWidth <= 768) {
           document.getElementById("sidebar").classList.remove("collapsed");
           document.getElementById("main-content").classList.remove("expanded");
@@ -280,7 +663,6 @@ function setupNavigation() {
     });
   });
 
-  // Configura tabs
   setupTabs();
 }
 
@@ -296,17 +678,14 @@ function setupTabs() {
 }
 
 function showTab(tabContentId) {
-  // Remove classe ativa de todos os botões
   document.querySelectorAll(".tab-button").forEach((btn) => {
     btn.classList.remove("active");
   });
 
-  // Esconde todos os conteúdos
   document.querySelectorAll(".tab-content").forEach((content) => {
     content.style.display = "none";
   });
 
-  // Ativa o botão e conteúdo selecionado
   const activeButton = document.querySelector(
     `[data-tab-content="${tabContentId}"]`
   );
@@ -329,7 +708,6 @@ function toggleSidebar() {
 }
 
 function toggleAlertsWindow(event) {
-  // Previne que o clique no sino propague para o document
   if (event) {
     event.stopPropagation();
   }
@@ -338,32 +716,20 @@ function toggleAlertsWindow(event) {
   const isVisible = dropdown.style.display === "block";
   dropdown.style.display = isVisible ? "none" : "block";
 
-  // Atualiza os alertas quando abre o dropdown
   if (!isVisible) {
     updateAlerts();
   }
 }
 
-// =================================================================
-// 4. DASHBOARD E MÉTRICAS
-// =================================================================
 
-// ==========================================
-// 2. DASHBOARD (VENDAS HOJE)
-// ==========================================
-// =========================================================
-// 2. CORREÇÃO VENDAS HOJE (POR TEXTO)
-// =========================================================
 function updateDashboardMetrics() {
     try {
         if (!products || !Array.isArray(products)) products = [];
 
-        // Estoque
         let totalStockItems = products.reduce((sum, p) => sum + (Number(p.quantidade) || 0), 0);
         let lowStockCount = products.filter((p) => (Number(p.quantidade) || 0) <= (Number(p.minimo) || 0)).length;
         let totalProducts = products.length;
 
-        // VENDAS HOJE
         const hojeTexto = new Date().toLocaleDateString("pt-BR"); // ex: "03/12/2023"
         let salesToday = 0;
 
@@ -371,17 +737,14 @@ function updateDashboardMetrics() {
             const dataVenda = parseDataSegura(sale.timestamp || sale.date);
             
             if (dataVenda) {
-                // Converte a data da venda para texto BR
                 const vendaTexto = dataVenda.toLocaleDateString("pt-BR");
                 
-                // Se o texto for igual, é hoje!
                 if (vendaTexto === hojeTexto) {
                     salesToday += Number(sale.total) || 0;
                 }
             }
         });
 
-        // Atualiza a Tela
         const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
         
         setVal("total-stock-items", totalStockItems.toLocaleString("pt-BR"));
@@ -397,11 +760,18 @@ function updateDashboardMetrics() {
     } catch (error) { console.error("Erro Dashboard:", error); }
 }
 
-// CORREÇÃO: Alertas do Dashboard
 
 function updateAlerts() {
   try {
-    const lowStockProducts = products.filter((p) => p.quantidade <= p.minimo);
+    // 1. Carrega a lista de IDs ocultos
+    const hidden = JSON.parse(localStorage.getItem("hiddenAlerts")) || [];
+
+    // 2. Filtra: Só mostra se estoque for baixo E o ID NÃO estiver na lista de ocultos
+    const lowStockProducts = products.filter((p) => 
+        (Number(p.quantidade) || 0) <= (Number(p.minimo) || 0) &&
+        !hidden.includes(p.id) // <--- ESTA LINHA FALTAVA
+    );
+
     const alertListDropdown = document.getElementById("alerts-dropdown-list");
     const dashboardAlertList = document.getElementById("dashboard-alert-list");
     const bellIcon = document.getElementById("bell-icon");
@@ -411,15 +781,13 @@ function updateAlerts() {
 
       listElement.innerHTML = "";
       if (lowStockProducts.length === 0) {
-        listElement.innerHTML = `<li><i class="fas fa-check-circle" style="color: var(--accent-green); margin-right: 5px;"></i> Estoque saudável.</li>`;
+        listElement.innerHTML = `<li><span style="color: var(--color-accent-green);"><i class="fa-solid fa-circle-check"></i>   Estoque saudável.</span></li>`;
         return;
       }
 
       lowStockProducts.forEach((p) => {
         const li = document.createElement("li");
-        li.innerHTML = `<i class="fas fa-exclamation-circle" style="color: var(--accent-red); margin-right: 5px;"></i> ${sanitizeHTML(
-          p.nome
-        )} com estoque baixo. (${p.quantidade} und.)`;
+        li.innerHTML = `<i class="fas fa-exclamation-circle" style="color: var(--color-accent-red); margin-right: 5px;"></i> ${sanitizeHTML(p.nome)} (${p.quantidade} und.)`;
         listElement.appendChild(li);
       });
     };
@@ -427,44 +795,23 @@ function updateAlerts() {
     renderAlertsList(alertListDropdown);
     renderAlertsList(dashboardAlertList);
 
-    // Atualiza estado do sino
     if (lowStockProducts.length > 0) {
-      bellIcon.classList.add("has-alerts");
+      if(bellIcon) bellIcon.classList.add("has-alerts");
     } else {
-      bellIcon.classList.remove("has-alerts");
+      if(bellIcon) bellIcon.classList.remove("has-alerts");
     }
   } catch (error) {
     console.error("Erro ao atualizar alertas:", error);
   }
 }
 
-// =================================================================
-// 5. GERENCIAMENTO DE PRODUTOS
-// =================================================================
-
 function updateCategorySelect(selectedCategory = "") {
   try {
-    // Tenta encontrar o select de várias formas
     let select = document.getElementById("categoria");
+    if (!select) return;
 
-    if (!select) {
-      console.warn(
-        "⚠️ Elemento #categoria não encontrado. Tentando encontrar..."
-      );
-
-      // Tenta encontrar em outras localizações possíveis
-      select = document.querySelector('select[name="categoria"]');
-
-      if (!select) {
-        console.error("❌ Elemento categoria não encontrado em nenhum lugar.");
-        return;
-      }
-    }
-
-    // Limpa o select
     select.innerHTML = "";
 
-    // Adiciona opção vazia
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
     emptyOption.textContent = "Selecione uma categoria";
@@ -472,8 +819,10 @@ function updateCategorySelect(selectedCategory = "") {
     emptyOption.selected = !selectedCategory;
     select.appendChild(emptyOption);
 
-    // Adiciona categorias
-    config.categories.forEach((cat) => {
+    // 🛑 ESSENCIAL: Garantir que config.categories existe e é um array
+    const categories = Array.isArray(config.categories) ? config.categories : [];
+
+    categories.forEach((cat) => {
       const option = document.createElement("option");
       option.value = cat;
       option.textContent = cat;
@@ -481,10 +830,11 @@ function updateCategorySelect(selectedCategory = "") {
       select.appendChild(option);
     });
 
-    console.log(
-      "✅ updateCategorySelect executada com sucesso. Categorias:",
-      config.categories.length
-    );
+    // Se houver categorias, pré-seleciona a primeira se nenhuma for passada
+    if (categories.length > 0 && !selectedCategory) {
+        select.value = categories[0];
+    }
+    
   } catch (error) {
     console.error("❌ Erro em updateCategorySelect:", error);
   }
@@ -513,16 +863,16 @@ function validateProductForm(data) {
   return errors;
 }
 
-// =================================================================
-// SALVAR / EDITAR PRODUTO (FIREBASE)
-// =================================================================
 async function handleProductForm(event) {
     event.preventDefault();
 
+    const btn = document.getElementById('submit-btn');
     const idInput = document.getElementById('product-id').value;
     const isEditing = idInput && idInput !== '';
+    
+    const user = auth.currentUser;
+    if (!user) { showToast("Erro: Sessão não encontrada.", "error"); return; }
 
-    // Mapeamento dos dados do formulário
     const productData = {
         nome: document.getElementById('nome').value,
         categoria: document.getElementById('categoria').value,
@@ -532,56 +882,59 @@ async function handleProductForm(event) {
         minimo: parseInt(document.getElementById('minimo').value || 0)
     };
     
-    // ATENÇÃO: Se o Back-end retornar um erro 400, é por aqui.
     if (!productData.nome || isNaN(productData.preco) || productData.preco <= 0) {
-        alert("Preencha o nome e o preço corretamente.");
+        showToast("Preencha nome e preço corretamente.", "error");
         return;
     }
 
     try {
+        setBtnLoading(btn, true); // <--- ATIVA ANIMAÇÃO
+
         if (isEditing) {
-            // EDITAR: Atualiza o documento existente no Firebase
-            await updateDoc(doc(db, "products", idInput), productData);
-            alert("✅ Produto atualizado na nuvem!");
+            const productRef = getUserDocumentRef("products", idInput);
+            await updateDoc(productRef, productData);
+            showToast("Produto atualizado com sucesso!", "success");
         } else {
-            // NOVO: Cria um novo documento no Firebase
-            await addDoc(collection(db, "products"), productData);
-            alert("✅ Produto cadastrado na nuvem!");
+            await addDoc(getUserCollectionRef("products"), productData);
+            showToast("Produto cadastrado com sucesso!", "success");
         }
 
-        // Recarrega os dados para atualizar a tela
+        document.querySelector(".product-form").reset();
         resetProductForm();
         await loadAllData(); 
         showTab('product-list-tab');
 
     } catch (error) {
-        console.error("❌ Erro ao salvar no Firebase:", error);
-        alert("Erro ao salvar no banco de dados.");
+        console.error("Erro:", error);
+        showToast("Erro ao salvar no banco de dados.", "error");
+    } finally {
+        setBtnLoading(btn, false); // <--- DESATIVA ANIMAÇÃO
     }
 }
 
 function editProduct(id) {
-    // Procura o produto na lista comparando com _id ou id
     const product = products.find(p => (p._id === id) || (p.id == id));
     
     if (!product) {
-        console.error("Produto não encontrado na memória local:", id);
-        alert('Erro ao carregar produto para edição. Tente recarregar a página.');
+        alert('Erro ao carregar produto. Tente recarregar a página.');
         return;
     }
 
-    // Preenche o campo oculto com o ID REAL (_id)
+    // 1. GARANTE QUE O SELECT ESTÁ PREENCHIDO ANTES DE TENTAR SELECIONAR
+    updateCategorySelect(); 
+
     document.getElementById('product-id').value = product._id || product.id;
     
-    // ATENÇÃO: Usando os IDs exatos do HTML (nome, categoria, etc.)
     document.getElementById('nome').value = product.nome; 
-    document.getElementById('categoria').value = product.categoria;
+    
+    // Agora vai funcionar porque chamamos o updateCategorySelect ali em cima
+    document.getElementById('categoria').value = product.categoria; 
+    
     document.getElementById('preco').value = product.preco;
     document.getElementById('custo').value = product.custo;
     document.getElementById('quantidade').value = product.quantidade;
     document.getElementById('minimo').value = product.minimo;
     
-    // Ajusta visual dos botões
     document.getElementById('form-title').textContent = 'Editar Produto';
     document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Salvar Edição';
     document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
@@ -589,21 +942,21 @@ function editProduct(id) {
     showTab('product-form-tab');
 }
 
-// função deleteProduct inteira 
 async function deleteProduct(id) {
-    if (!confirm("Tem certeza que deseja excluir este produto da nuvem?")) return;
+    const user = auth.currentUser;
+    if (!user) { customAlert("Erro de autenticação.", "error"); return; }
 
-    try {
-        // DELETAR: Remove o documento pelo ID do Firebase
-        await deleteDoc(doc(db, "products", id));
-        
-        alert("🗑️ Produto excluído!");
-        await loadAllData(); // Atualiza a tela
-
-    } catch (error) {
-        console.error("❌ Erro ao deletar:", error);
-        alert("Erro ao excluir produto.");
-    }
+    customConfirm("Tem certeza que deseja excluir este produto permanentemente?", async () => {
+        try {
+            // DELETA: Caminho users/UID/products/PRODUTO_ID
+            const productRef = doc(db, "users", user.uid, "products", id);
+            await deleteDoc(productRef);
+            customAlert("Produto excluído com sucesso!", "success");
+            await loadAllData();
+        } catch (error) {
+            customAlert("Erro ao excluir: " + error.message, "error");
+        }
+    });
 }
 
 function resetProductForm() {
@@ -617,7 +970,6 @@ function resetProductForm() {
       '<i class="fas fa-plus-circle"></i> Cadastrar Produto';
     document.getElementById("cancel-edit-btn").style.display = "none";
 
-    // CORREÇÃO: Garante que a categoria é resetada corretamente
     setTimeout(() => {
       updateCategorySelect(config.categories[0] || "");
     }, 100);
@@ -629,77 +981,51 @@ function renderProductTable() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // Se não tiver produtos ou a lista estiver vazia
+    // --- LÓGICA DE ESTADO VAZIO ---
     if (!products || products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Nenhum produto cadastrado.</td></tr>';
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="7">
+                    <div class="empty-state-container" style="border:none; background:transparent;">
+                        <i class="fas fa-box-open empty-state-icon"></i>
+                        <h3 class="empty-state-title">Seu estoque está vazio</h3>
+                        <p class="empty-state-description">Cadastre seus produtos para começar a vender e controlar seu estoque.</p>
+                        <button class="submit-btn blue-btn" onclick="showTab('product-form-tab')">
+                            <i class="fas fa-plus"></i> Cadastrar Produto
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        // Garante que o contador de produtos no Dashboard zere
+        document.getElementById('total-products').textContent = '0';
         return;
     }
+    // ----------------------------
 
     products.forEach(p => {
-        // CORREÇÃO CRÍTICA: Usa o _id do MongoDB. Se não existir, usa o id legado.
-        const idMongo = p._id || p.id; 
-        
-        // Se o produto não tiver ID nenhum (dados corrompidos), ignora
-        if (!idMongo) return;
-
         const row = tbody.insertRow();
         
-        const nome = p.nome || 'Sem nome';
-        const preco = parseFloat(p.preco || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-        const qtd = parseInt(p.quantidade || 0);
-        const min = parseInt(p.minimo || 0);
+        // Verifica estoque baixo para adicionar classe visual (se a linha estiver na sua CSS)
+        if (p.quantidade <= p.minimo) row.classList.add('low-stock-row');
         
-        // Verifica estoque baixo
-        if (qtd <= min) row.classList.add('low-stock-row');
-
-        // Note que nos botões onclick, estamos passando 'idMongo'
+        // **IMPORTANTE**: Usamos p.id (ID do Firebase) para ações.
         row.innerHTML = `
-            <td>#...${idMongo.toString().slice(-4)}</td>
-            <td>${sanitizeHTML(nome)}</td>
-            <td>${sanitizeHTML(p.categoria || 'Geral')}</td>
-            <td>R$ ${preco}</td>
-            <td>${qtd}</td>
-            <td>${min}</td>
+            <td>#...${p.id.slice(-4)}</td>
+            <td><strong style="color: var(--color-text-primary);">${p.nome}</strong></td>
+            <td><span class="badge badge-purple">${p.categoria}</span></td> <td style="font-family: monospace; font-size: 1.1em;">R$ ${parseFloat(p.preco).toFixed(2)}</td>
+            
+            <td>${getEstoqueBadge(p.quantidade, p.minimo, p.categoria)}</td>
+            
+            <td style="opacity: 0.7;">${p.minimo}</td>
             <td>
-                <button class="action-btn edit-btn" onclick="editProduct('${idMongo}')"><i class="fas fa-pencil-alt"></i></button>
-                <button class="action-btn delete-btn" onclick="deleteProduct('${idMongo}')"><i class="fas fa-trash"></i></button>
+                <button class="action-btn edit-btn" onclick="editProduct('${p.id}')"><i class="fas fa-pencil-alt"></i></button>
+                <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i></button>
             </td>
         `;
+// ...
     });
 }
 
-// CORREÇÃO: Histórico de Ações
-function renderHistoryLog() {
-  try {
-    const tbody = document.getElementById("history-log-tbody");
-    if (!tbody) {
-      console.error("Tabela de histórico não encontrada");
-      return;
-    }
-
-    tbody.innerHTML = "";
-
-    if (logHistory.length === 0) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align: center; padding: 20px;">Nenhuma ação registrada</td></tr>';
-      return;
-    }
-
-    logHistory.forEach((log) => {
-      const row = tbody.insertRow();
-      row.innerHTML = `
-                <td>#${log.id}</td>
-                <td>${sanitizeHTML(log.timestamp)}</td>
-                <td>${sanitizeHTML(log.type)}</td>
-                <td>${sanitizeHTML(log.detail)}</td>
-            `;
-    });
-
-    console.log("Histórico renderizado:", logHistory.length, "ações");
-  } catch (error) {
-    console.error("Erro ao renderizar histórico:", error);
-  }
-}
 
 function showUndoModal(type, detail, logId) {
   document.getElementById("undo-action-type").textContent = type;
@@ -714,13 +1040,10 @@ function simulateUndoConfirmation() {
   document.getElementById("undo-modal").style.display = "none";
 }
 
-// =================================================================
-// 6. INICIALIZAÇÃO PRINCIPAL
-// =================================================================
 
 function initializeErrorHandling() {
   window.addEventListener("error", (e) => {
-    console.error("Erro global:", e.error);
+  
   });
 
   window.addEventListener("unhandledrejection", (e) => {
@@ -729,29 +1052,22 @@ function initializeErrorHandling() {
   });
 }
 
-// Inicialização quando o DOM estiver pronto
-// Substitua o bloco document.addEventListener("DOMContentLoaded", async () => { ... }) inteiro
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // 1. CHAMA O CARREGAMENTO PRINCIPAL E ESPERA O FIREBASE
     await loadAllData(); 
 
-    // 2. INICIALIZAÇÃO DE UI E UTILIDADES (O que não depende de dados)
     
     initializeErrorHandling();
     setupNavigation();
     
-    // Configurações de campo
     if(typeof initSystemConfig === 'function') initSystemConfig();
     if(typeof applySystemConfig === 'function') applySystemConfig();
     if(typeof setupCartClientAutocomplete === 'function') setupCartClientAutocomplete();
     if(typeof setupSaleDetailsStyles === 'function') setupSaleDetailsStyles();
     
-    // Inicia os gráficos
     if(typeof initializeDashboardCharts === 'function') initializeDashboardCharts();
     if(typeof inicializarGraficoCategoria === 'function') inicializarGraficoCategoria();
     
-    // 3. FECHA MODAIS (Comportamento UI)
     document.addEventListener("click", (e) => {
         if (e.target.classList.contains("modal-overlay")) {
             e.target.style.display = "none";
@@ -767,59 +1083,60 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 
-// ⚠️ IMPORTANTE: Você deve remover a função loadInitialData() inteira
-// Procure e exclua a função loadInitialData() completa do seu script.js.
-// O novo loadAllData já assume todas as responsabilidades.
-
-// =================================================================
-// 7. PONTO DE VENDA (PDV) - CORRIGIDO
-// =================================================================
-
-// CORREÇÃO: Garantir que produtos apareçam no PDV
 function renderPdvProducts() {
-    try {
-        const grid = document.getElementById("products-grid");
-        if (!grid) return;
+    const grid = document.getElementById("products-grid");
+    if (!grid) return;
+    
+    if (products.length === 0 && grid.querySelector('.skeleton')) return;
 
-        grid.innerHTML = "";
+    grid.innerHTML = "";
+    
+    if(products.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state-container" style="grid-column: 1 / -1; padding: 30px; border:none;">
+                <i class="fas fa-tags empty-state-icon" style="font-size: 3rem;"></i>
+                <h3 class="empty-state-title">Sem produtos para vender</h3>
+                <p class="empty-state-description">Vá até a aba Produtos para cadastrar itens.</p>
+            </div>`;
+        return;
+    }
 
-        if (products.length === 0) {
-            grid.innerHTML = '<div class="empty-state">Nenhum produto cadastrado</div>';
-            return;
-        }
-
-        products.forEach((p) => {
-            // CORREÇÃO: Usa o _id do Mongo ou o id antigo como fallback
-            const idReal = p._id || p.id;
-            
-            const inStock = (p.quantidade > 0) || (p.categoria === "Serviços");
-            const buttonClass = inStock ? "submit-btn blue-btn" : "submit-btn out-of-stock";
-            const buttonText = inStock ? "Adicionar" : "Esgotado";
-            const buttonIcon = inStock ? "fa-cart-plus" : "fa-ban";
-
-            const productCard = document.createElement("div");
-            productCard.className = "product-card";
-            
-            // CORREÇÃO: Passamos o ID entre aspas simples '${idReal}' para funcionar com IDs do Mongo
-            productCard.innerHTML = `
-                <span class="product-id">#...${idReal.toString().slice(-4)}</span>
-                <h4 class="product-name">${sanitizeHTML(p.nome)}</h4>
-                <p class="product-category">${sanitizeHTML(p.categoria)}</p>
-                <p class="product-price">R$ ${parseFloat(p.preco).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                <p class="product-stock ${!inStock ? "out-of-stock-text" : ""}">
-                    ${p.categoria === "Serviços" ? "Serviço" : `Estoque: ${p.quantidade}`}
-                </p>
-                <div class="product-button-container">
-                    <button class="${buttonClass}" onclick="addToCart('${idReal}')" ${!inStock ? "disabled" : ""}>
-                        <i class="fas ${buttonIcon}"></i> ${buttonText}
-                    </button>
+    products.forEach((p) => {
+        const inStock = p.quantidade > 0 || p.categoria === "Serviços";
+        const btnClass = inStock ? "blue-btn" : "out-of-stock";
+        
+        // --- ÍCONE MINIMALISTA ---
+        let lowStockIcon = "";
+        
+        // Verifica se estoque é baixo (e não é serviço e não está zerado)
+        if (p.categoria !== "Serviços" && p.quantidade <= p.minimo && p.quantidade > 0) {
+            lowStockIcon = `
+                <div class="low-stock-indicator" title="Estoque Baixo: Restam apenas ${p.quantidade} unidades (Mínimo: ${p.minimo})">
+                    <i class="fas fa-exclamation-circle"></i>
                 </div>
             `;
-            grid.appendChild(productCard);
-        });
-    } catch (error) {
-        console.error("Erro ao renderizar produtos PDV:", error);
-    }
+        }
+        // -------------------------
+
+        const div = document.createElement("div");
+        div.className = "product-card";
+        div.innerHTML = `
+            ${lowStockIcon}
+            
+            <span class="product-id">#${p.id.slice(-4)}</span>
+            <h4 class="product-name">${p.nome}</h4>
+            <p class="product-category">${p.categoria}</p>
+            <p class="product-price">R$ ${parseFloat(p.preco).toFixed(2)}</p>
+            <p class="product-stock">${p.categoria === "Serviços" ? "Serviço" : `Estoque: ${p.quantidade}`}</p>
+            
+            <div class="product-button-container">
+                <button class="submit-btn ${btnClass}" onclick="addToCart('${p.id}')" ${!inStock ? "disabled" : ""}>
+                    ${inStock ? "Adicionar" : "Esgotado"}
+                </button>
+            </div>
+        `;
+        grid.appendChild(div);
+    });
 }
 
 function filterPdvProducts() {
@@ -851,13 +1168,9 @@ function filterPdvProducts() {
   }
 }
 
-// =================================================================
-// 8. CARRINHO DE COMPRAS - CORRIGIDO
-// =================================================================
 
 function addToCart(productId) {
     try {
-        // CORREÇÃO: Compara tanto com _id quanto com id, garantindo que ache o produto
         const product = products.find((p) => (p._id === productId) || (p.id == productId));
         
         if (!product) {
@@ -871,7 +1184,6 @@ function addToCart(productId) {
             return;
         }
 
-        // Procura se já tem no carrinho pelo mesmo ID
         const cartItem = cart.find((item) => item.id === productId);
 
         if (cartItem) {
@@ -882,7 +1194,6 @@ function addToCart(productId) {
                 return;
             }
         } else {
-            // Adiciona novo item usando o ID correto
             cart.push({
                 id: productId, // Guarda o ID real (_id)
                 nome: product.nome,
@@ -899,17 +1210,13 @@ function addToCart(productId) {
 }
 
 function updateCartQuantity(productId, change) {
-    // Encontra o item no carrinho (comparando ID como texto ou número)
     const cartItem = cart.find((item) => (item.id || item._id) == productId);
 
     if (!cartItem) return;
 
-    // Se for adicionar (+1)
     if (change > 0) {
-        // Busca o produto original para checar estoque
         const product = products.find((p) => (p._id || p.id) == productId);
         
-        // Se achou produto e não for serviço, checa limite
         if (product && product.categoria !== "Serviços") {
             if (cartItem.quantity >= product.quantidade) {
                 alert(`Estoque máximo atingido! Apenas ${product.quantidade} unidades disponíveis.`);
@@ -918,12 +1225,10 @@ function updateCartQuantity(productId, change) {
         }
         cartItem.quantity++;
     } 
-    // Se for remover (-1)
     else {
         cartItem.quantity--;
     }
 
-    // Se zerou, remove do carrinho
     if (cartItem.quantity <= 0) {
         removeItemFromCart(productId);
     } else {
@@ -932,22 +1237,21 @@ function updateCartQuantity(productId, change) {
 }
 
 function removeItemFromCart(productId) {
-    // Filtra removendo o ID selecionado
     cart = cart.filter((item) => (item.id || item._id) != productId);
     renderCart();
 }
 
 function clearCart() {
-  if (cart.length === 0) {
-    alert("O carrinho já está vazio!");
-    return;
-  }
+    if (cart.length === 0) {
+        customAlert("O carrinho já está vazio!", "info");
+        return;
+    }
 
-  if (!confirm("Deseja realmente limpar o carrinho de compras?")) return;
-
-  cart = [];
-  renderCart();
-  alert("Carrinho limpo com sucesso!");
+    customConfirm("Deseja limpar todo o carrinho?", () => {
+        cart = [];
+        renderCart();
+        customAlert("Carrinho limpo!", "success");
+    });
 }
 
 function calculateTotals() {
@@ -990,7 +1294,6 @@ function renderCart() {
             const li = document.createElement("li");
             li.className = "cart-item";
             
-            // AQUI ESTAVA O ERRO: Adicionei aspas simples '${item.id}' nos onlicks
             li.innerHTML = `
                 <div class="item-info">
                     <span class="item-name">${item.nome}</span>
@@ -1017,25 +1320,18 @@ function renderCart() {
     subtotalEl.textContent = subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     totalEl.textContent = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
-// =================================================================
-// 9. CARRINHOS SALVOS - CORRIGIDO
-// =================================================================
 
-// 1. Apenas abre o modal
 function saveCurrentCart() {
     if (cart.length === 0) {
         alert("O carrinho está vazio!");
         return;
     }
-    // Limpa o campo e abre o modal
     document.getElementById('save-cart-client-name').value = "";
     document.getElementById('save-cart-modal').style.display = 'flex';
     
-    // Foca no campo de nome automaticamente
     setTimeout(() => document.getElementById('save-cart-client-name').focus(), 100);
 }
 
-// 2. Realmente salva e LIMPA o carrinho
 function confirmSaveCart() {
     try {
         const nameInput = document.getElementById('save-cart-client-name');
@@ -1049,22 +1345,18 @@ function confirmSaveCart() {
             client: clientName
         };
 
-        // Salva na lista
         savedCarts.unshift(newSavedCart);
         if (savedCarts.length > 15) savedCarts.pop(); // Limite de 15
 
         persistData();
         renderSavedCarts();
 
-        // --- AQUI ESTÁ A LIMPEZA ---
         cart = []; // Zera o array do carrinho
         renderCart(); // Atualiza a tela (vai mostrar "Carrinho vazio")
         
-        // Fecha o modal
         document.getElementById('save-cart-modal').style.display = 'none';
 
-        // Mensagem simples
-        alert(`✅ Carrinho salvo com sucesso para "${clientName}"!`);
+        alert(`Carrinho salvo com sucesso para "${clientName}"!`);
 
     } catch (error) {
         console.error(error);
@@ -1072,18 +1364,15 @@ function confirmSaveCart() {
     }
 }
 
-// Verifica se dois carrinhos têm exatamente os mesmos itens e quantidades
 function areCartsEqual(cart1, cart2) {
   if (cart1.length !== cart2.length) return false;
 
   const cart1Map = new Map();
   const cart2Map = new Map();
 
-  // Preenche os maps com ID -> quantidade
   cart1.forEach((item) => cart1Map.set(item.id, item.quantity));
   cart2.forEach((item) => cart2Map.set(item.id, item.quantity));
 
-  // Verifica se todos os IDs e quantidades são iguais
   for (let [id, quantity] of cart1Map) {
     if (cart2Map.get(id) !== quantity) return false;
   }
@@ -1091,12 +1380,10 @@ function areCartsEqual(cart1, cart2) {
   return true;
 }
 
-// Verifica se dois carrinhos têm os mesmos produtos (ignorando quantidades)
 function hasSameProducts(cart1, cart2) {
   const cart1Ids = new Set(cart1.map((item) => item.id));
   const cart2Ids = new Set(cart2.map((item) => item.id));
 
-  // Verifica se têm exatamente os mesmos produtos
   if (cart1Ids.size !== cart2Ids.size) return false;
 
   for (let id of cart1Ids) {
@@ -1112,12 +1399,9 @@ function loadSavedCart(cartId) {
 
     const loadedCart = savedCarts[savedCartIndex];
     
-    // Validação de estoque corrigida
     const validItems = loadedCart.items.filter((savedItem) => {
-        // Busca produto pelo ID novo ou velho
         const product = products.find((p) => (p._id || p.id) == savedItem.id);
         
-        // Se for serviço ou tiver estoque, é válido
         if (product && (product.categoria === "Serviços" || product.quantidade >= savedItem.quantity)) {
             return true;
         }
@@ -1130,66 +1414,62 @@ function loadSavedCart(cartId) {
     }
 
     cart = validItems;
-    // Removemos da lista de salvos ao carregar (opcional)
     savedCarts.splice(savedCartIndex, 1);
     
     renderCart();
     renderSavedCarts();
     persistData();
     
-    // Vai para a aba de vendas
     document.querySelector('.nav-item[href="#vendas"]').click();
     alert(`Carrinho carregado! ( ⚠️ ${loadedCart.items.length - validItems.length} produtos será removido por falta de estoque)`);
 }
 
 function deleteSavedCart(cartId) {
     if (!confirm("Excluir este carrinho salvo?")) return;
-    // Filtro corrigido com comparação solta
     savedCarts = savedCarts.filter((c) => c.id != cartId);
     renderSavedCarts();
     persistData();
 }
 
 function renderSavedCarts() {
-    try {
-        const container = document.getElementById("saved-carts-list");
-        if (!container) return;
-        container.innerHTML = "";
+    const container = document.getElementById("saved-carts-list");
+    if (!container) return;
+    container.innerHTML = "";
 
-        if (savedCarts.length === 0) {
-            container.innerHTML = `<div class="empty-state"><p>Nenhum carrinho salvo</p></div>`;
-            return;
-        }
+    // --- NOVO EMPTY STATE ---
+    if (savedCarts.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-container" style="grid-column: 1 / -1;">
+                <i class="fas fa-shopping-basket empty-state-icon"></i>
+                <h3 class="empty-state-title">Nenhum carrinho salvo</h3>
+                <p class="empty-state-description">Você pode salvar vendas pendentes no PDV para finalizar depois.</p>
+                <button class="submit-btn green-btn" onclick="document.querySelector('a[href=\\'#vendas\\']').click()">
+                    Criar Carrinho
+                </button>
+            </div>`;
+        return;
+    }
+    // ------------------------
 
-        savedCarts.forEach((cart) => {
-            // Verifica se tem nome de cliente salvo
-            const clienteLabel = cart.client ? `👤 ${cart.client}` : "👤 Sem Cliente";
-
-            const cartElement = document.createElement("div");
-            cartElement.className = "saved-cart-card";
-            cartElement.innerHTML = `
-                <div class="cart-info">
-                    <span class="cart-title">
-                        Carrinho #${cart.id.toString().slice(-4)} 
-                        <i class="fas fa-info-circle" style="color:var(--color-accent-blue); cursor:pointer; margin-left:5px;" onclick="viewCartDetails(${cart.id})" title="Ver detalhes"></i>
-                    </span>
-                    <p class="cart-meta" style="font-weight:bold; color:var(--color-text-primary); margin: 5px 0;">${clienteLabel}</p>
-                    <p class="cart-meta">${cart.timestamp}</p>
-                    <p class="cart-summary">${cart.items.length} itens - Total: R$ ${cart.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div class="cart-actions">
-                    <button class="submit-btn blue-btn" onclick="loadSavedCart(${cart.id})">Carregar</button>
-                    <button class="submit-btn delete-btn" onclick="deleteSavedCart(${cart.id})"><i class="fas fa-trash"></i>Deletar</button>
-                </div>
-            `;
-            container.appendChild(cartElement);
-        });
-    } catch (error) { console.error(error); }
+    savedCarts.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "saved-cart-card";
+        div.innerHTML = `
+            <div class="cart-info">
+                <span class="cart-title">Carrinho #${c.id.toString().slice(-4)}</span>
+                <p class="cart-meta"><strong>${c.client}</strong></p>
+                <p class="cart-meta">${c.timestamp}</p>
+                <p class="cart-summary">R$ ${c.total.toFixed(2)}</p>
+            </div>
+            <div class="cart-actions">
+                <button class="submit-btn blue-btn" onclick="loadSavedCart(${c.id})">Abrir</button>
+                <button class="submit-btn delete-btn" onclick="deleteSavedCart(${c.id})"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
 }
 
-// =================================================================
-// 10. PROCESSAMENTO DE VENDAS - CORRIGIDO
-// =================================================================
 
 function checkout() {
   try {
@@ -1198,7 +1478,6 @@ function checkout() {
       return;
     }
 
-    // Verifica estoque antes de prosseguir
     const stockIssues = [];
     cart.forEach((item) => {
       const product = products.find((p) => p.id === item.id);
@@ -1226,23 +1505,18 @@ function checkout() {
   }
 }
 
-// Variável para guardar a escolha
 let pagamentoSelecionado = null;
 
 function renderPaymentOptions() {
     const container = document.getElementById("payment-options-container");
     const totalDisplay = document.getElementById("payment-total-display");
 
-    // Atualiza valor total
     const { total } = calculateTotals();
     if(totalDisplay) totalDisplay.textContent = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-    // Limpa a janela
     container.innerHTML = "";
     pagamentoSelecionado = null;
 
-    // --- 1. CAMPO NOME DO CLIENTE (VOLTOU!) ---
-    // Tenta pegar nome se já foi digitado antes
     const nomeAnterior = document.getElementById("cart-client-name-input")?.value || "";
     
     const divCliente = document.createElement("div");
@@ -1254,7 +1528,6 @@ function renderPaymentOptions() {
     `;
     container.appendChild(divCliente);
 
-    // --- 2. LISTA DE PAGAMENTOS (CLÁSSICA) ---
     const labelPgto = document.createElement("p");
     labelPgto.style.marginBottom = "10px";
     container.appendChild(labelPgto);
@@ -1265,14 +1538,10 @@ function renderPaymentOptions() {
         btn.innerHTML = `<i class="fas fa-credit-card"></i> ${type}`;
         
         btn.onclick = () => {
-            // Remove verde dos outros
             document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
-            // Fica verde neste
             btn.classList.add('selected');
-            // Salva a escolha
             pagamentoSelecionado = type;
             
-            // Destrava o botão de confirmar
             const btnConfirmar = document.getElementById('btn-finalizar-venda');
             if(btnConfirmar) {
                 btnConfirmar.disabled = false;
@@ -1284,23 +1553,19 @@ function renderPaymentOptions() {
         container.appendChild(btn);
     });
 
-    // --- 3. BOTÕES DE AÇÃO (CANCELAR + CONFIRMAR) ---
     const row = document.createElement("div");
     row.className = "modal-actions-row";
 
-    // Botão Cancelar
     const btnCancel = document.createElement("button");
     btnCancel.className = "submit-btn delete-btn";
     btnCancel.innerHTML = 'Cancelar';
     btnCancel.onclick = () => document.getElementById('payment-modal').style.display = 'none';
 
-    // Botão Finalizar
     const btnConfirm = document.createElement("button");
     btnConfirm.id = "btn-finalizar-venda";
     btnConfirm.className = "submit-btn green-btn";
     btnConfirm.innerHTML = 'Finalizar';
     
-    // Começa travado até escolher pagamento
     btnConfirm.disabled = true;
     btnConfirm.style.opacity = "0.5";
     btnConfirm.style.cursor = "not-allowed";
@@ -1310,7 +1575,6 @@ function renderPaymentOptions() {
             alert("⚠️ Selecione uma forma de pagamento na lista acima.");
             return;
         }
-        // CHAMA A VENDA COM O PAGAMENTO ESCOLHIDO
         processSale(pagamentoSelecionado);
     };
 
@@ -1322,96 +1586,63 @@ function renderPaymentOptions() {
 
 
 async function processSale(paymentType) {
-    // Busca o botão de confirmação para travar/destravar
-    const btnConfirm = document.getElementById("btn-finalizar-venda");
-    
-    // A função try/finally garante que o botão seja destravado em caso de erro
+    const btn = document.getElementById("btn-finalizar-venda");
+    const clientName = document.getElementById("modal-client-name").value || "Não informado";
+    const total = cart.reduce((acc, i) => acc + (i.preco * i.quantity), 0);
+    const updates = [];
+
+    const user = auth.currentUser;
+    if (!user) { throw new Error("Usuário não autenticado."); }
+
     try {
-        // Pega o nome do cliente do modal
-        const inputNome = document.getElementById("modal-client-name");
-        const clientName = inputNome ? inputNome.value.trim() : "";
+        setBtnLoading(btn, true); // <--- ATIVA ANIMAÇÃO
 
-        // 1. TRAVA E CONFIGURAÇÃO
-        if(btnConfirm) {
-            btnConfirm.disabled = true;
-            btnConfirm.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
-        }
-
-        const { total } = calculateTotals();
-        
-        // 2. VERIFICA ESTOQUE E PREPARA ATUALIZAÇÕES
-        const updates = [];
-        for (const cartItem of cart) {
-            // CRÍTICO: Buscar o produto original na lista de produtos carregada
-            const product = products.find((p) => p.id === cartItem.id); 
+        // 1. Verifica Estoque
+        for (const item of cart) {
+            const prod = products.find(p => p.id === item.id);
+            if (!prod) throw new Error(`Produto "${item.nome}" não encontrado.`);
             
-            if (!product) {
-                console.error(`Produto ID ${cartItem.id} não encontrado na lista atual.`);
-                throw new Error("Produto não encontrado no estoque atual. Recarregue.");
-            }
-            
-            // Só checa estoque se não for 'Serviços'
-            if (product.categoria !== "Serviços") {
-                const novaQuantidade = (product.quantidade || 0) - cartItem.quantity;
-                
-                if (novaQuantidade < 0) {
-                    alert(`Estoque insuficiente para: ${product.nome}`);
-                    throw new Error("Estoque insuficiente.");
+            if (prod.categoria !== "Serviços") {
+                if (prod.quantidade < item.quantity) {
+                    throw new Error(`Estoque insuficiente: ${prod.nome}`);
                 }
-                
-                // Prepara o objeto para atualização do Firebase
-                updates.push({ id: product.id, novaQtd: novaQuantidade });
+                updates.push({ id: prod.id, novaQtd: prod.quantidade - item.quantity });
             }
         }
 
-        // 3. ATUALIZA ESTOQUE NO FIREBASE (Bulk Update)
-        for (const item of updates) {
-            // O ERRO OCORRIA AQUI. Agora, garantimos que item.id é o ID do documento.
-            await updateDoc(doc(db, "products", item.id), { 
-                quantidade: item.novaQtd 
-            });
+        // 2. Atualiza Estoque
+        for (const up of updates) {
+            const productRef = getUserDocumentRef("products", up.id);
+            await updateDoc(productRef, { quantidade: up.novaQtd });
         }
 
-        // 4. SALVA A VENDA NO FIREBASE
-        const newSale = {
+        // 3. Salva Venda
+        const sale = {
             timestamp: new Date().toISOString(),
             items: JSON.parse(JSON.stringify(cart)),
-            total: total,
+            total,
             payment: paymentType,
-            client: clientName,
+            client: clientName
         };
+
+        await addDoc(getUserCollectionRef("sales"), sale);
         
-        // Adiciona um novo documento na coleção "sales"
-        await addDoc(collection(db, "sales"), newSale);
-        
-        // 5. LIMPEZA E FINALIZAÇÃO
-        salesHistory.unshift({ id: Date.now(), ...newSale }); 
-        persistData(); // Salva histórico local e configs
-        
+        // 4. Finaliza
         cart = [];
         renderCart();
         document.getElementById("payment-modal").style.display = "none";
         
-        alert(`✅ Venda Finalizada!\nCliente: ${clientName || "Não informado"}\nValor: R$ ${total.toFixed(2)}`);
-        
-        // Recarrega os dados do Firebase para atualizar a tela e o dashboard
-        await loadAllData(); 
+        showToast(`Venda de R$ ${total.toFixed(2)} finalizada!`, "success"); // TOAST BONITO
+
+        await loadAllData();
 
     } catch (error) {
-        console.error("❌ ERRO FATAL NO PROCESSO DE VENDA:", error);
-        alert(`Erro crítico ao processar venda: ${error.message || "Verifique o console."}`);
-        
+        console.error("Erro venda:", error);
+        showToast(error.message, "error");
     } finally {
-        // GARANTE QUE O BOTÃO VOLTE AO NORMAL
-        if(btnConfirm) {
-            btnConfirm.disabled = false;
-            btnConfirm.innerHTML = 'Finalizar';
-        }
+        setBtnLoading(btn, false); // <--- DESATIVA ANIMAÇÃO
     }
 }
-// =================================================================
-// 11. CONFIGURAÇÕES - CORRIGIDO
-// =================================================================
 
 function renderConfigFields() {
   try {
@@ -1431,85 +1662,63 @@ function renderConfigFields() {
   }
 }
 
-function saveCategories() {
-  try {
+async function saveCategories() {
+    // Tenta encontrar o botão próximo ao textarea de categorias
     const textarea = document.getElementById("product-categories-config");
+    const btn = textarea ? textarea.nextElementSibling : null; 
+
     if (!textarea) return;
 
-    const newCategories = textarea.value
-      .split("\n")
-      .map((c) => c.trim())
-      .filter((c) => c.length > 0);
+    const newCategories = textarea.value.split("\n").map(c => c.trim()).filter(c => c.length > 0);
 
     if (newCategories.length === 0) {
-      alert("A lista de categorias não pode estar vazia.");
-      textarea.value = config.categories.join("\n");
-      return;
+        showToast("A lista não pode estar vazia.", "error");
+        return;
     }
 
-    // Verifica se há produtos usando categorias que serão removidas
-    const removedCategories = config.categories.filter(
-      (cat) => !newCategories.includes(cat)
-    );
-    const productsUsingRemovedCategories = products.filter((p) =>
-      removedCategories.includes(p.categoria)
-    );
+    try {
+        if(btn) setBtnLoading(btn, true); // <--- ATIVA ANIMAÇÃO
 
-    if (productsUsingRemovedCategories.length > 0) {
-      alert(
-        `Atenção: ${productsUsingRemovedCategories.length} produto(s) usam categorias que serão removidas. Eles serão movidos para a primeira categoria.`
-      );
+        config.categories = newCategories;
+        
+        updateCategorySelect();
+        persistData();
+        await saveConfigToFirebase();
 
-      // Move produtos para a primeira categoria
-      productsUsingRemovedCategories.forEach((product) => {
-        product.categoria = newCategories[0];
-      });
+        showToast("Categorias sincronizadas!", "success");
 
-      renderProductTable();
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao salvar categorias.", "error");
+    } finally {
+        if(btn) setBtnLoading(btn, false); // <--- DESATIVA ANIMAÇÃO
     }
-
-    config.categories = newCategories;
-    updateCategorySelect();
-    persistData();
-
-    logAction("Configurações", "Categorias atualizadas");
-    alert("Categorias salvas com sucesso!");
-  } catch (error) {
-    console.error("Erro ao salvar categorias:", error);
-    alert("Erro ao salvar categorias.");
-  }
 }
 
-function savePaymentTypes() {
-  try {
+async function savePaymentTypes() {
     const textarea = document.getElementById("payment-types-config");
     if (!textarea) return;
 
-    const newPaymentTypes = textarea.value
-      .split("\n")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
+    const newTypes = textarea.value.split("\n").map(t => t.trim()).filter(t => t.length > 0);
 
-    if (newPaymentTypes.length === 0) {
-      alert("A lista de tipos de pagamento não pode estar vazia.");
-      textarea.value = config.paymentTypes.join("\n");
-      return;
+    if (newTypes.length === 0) {
+        alert("A lista não pode estar vazia.");
+        return;
     }
 
-    config.paymentTypes = newPaymentTypes;
+    config.paymentTypes = newTypes;
+    
+    // Salva Local
     persistData();
+    
+    // SALVA NA NUVEM (Importante!)
+    await saveConfigToFirebase();
 
-    logAction("Configurações", "Tipos de pagamento atualizados");
-    alert("Tipos de pagamento salvos com sucesso!");
-  } catch (error) {
-    console.error("Erro ao salvar tipos de pagamento:", error);
-    alert("Erro ao salvar tipos de pagamento.");
-  }
+    alert("Formas de pagamento salvas e sincronizadas!");
 }
 
-// =================================================================
-// 12. RELATÓRIOS - CORRIGIDO
-// =================================================================
+
+
 
 let dailySalesChart = null;
 let categorySalesChart = null;
@@ -1532,7 +1741,6 @@ function parseDate(dateStr) {
     const [day, month, year] = dateStr.split("/").map(Number);
     const date = new Date(year, month - 1, day);
 
-    // Verifica se a data é válida
     return date.getDate() === day &&
       date.getMonth() === month - 1 &&
       date.getFullYear() === year
@@ -1549,10 +1757,8 @@ function getSalesDataForPeriod(startDateStr, endDateStr) {
     const startDate = parseDate(startDateStr);
     let endDate = parseDate(endDateStr);
 
-    // Se datas inválidas, retorna todo o histórico
     if (!startDate && !endDate) return salesHistory;
 
-    // Ajusta data final para incluir o dia inteiro
     if (endDate) {
       endDate = new Date(endDate);
       endDate.setDate(endDate.getDate() + 1);
@@ -1586,10 +1792,8 @@ function calculateReportMetrics(sales) {
     let totalCost = 0;
 
     sales.forEach((sale) => {
-      // Verifica se sale.items existe e é um array
       if (sale.items && Array.isArray(sale.items)) {
         sale.items.forEach((item) => {
-          // Garante que os valores são números válidos
           const preco = Number(item.preco) || 0;
           const custo = Number(item.custo) || 0;
           const quantity = Number(item.quantity) || 0;
@@ -1614,7 +1818,6 @@ function calculateReportMetrics(sales) {
     };
   } catch (error) {
     console.error("Erro ao calcular métricas:", error);
-    // Retorna valores padrão em caso de erro
     return {
       totalSales: 0,
       totalTransactions: 0,
@@ -1631,7 +1834,6 @@ function renderReportMetrics(metrics, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Garante que todos os valores são números válidos
     const safeMetrics = {
       totalSales: Number(metrics.totalSales) || 0,
       estimatedProfit: Number(metrics.estimatedProfit) || 0,
@@ -1701,7 +1903,6 @@ function renderSalesReport() {
     const sales = getSalesDataForPeriod(startDateStr, endDateStr);
     const metrics = calculateReportMetrics(sales);
 
-    // ATUALIZA AS MÉTRICAS DA ANÁLISE VISUAL
     updateReportMetrics(); // ✅ CORREÇÃO ADICIONADA
 
     renderReportMetrics(metrics, "analysis-summary-metrics");
@@ -1726,9 +1927,7 @@ function renderCategorySalesChart(sales) {
     sales.forEach((sale) => {
         if (sale.items && Array.isArray(sale.items)) {
             sale.items.forEach((item) => {
-                // CORREÇÃO: Busca o produto original para saber a categoria, comparando ID corretamente
                 const product = products.find((p) => (p._id || p.id) == item.id);
-                // Se não achar o produto (foi deletado), usa 'Deletado/Outros'
                 const category = product ? product.categoria : "Outros";
                 
                 const value = (item.preco || 0) * (item.quantity || 0);
@@ -1813,7 +2012,6 @@ function renderSalesDetailsTable(sales) {
       return;
     }
 
-    // Adiciona campo de pesquisa se não existir
     const existingSearch = document.getElementById("sales-search");
     if (!existingSearch) {
       const tableHeader =
@@ -1836,18 +2034,15 @@ function renderSalesDetailsTable(sales) {
                 `;
         tableHeader.innerHTML = searchHtml;
 
-        // Configura a pesquisa
         setTimeout(() => {
           setupSalesSearch();
         }, 100);
       }
     }
 
-    // Renderiza cada venda
     sales.forEach((sale) => {
       const row = salesReportTbody.insertRow();
 
-      // Garante que os dados existem
       const saleId = sale.id || "N/A";
       const timestamp = sale.timestamp || "Data não disponível";
       const total = sale.total || 0;
@@ -1855,28 +2050,23 @@ function renderSalesDetailsTable(sales) {
       const itemsCount = sale.items ? sale.items.length : 0;
       const client = sale.client || "";
 
-      // --- TRECHO CORRIGIDO ---
 
-row.innerHTML = `
-    <td>#${saleId}</td>
-    <td>${sanitizeHTML(timestamp)}</td>
-    <td>${total.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    })}</td>
-    <td>${sanitizeHTML(payment)}</td>
-    <td>${itemsCount} item(s)</td>
-    <td>${
-      client
-        ? sanitizeHTML(client)
-        : '<em style="color: var(--color-text-tertiary);">Não informado</em>'
-    }</td>
-    <td>
-        <button class="action-btn view-btn" onclick="viewSaleDetails('${saleId}')" title="Ver detalhes da venda">
-            <i class="fas fa-eye"></i> Detalhes
-        </button>
-    </td>
-`;
+    row.innerHTML = `
+        <td><span style="opacity:0.6">#${saleId.slice(-4)}</span></td>
+        <td>${sanitizeHTML(timestamp)}</td>
+        <td style="font-weight:bold; color:var(--color-accent-green);">R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+        
+        <td>${getPagamentoBadge(payment)}</td>
+        
+        <td>${itemsCount} item(s)</td>
+        <td>${client ? `<i class="fas fa-user" style="font-size:0.8em; margin-right:5px;"></i> ${sanitizeHTML(client)}` : '-'}</td>
+        <td>
+            <button class="action-btn view-btn" onclick="viewSaleDetails('${saleId}')" title="Ver detalhes">
+                <i class="fas fa-eye"></i>
+            </button>
+        </td>
+    `;
+// ...
 
     });
 
@@ -1890,24 +2080,27 @@ row.innerHTML = `
   }
 }
 
-// CORREÇÃO: Gráfico de Análise de Vendas (Últimos 30 Dias)
+// --- SUBSTITUA ESTA FUNÇÃO NO SEU script.js ---
 function initializeDashboardCharts() {
     try {
         const ctx = document.getElementById("daily-sales-chart");
         if (!ctx) return;
 
-        if (window.dailySalesChart instanceof Chart) window.dailySalesChart.destroy();
+        // 1. GARANTE QUE O GRÁFICO ANTERIOR É DESTRUÍDO
+        if (window.dailySalesChart instanceof Chart) {
+             window.dailySalesChart.destroy();
+        }
 
         const salesMap = {};
         
-        // Cria chaves para os últimos 30 dias
+        // Preenche 30 dias vazios
         for (let i = 29; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             salesMap[d.toLocaleDateString("pt-BR")] = 0;
         }
 
-        // Preenche com os dados
+        // Popula com dados do salesHistory
         salesHistory.forEach(sale => {
             const dataVenda = parseDataSegura(sale.timestamp || sale.date);
             if (dataVenda) {
@@ -1918,7 +2111,7 @@ function initializeDashboardCharts() {
             }
         });
 
-        // Desenha o gráfico
+        // 2. RECria o gráfico
         window.dailySalesChart = new Chart(ctx, {
             type: "line",
             data: {
@@ -1942,34 +2135,23 @@ function initializeDashboardCharts() {
                 }
             }
         });
-    } catch (e) { console.error("Erro Gráfico:", e); }
+        
+    } catch (e) { 
+        console.error("❌ Erro Gráfico:", e); 
+        // Em caso de erro, você pode querer exibir uma mensagem na tela
+    }
 }
 
-// CORREÇÃO: Verificar se o canvas existe no DOM
 function verificarElementosDashboard() {
   const canvas = document.getElementById("daily-sales-chart");
   if (!canvas) {
     console.error("Canvas do gráfico não encontrado no DOM");
-    // Tentar recriar após um tempo
     setTimeout(initializeDashboardCharts, 1000);
     return false;
   }
   return true;
 }
 
-// CORREÇÃO: Adicionar ao DOMContentLoaded
-document.addEventListener("DOMContentLoaded", function () {
-  // ... seu código existente
-
-  // Verificar e inicializar gráfico
-  setTimeout(() => {
-    if (verificarElementosDashboard()) {
-      initializeDashboardCharts();
-    }
-  }, 1000);
-});
-
-// CORREÇÃO: CSS para garantir que o gráfico tenha altura
 const style = document.createElement("style");
 style.textContent = `
     .chart-container {
@@ -2005,7 +2187,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// Função para recriar o gráfico (use no console se necessário)
 function recriarGraficoVendas() {
   if (window.dailySalesChart) {
     window.dailySalesChart.destroy();
@@ -2014,20 +2195,16 @@ function recriarGraficoVendas() {
   initializeDashboardCharts();
 }
 
-// No console, você pode executar: recriarGraficoVendas()
 
-// Variável para controlar alertas ocultos
 let hiddenAlerts = JSON.parse(localStorage.getItem("hiddenAlerts")) || [];
 
 
-// Função para ocultar alerta individual
 function hideAlert(productId) {
   if (!hiddenAlerts.includes(productId)) {
     hiddenAlerts.push(productId);
     localStorage.setItem("hiddenAlerts", JSON.stringify(hiddenAlerts));
     updateAlerts();
 
-    // Fecha o dropdown após ocultar
     setTimeout(() => {
       const dropdown = document.getElementById("alerts-floating-window");
       if (dropdown) dropdown.style.display = "none";
@@ -2035,34 +2212,33 @@ function hideAlert(productId) {
   }
 }
 
-// Função para limpar todos os alertas
+// --- SUBSTITUA ESTA FUNÇÃO NO SEU script.js ---
 function clearAllAlerts() {
-  const currentAlerts = products
-    .filter((p) => p.quantidade <= p.minimo)
-    .map((p) => p.id);
+  const lowStockProducts = products.filter((p) => (Number(p.quantidade) || 0) <= (Number(p.minimo) || 0));
+  const currentAlertIds = lowStockProducts.map(p => p.id);
 
-  if (currentAlerts.length === 0) {
-    alert("Não há alertas para limpar!");
+  if (currentAlertIds.length === 0) {
+    customAlert("Não há alertas de estoque para limpar!", "info");
     return;
   }
 
-  if (!confirm(`Deseja ocultar todos os ${currentAlerts.length} alertas?`)) {
-    return;
-  }
+  customConfirm(`Deseja ocultar todos os ${currentAlertIds.length} alertas de estoque baixo?`, () => {
+    
+    // Adiciona os IDs atuais à lista de alertas ocultos (garantindo unicidade)
+    hiddenAlerts = [...new Set([...hiddenAlerts, ...currentAlertIds])];
+    localStorage.setItem("hiddenAlerts", JSON.stringify(hiddenAlerts));
+    
+    // Força a atualização visual
+    updateAlerts();
 
-  // Adiciona todos os alertas atuais à lista de ocultos
-  hiddenAlerts = [...new Set([...hiddenAlerts, ...currentAlerts])];
-  localStorage.setItem("hiddenAlerts", JSON.stringify(hiddenAlerts));
-  updateAlerts();
+    // Fecha a janela de notificações (melhor UX)
+    const dropdown = document.getElementById("alerts-floating-window");
+    if (dropdown) dropdown.style.display = 'none';
 
-  // Fecha o dropdown
-  const dropdown = document.getElementById("alerts-floating-window");
-  if (dropdown) dropdown.style.display = "none";
-
-  alert(`Todos os ${currentAlerts.length} alertas foram ocultados!`);
+    customAlert(`${currentAlertIds.length} alertas foram ocultados!`, "success");
+  });
 }
 
-// Função para resetar alertas ocultos (útil para desenvolvimento)
 function resetHiddenAlerts() {
   hiddenAlerts = [];
   localStorage.setItem("hiddenAlerts", JSON.stringify(hiddenAlerts));
@@ -2070,9 +2246,7 @@ function resetHiddenAlerts() {
   alert("Alertas ocultos resetados!");
 }
 
-// Execute no console: resetHiddenAlerts() se precisar
 
-// Versão mais direta - fecha ao clicar em qualquer lugar
 document.addEventListener("click", function (event) {
   const modal = document.getElementById("sale-details-modal");
   if (event.target === modal) {
@@ -2080,11 +2254,8 @@ document.addEventListener("click", function (event) {
   }
 });
 
-// Variável para armazenar a venda atual sendo visualizada
 let currentSaleView = null;
 
-// Função para abrir detalhes da venda
-// CORREÇÃO: Botão Detalhes da venda funcionando
 function viewSaleDetails(saleId) {
   try {
     console.log("Abrindo detalhes da venda:", saleId);
@@ -2095,7 +2266,6 @@ function viewSaleDetails(saleId) {
       return;
     }
 
-    // Preenche as informações básicas da venda
     document.getElementById("detail-sale-id").textContent = `#${sale.id}`;
     document.getElementById("detail-sale-date").textContent =
       sale.timestamp || "Data não disponível";
@@ -2105,13 +2275,11 @@ function viewSaleDetails(saleId) {
       sale.total || 0
     ).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-    // Remove cliente anterior se existir
     const existingClient = document.querySelector(".client-meta-item");
     if (existingClient) {
       existingClient.remove();
     }
 
-    // Adiciona cliente se existir
     const saleMeta = document.querySelector(".sale-meta");
     if (sale.client && sale.client.trim() !== "") {
       const clientItem = document.createElement("div");
@@ -2122,7 +2290,6 @@ function viewSaleDetails(saleId) {
                   sale.client
                 )}</span>
             `;
-      // Insere antes do total
       const totalItem = saleMeta.querySelector(".total-item");
       if (totalItem) {
         saleMeta.insertBefore(clientItem, totalItem);
@@ -2131,7 +2298,6 @@ function viewSaleDetails(saleId) {
       }
     }
 
-    // Renderiza os itens da venda
     const itemsContainer = document.getElementById("detail-sale-items");
     itemsContainer.innerHTML = "";
 
@@ -2142,13 +2308,11 @@ function viewSaleDetails(saleId) {
         const itemElement = document.createElement("div");
         itemElement.className = "item-detail";
 
-        // Garante que os valores são números
         const preco = parseFloat(item.preco) || 0;
         const quantidade = parseInt(item.quantity) || 0;
         const totalItem = preco * quantidade;
         subtotal += totalItem;
 
-        // Calcula lucro do item
         const custo = parseFloat(item.custo) || 0;
         const lucroItem = totalItem - custo * quantidade;
         const margem = totalItem > 0 ? (lucroItem / totalItem) * 100 : 0;
@@ -2191,7 +2355,6 @@ function viewSaleDetails(saleId) {
         itemsContainer.appendChild(itemElement);
       });
 
-      // Linha de totais
       const totalElement = document.createElement("div");
       totalElement.className = "sale-totals";
       totalElement.innerHTML = `
@@ -2222,7 +2385,6 @@ function viewSaleDetails(saleId) {
             `;
     }
 
-    // Mostra o modal
     document.getElementById("sale-details-modal").style.display = "flex";
 
     console.log("Detalhes da venda carregados com sucesso");
@@ -2234,12 +2396,10 @@ function viewSaleDetails(saleId) {
   }
 }
 
-// Função para fechar detalhes da venda
 function closeSaleDetails() {
   document.getElementById("sale-details-modal").style.display = "none";
 }
 
-// Fechar modal ao clicar fora ou pressionar ESC
 document.addEventListener("click", function (event) {
   const modal = document.getElementById("sale-details-modal");
   if (event.target === modal) {
@@ -2253,11 +2413,7 @@ document.addEventListener("keydown", function (event) {
   }
 });
 
-// ==================================================
-// CONFIGURAÇÕES DO SISTEMA - NOVAS FUNÇÕES
-// ==================================================
 
-// Inicializar configurações
 function initSystemConfig() {
   renderCategoriesManager();
   renderPaymentsManager();
@@ -2265,7 +2421,6 @@ function initSystemConfig() {
   updateStorageInfo();
 }
 
-// Abas de configuração
 function setupConfigTabs() {
   const tabButtons = document.querySelectorAll(".config-tab-button");
 
@@ -2278,17 +2433,14 @@ function setupConfigTabs() {
 }
 
 function showConfigTab(tabId) {
-  // Remove classe ativa de todos os botões
   document.querySelectorAll(".config-tab-button").forEach((btn) => {
     btn.classList.remove("active");
   });
 
-  // Esconde todos os conteúdos
   document.querySelectorAll(".config-tab-content").forEach((content) => {
     content.style.display = "none";
   });
 
-  // Ativa o botão e conteúdo selecionado
   const activeButton = document.querySelector(`[data-config-tab="${tabId}"]`);
   const activeContent = document.getElementById(`${tabId}-tab`);
 
@@ -2299,7 +2451,6 @@ function showConfigTab(tabId) {
   }
 }
 
-// Gerenciador de Categorias
 function renderCategoriesManager() {
   const container = document.getElementById("categories-container");
   if (!container) return;
@@ -2324,7 +2475,7 @@ function renderCategoriesManager() {
   });
 }
 
-function addNewCategory() {
+async function addNewCategory() {
   const input = document.getElementById("new-category-name");
   const name = input.value.trim();
 
@@ -2339,64 +2490,73 @@ function addNewCategory() {
   }
 
   config.categories.push(name);
+  
+  // Salva Local
   persistData();
+  
+  // SALVA NA NUVEM (CORREÇÃO)
+  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+
   renderCategoriesManager();
   updateCategorySelect();
 
   input.value = "";
-  alert(`Categoria "${name}" adicionada com sucesso!`);
+  // alert(`Categoria "${name}" adicionada!`); // Opcional
 }
 
-function editCategory(index) {
+async function editCategory(index) {
   const newName = prompt("Editar nome da categoria:", config.categories[index]);
 
   if (newName && newName.trim()) {
     config.categories[index] = newName.trim();
+    
+    // Salva Local
     persistData();
+    
+    // SALVA NA NUVEM (CORREÇÃO)
+    if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+
     renderCategoriesManager();
     updateCategorySelect();
     alert("Categoria atualizada!");
   }
 }
 
-function deleteCategory(index) {
+async function deleteCategory(index) {
   const categoryName = config.categories[index];
 
-  if (
-    !confirm(`Tem certeza que deseja excluir a categoria "${categoryName}"?`)
-  ) {
+  if (!confirm(`Tem certeza que deseja excluir a categoria "${categoryName}"?`)) {
     return;
   }
 
-  // Verifica se há produtos usando esta categoria
-  const productsUsingCategory = products.filter(
-    (p) => p.categoria === categoryName
-  );
+  // Verifica se tem produtos usando essa categoria
+  const productsUsingCategory = products.filter((p) => p.categoria === categoryName);
 
   if (productsUsingCategory.length > 0) {
-    if (
-      !confirm(
-        `⚠️ ${productsUsingCategory.length} produto(s) usam esta categoria. Eles serão movidos para "${config.categories[0]}". Continuar?`
-      )
-    ) {
+    if (!confirm(`⚠️ ${productsUsingCategory.length} produto(s) usam esta categoria. Eles serão movidos para "${config.categories[0]}". Continuar?`)) {
       return;
     }
-
-    // Move os produtos para a primeira categoria
+    // Move os produtos para a primeira categoria disponível
     productsUsingCategory.forEach((product) => {
       product.categoria = config.categories[0];
     });
+    // Se quiser salvar a alteração dos produtos na nuvem também, precisaria de um loop aqui, 
+    // mas vamos focar na categoria primeiro.
     renderProductTable();
   }
 
   config.categories.splice(index, 1);
+  
+  // Salva Local
   persistData();
+  
+  // SALVA NA NUVEM (CORREÇÃO)
+  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+
   renderCategoriesManager();
   updateCategorySelect();
   alert("Categoria excluída!");
 }
-
-// Gerenciador de Pagamentos (similar às categorias)
 function renderPaymentsManager() {
   const container = document.getElementById("payments-container");
   if (!container) return;
@@ -2421,7 +2581,7 @@ function renderPaymentsManager() {
   });
 }
 
-function addNewPayment() {
+async function addNewPayment() {
   const input = document.getElementById("new-payment-name");
   const name = input.value.trim();
 
@@ -2436,28 +2596,37 @@ function addNewPayment() {
   }
 
   config.paymentTypes.push(name);
+  
+  // Salva Local
   persistData();
+  
+  // SALVA NA NUVEM (CORREÇÃO)
+  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+  
   renderPaymentsManager();
 
   input.value = "";
-  alert(`Método de pagamento "${name}" adicionado com sucesso!`);
+  // alert(`Método "${name}" adicionado!`);
 }
 
-function editPayment(index) {
-  const newName = prompt(
-    "Editar método de pagamento:",
-    config.paymentTypes[index]
-  );
+async function editPayment(index) {
+  const newName = prompt("Editar método de pagamento:", config.paymentTypes[index]);
 
   if (newName && newName.trim()) {
     config.paymentTypes[index] = newName.trim();
+    
+    // Salva Local
     persistData();
+    
+    // SALVA NA NUVEM (CORREÇÃO)
+    if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+    
     renderPaymentsManager();
     alert("Método de pagamento atualizado!");
   }
 }
 
-function deletePayment(index) {
+async function deletePayment(index) {
   const paymentName = config.paymentTypes[index];
 
   if (!confirm(`Tem certeza que deseja excluir o método "${paymentName}"?`)) {
@@ -2465,14 +2634,18 @@ function deletePayment(index) {
   }
 
   config.paymentTypes.splice(index, 1);
+  
+  // Salva Local
   persistData();
+  
+  // SALVA NA NUVEM (CORREÇÃO)
+  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+  
   renderPaymentsManager();
   alert("Método de pagamento excluído!");
 }
 
-// Configurações Gerais
 function renderGeneralConfig() {
-  // Preenche os campos com os valores atuais
   document.getElementById("alert-enabled").checked = systemConfig.alertsEnabled;
   document.getElementById("auto-save-interval").value =
     systemConfig.autoSaveInterval;
@@ -2485,7 +2658,6 @@ function renderGeneralConfig() {
   document.getElementById("theme-select").value = systemConfig.theme;
   document.getElementById("compact-mode").checked = systemConfig.compactMode;
 
-  // Preenche o select de pagamento padrão
   const paymentSelect = document.getElementById("default-payment-method");
   paymentSelect.innerHTML = "";
   config.paymentTypes.forEach((payment) => {
@@ -2520,56 +2692,110 @@ function saveGeneralConfig() {
 }
 
 function applySystemConfig() {
-  // Aplica o tema
   document.body.setAttribute("data-theme", systemConfig.theme);
 
-  // Aplica modo compacto
   if (systemConfig.compactMode) {
     document.body.classList.add("compact-mode");
   } else {
     document.body.classList.remove("compact-mode");
   }
 
-  // Atualiza alertas
   updateAlerts();
 }
 
-// Backup e Restauração
-function exportData(type = "all") {
-  let data = {};
+async function exportData(type = "all") {
+    try {
+        // 1. Mostra carregamento
+        showLoadingScreen("Gerando Backup...", "Compilando seus dados");
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-  switch (type) {
-    case "products":
-      data = { products };
-      break;
-    case "sales":
-      data = { salesHistory };
-      break;
-    default:
-      data = {
-        products,
-        salesHistory,
-        savedCarts,
-        logHistory,
-        config,
-        systemConfig,
-        exportDate: new Date().toISOString(),
-      };
-  }
+        let data = {
+            exportDate: new Date().toISOString(),
+            appVersion: "2.0", // Versão atualizada
+            dataType: type
+        };
 
-  const dataStr = JSON.stringify(data, null, 2);
-  const dataBlob = new Blob([dataStr], { type: "application/json" });
+        // 2. DADOS PRINCIPAIS (Produtos e Vendas)
+        if (type === "all" || type === "products") {
+            data.products = (typeof products !== 'undefined') ? products : [];
+        }
 
-  const url = URL.createObjectURL(dataBlob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `backup-stockbrasil-${type}-${
-    new Date().toISOString().split("T")[0]
-  }.json`;
-  link.click();
+        if (type === "all" || type === "sales") {
+            if (typeof salesHistory !== 'undefined') {
+                data.salesHistory = salesHistory;
+            } else {
+                data.salesHistory = JSON.parse(localStorage.getItem("salesHistory") || "[]");
+            }
+        }
 
-  URL.revokeObjectURL(url);
-  alert(`Backup de ${type} exportado com sucesso!`);
+        // 3. DADOS DE CONFIGURAÇÃO E CLIENTES (Obrigatório no 'all')
+        if (type === "all") {
+            // Carrinhos em aberto
+            data.savedCarts = (typeof savedCarts !== 'undefined') ? savedCarts : [];
+            
+            // CONFIGURAÇÕES CRÍTICAS (Categorias e Pagamentos)
+            // Tenta pegar da variável global, se não, pega do localStorage
+            if (typeof config !== 'undefined') {
+                data.config = config;
+            } else {
+                data.config = JSON.parse(localStorage.getItem("config") || '{"categories":[], "paymentTypes":[]}');
+            }
+
+            // Preferências do Sistema (Tema, Alertas, etc)
+            if (typeof systemConfig !== 'undefined') {
+                data.systemConfig = systemConfig;
+            } else {
+                data.systemConfig = JSON.parse(localStorage.getItem("systemConfig") || "{}");
+            }
+
+            // Clientes Cadastrados
+            if (typeof clients !== 'undefined') {
+                data.clients = clients;
+            } else {
+                data.clients = JSON.parse(localStorage.getItem("clients") || "[]");
+            }
+            
+            // Histórico e Alertas Ocultos
+            data.logHistory = JSON.parse(localStorage.getItem("logHistory") || "[]");
+            data.hiddenAlerts = JSON.parse(localStorage.getItem("hiddenAlerts") || "[]");
+        }
+
+        // 4. Validação se tem dados
+        const totalItems = (data.products?.length || 0) + (data.salesHistory?.length || 0);
+        // Se for backup completo, permitimos exportar mesmo sem produtos, pois pode querer salvar só as configs
+        if (totalItems === 0 && type !== 'all' && !data.config) {
+            hideLoadingScreen();
+            return showToast("Não há dados suficientes para exportar.", "info");
+        }
+
+        updateLoadingMessage("Criando Arquivo...", "Finalizando download");
+
+        // 5. Gera o Arquivo
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        const nomeArquivo = type === 'all' ? 'Completo' : (type === 'products' ? 'Produtos' : 'Vendas');
+        // Adiciona a data no nome do arquivo para organização
+        const dataHoje = new Date().toISOString().split("T")[0];
+        link.download = `Backup_StockBrasil_${nomeArquivo}_${dataHoje}.json`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+
+        hideLoadingScreen();
+        showToast("Backup completo exportado com sucesso!", "success");
+
+    } catch (error) {
+        console.error("Erro na exportação:", error);
+        hideLoadingScreen();
+        showToast("Erro ao gerar arquivo: " + error.message, "error");
+    }
 }
 
 
@@ -2598,66 +2824,63 @@ function clearOldSales() {
 }
 
 async function clearAllData() {
-    if (!confirm("🚨 PERIGO: Isso vai apagar TODOS os produtos e zerar o sistema.\n\nTem certeza?")) return;
-    
-    const senha = prompt("Digite '192837' para confirmar:");
-    if (senha !== "192837") return;
-
-    // Mensagem de loading
-    document.body.innerHTML = `
-        <div style="
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            width: 100vw; 
-            background: #1a1a1a; 
-            color: white; 
-            flex-direction: column;
-            text-align: center;
-            font-family: sans-serif;
-        ">
-            <i class="fas fa-broom fa-3x fa-spin" style="margin-bottom: 20px; color: #e74c3c;"></i>
-            <h1 style="margin: 0;">Limpando Sistema...</h1>
-            <p style="color: #888; margin-top: 10px;">Aguarde, não feche a página.</p>
-        </div>
-    `;
-
-    try {
-        // 1. Limpa LocalStorage (Configurações e Histórico Local)
-        localStorage.clear();
-
-        // 2. Limpa Produtos no Firebase
-        const productsQuery = await getDocs(collection(db, "products"));
-        for (const docSnapshot of productsQuery.docs) {
-            await deleteDoc(doc(db, "products", docSnapshot.id));
-        }
-
-        // 3. Limpa Vendas no Firebase
-        const salesQuery = await getDocs(collection(db, "sales"));
-        for (const docSnapshot of salesQuery.docs) {
-            await deleteDoc(doc(db, "sales", docSnapshot.id));
-        }
-        
-        // 4. Limpa Histórico de Logs (Se for uma coleção separada)
-        // Se você tiver uma coleção chamada 'logHistory', adicione a limpeza aqui:
-        // const logsQuery = await getDocs(collection(db, "logHistory"));
-        // for (const docSnapshot of logsQuery.docs) {
-        //     await deleteDoc(doc(db, "logHistory", docSnapshot.id));
-        // }
-
-
-        setTimeout(() => {
-            alert("✅ Sistema zerado! Reiniciando.");
-            location.reload();
-        }, 1000);
-
-    } catch (error) {
-        console.error("❌ ERRO FATAL AO LIMPAR DADOS:", error);
-        alert("Erro crítico ao limpar dados. Verifique suas regras de segurança do Firebase.");
-        location.reload(); // Tenta recarregar mesmo com erro
+    const user = auth.currentUser;
+    if (!user) {
+        return showToast("Erro: Usuário não autenticado.", "error");
     }
+
+    customConfirm("⚠️ PERIGO: Isso vai apagar TODOS os produtos e vendas da sua conta.\nDeseja continuar?", () => {
+        customPrompt("Segurança", "Digite a senha '192837' para confirmar:", async (senha) => {
+            if (senha === "192837") {
+                try {
+                    // Adicionamos a tela de carregamento para ficar bonito
+                    if(window.showLoadingScreen) window.showLoadingScreen("Limpando Sistema...", "Excluindo registros");
+
+                    // 1. Limpa LocalStorage
+                    localStorage.clear();
+                    
+                    // 2. Apaga do Firebase (Caminho CORRETO: users/{uid}/products)
+                    // Buscamos as referências corretas do usuário
+                    const prodsRef = collection(db, "users", user.uid, "products");
+                    const salesRef = collection(db, "users", user.uid, "sales");
+                    
+                    // Busca os dados para deletar
+                    const [prodsSnap, salesSnap] = await Promise.all([
+                        getDocs(prodsRef),
+                        getDocs(salesRef)
+                    ]);
+
+                    const deletePromises = [];
+
+                    // Prepara as deleções
+                    prodsSnap.forEach(d => {
+                        deletePromises.push(deleteDoc(doc(db, "users", user.uid, "products", d.id)));
+                    });
+                    
+                    salesSnap.forEach(d => {
+                        deletePromises.push(deleteDoc(doc(db, "users", user.uid, "sales", d.id)));
+                    });
+                    
+                    // Executa tudo junto
+                    await Promise.all(deletePromises);
+                    
+                    if(window.hideLoadingScreen) window.hideLoadingScreen();
+                    
+                    customAlert("Sistema zerado com sucesso!", "success");
+                    setTimeout(() => location.reload(), 2000);
+
+                } catch (error) {
+                    if(window.hideLoadingScreen) window.hideLoadingScreen();
+                    console.error("Erro na limpeza:", error);
+                    customAlert("Erro ao limpar: " + error.message, "error");
+                }
+            } else {
+                customAlert("Senha incorreta.", "error");
+            }
+        });
+    });
 }
+
 
 function updateStorageInfo() {
   const totalSize = JSON.stringify(localStorage).length;
@@ -2672,7 +2895,6 @@ function updateStorageInfo() {
   ).toFixed(1)} KB usado (${usedPercentage.toFixed(1)}% do limite)`;
 }
 
-// Inicializar quando carregar a página
 document.addEventListener("DOMContentLoaded", function () {
   initSystemConfig();
   applySystemConfig();
@@ -2681,15 +2903,8 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 1000);
 });
 
-// Adicione esta biblioteca no <head> do seu HTML:
-// <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-// <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-// =================================================================
-// CORREÇÃO: FUNÇÕES QUE ESTAVAM FALTANDO
-// =================================================================
 
-// Função para calcular vendas por categoria
 function calculateCategorySales(sales) {
   const categoryMap = {};
 
@@ -2705,7 +2920,6 @@ function calculateCategorySales(sales) {
     }
   });
 
-  // Ordena por valor decrescente
   return Object.entries(categoryMap)
     .sort((a, b) => b[1] - a[1])
     .reduce((obj, [key, value]) => {
@@ -2714,7 +2928,6 @@ function calculateCategorySales(sales) {
     }, {});
 }
 
-// Função para calcular métodos de pagamento
 function calculatePaymentMethods(sales) {
   const paymentMap = {};
 
@@ -2726,7 +2939,6 @@ function calculatePaymentMethods(sales) {
   return paymentMap;
 }
 
-// Função para obter produtos mais vendidos
 function getTopSellingProducts(sales, limit = 10) {
   const productMap = {};
 
@@ -2753,7 +2965,6 @@ function getTopSellingProducts(sales, limit = 10) {
     .slice(0, limit);
 }
 
-// Função para obter produtos mais lucrativos
 function getTopProfitableProducts(sales, limit = 10) {
   const productMap = {};
 
@@ -2785,7 +2996,6 @@ function getTopProfitableProducts(sales, limit = 10) {
     .slice(0, limit);
 }
 
-// Função para obter top clientes
 function getTopClients(sales, limit = 5) {
   const clientMap = {};
 
@@ -2808,7 +3018,6 @@ function getTopClients(sales, limit = 5) {
     .slice(0, limit);
 }
 
-// Função para gerar insights
 function generateInsights(sales, metrics) {
   const insights = [];
 
@@ -2816,7 +3025,6 @@ function generateInsights(sales, metrics) {
     return ["• Nenhuma venda no período selecionado"];
   }
 
-  // Insight de crescimento
   if (sales.length >= 2) {
     const recent = sales.slice(0, Math.ceil(sales.length / 2));
     const older = sales.slice(Math.ceil(sales.length / 2));
@@ -2832,7 +3040,6 @@ function generateInsights(sales, metrics) {
     }
   }
 
-  // Insight de ticket médio
   if (metrics.averageTicket > 100) {
     insights.push("• 💎 Ticket médio alto indica vendas de alto valor");
   } else if (metrics.averageTicket > 50) {
@@ -2841,7 +3048,6 @@ function generateInsights(sales, metrics) {
     insights.push("• 🛒 Ticket médio baixo, considere upselling");
   }
 
-  // Insight de margem
   if (metrics.totalRevenue > 0) {
     const margin = (metrics.estimatedProfit / metrics.totalRevenue) * 100;
     if (margin > 40) {
@@ -2853,7 +3059,6 @@ function generateInsights(sales, metrics) {
     }
   }
 
-  // Insight de clientes
   const salesWithClient = sales.filter(
     (s) => s.client && s.client.trim() !== ""
   );
@@ -2866,22 +3071,12 @@ function generateInsights(sales, metrics) {
   return insights;
 }
 
-// =================================================================
-// CORREÇÃO: FUNÇÃO setupCartClientAutocomplete
-// =================================================================
 
 function setupCartClientAutocomplete() {
-  // Esta função é chamada no carregamento, mas não é crítica
-  // Pode ser removida ou implementada se necessário
   console.log("Auto-complete de clientes inicializado");
 }
 
-// =================================================================
-// CORREÇÃO: PROBLEMA NO ID DO STYLE
-// =================================================================
 
-// Remova ou corrija a linha problemática (linha 4112)
-// Substitua por:
 function setupSaleDetailsStyles() {
   if (!document.querySelector("#sale-details-beautiful-styles")) {
     const styleElement = document.createElement("style");
@@ -2898,23 +3093,15 @@ function setupSaleDetailsStyles() {
   }
 }
 
-// =================================================================
-// INICIALIZAÇÃO CORRIGIDA
-// =================================================================
 
-// Atualize o DOMContentLoaded para incluir as novas funções
 document.addEventListener("DOMContentLoaded", function () {
-  // Sua inicialização existente...
 
-  // Adicione estas linhas:
   window.setupCartClientAutocomplete = setupCartClientAutocomplete;
   window.setupSaleDetailsStyles = setupSaleDetailsStyles;
 
-  // Inicialize as funções
   setupCartClientAutocomplete();
   setupSaleDetailsStyles();
 
-  // Torne as funções do PDF disponíveis globalmente
   window.calculateCategorySales = calculateCategorySales;
   window.calculatePaymentMethods = calculatePaymentMethods;
   window.getTopSellingProducts = getTopSellingProducts;
@@ -2925,15 +3112,8 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("Todas as funções do PDF inicializadas com sucesso!");
 });
 
-// =================================================================
-// VERSÃO SIMPLIFICADA DO generateCompletePDF PARA TESTE
-// =================================================================
 
-// =================================================================
-// BOTÃO ALTERNATIVO PARA TESTE
-// =================================================================
 
-// Use esta função temporariamente para testar:
 function testPDF() {
   if (typeof generateCompletePDF === "function") {
     generateCompletePDF();
@@ -2944,7 +3124,6 @@ function testPDF() {
   }
 }
 
-// Adicione este botão temporário no HTML para teste:
 /*
 <button class="submit-btn blue-btn" onclick="testPDF()">
     <i class="fas fa-file-pdf"></i> Testar PDF
@@ -2954,9 +3133,6 @@ function testPDF() {
 
 
 
-// =================================================================
-// VERSÃO ALTERNATIVA: RELATÓRIO DETALHADO COM CLIENTES
-// =================================================================
 
 function generateDetailedSalesPDF(doc, startDate, endDate) {
   const sales = getSalesDataForPeriod(
@@ -2964,12 +3140,10 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
     endDate.toLocaleDateString("pt-BR")
   );
 
-  // Cabeçalho
   doc.setFontSize(20);
   doc.setTextColor(41, 128, 185);
   doc.text("RELATÓRIO DETALHADO DE VENDAS", 105, 20, { align: "center" });
 
-  // Período
   doc.setFontSize(12);
   doc.setTextColor(100, 100, 100);
   doc.text(
@@ -2981,7 +3155,6 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
     { align: "center" }
   );
 
-  // Métricas principais
   const metrics = calculateReportMetrics(sales);
   const salesWithClient = sales.filter(
     (sale) => sale.client && sale.client.trim() !== ""
@@ -2993,7 +3166,6 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
   doc.setFontSize(14);
   doc.setTextColor(0, 0, 0);
 
-  // Coluna esquerda - Métricas gerais
   doc.text("MÉTRICAS GERAIS:", 20, 50);
   doc.text(
     `Total de Vendas: R$ ${metrics.totalSales.toLocaleString("pt-BR")}`,
@@ -3012,7 +3184,6 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
     84
   );
 
-  // Coluna direita - Métricas de clientes
   doc.text("MÉTRICAS DE CLIENTES:", 110, 50);
   doc.text(`Vendas com cliente: ${salesWithClient.length}`, 110, 60);
   doc.text(`Clientes únicos: ${uniqueClients.length}`, 110, 68);
@@ -3025,7 +3196,6 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
     76
   );
 
-  // Tabela detalhada de vendas
   const tableData = sales.map((sale) => [
     `#${sale.id}`,
     sale.timestamp.split(" ")[0],
@@ -3054,7 +3224,6 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
     margin: { top: 100 },
   });
 
-  // Rodapé
   const finalY = doc.lastAutoTable.finalY + 10;
   doc.setFontSize(10);
   doc.setTextColor(150, 150, 150);
@@ -3069,17 +3238,10 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
   });
 }
 
-// =================================================================
-// ATUALIZAR FUNÇÃO generatePDF PARA USAR A VERSÃO CORRIGIDA
-// =================================================================
 
 
 
-// =================================================================
-// ATUALIZAR OPÇÕES DE PDF NO HTML (OPCIONAL)
-// =================================================================
 
-// Adicione esta opção no HTML se quiser o relatório detalhado:
 /*
 <div class="pdf-options">
     <button class="submit-btn red-btn" onclick="generatePDF('sales-report')">
@@ -3097,9 +3259,7 @@ function generateDetailedSalesPDF(doc, startDate, endDate) {
 </div>
 */
 
-// Relatório de Estoque em PDF
 function generateInventoryPDF(doc, startDate, endDate) {
-  // Cabeçalho
   doc.setFontSize(20);
   doc.setTextColor(39, 174, 96);
   doc.text("RELATÓRIO DE ESTOQUE", 105, 20, { align: "center" });
@@ -3110,7 +3270,6 @@ function generateInventoryPDF(doc, startDate, endDate) {
     align: "center",
   });
 
-  // Métricas
   const totalStock = products.reduce((sum, p) => sum + p.quantidade, 0);
   const lowStockCount = products.filter((p) => p.quantidade <= p.minimo).length;
   const totalValue = products.reduce(
@@ -3129,7 +3288,6 @@ function generateInventoryPDF(doc, startDate, endDate) {
     80
   );
 
-  // Tabela de produtos (apenas estoque baixo ou todos se poucos)
   const showAll = products.length <= 30;
   const displayProducts = showAll
     ? products
@@ -3152,7 +3310,6 @@ function generateInventoryPDF(doc, startDate, endDate) {
     theme: "grid",
     headStyles: { fillColor: [39, 174, 96] },
     didDrawCell: function (data) {
-      // Destaca estoque baixo
       if (data.column.index === 2 && data.cell.raw <= data.row.raw[3]) {
         doc.setTextColor(231, 76, 60);
       }
@@ -3171,7 +3328,6 @@ function generateInventoryPDF(doc, startDate, endDate) {
   }
 }
 
-// Relatório de Lucros em PDF
 function generateProfitPDF(doc, startDate, endDate) {
     try {
         const start = new Date(startDate); start.setHours(0,0,0,0);
@@ -3209,7 +3365,6 @@ function generateProfitPDF(doc, startDate, endDate) {
                     receitaTotal += receitaItem;
                     custoTotal += custoItem;
 
-                    // Agrupa por nome
                     const nome = item.nome || "Item";
                     if (!resumoProdutos[nome]) {
                         resumoProdutos[nome] = { qtd: 0, receita: 0, custo: 0, lucro: 0 };
@@ -3225,13 +3380,11 @@ function generateProfitPDF(doc, startDate, endDate) {
         const lucroTotal = receitaTotal - custoTotal;
         const margem = receitaTotal > 0 ? ((lucroTotal / receitaTotal) * 100).toFixed(1) : "0.0";
 
-        // Exibe Totais
         doc.text(`Receita: R$ ${receitaTotal.toFixed(2)}`, 14, 40);
         doc.text(`Custo: R$ ${custoTotal.toFixed(2)}`, 80, 40);
         doc.text(`Lucro: R$ ${lucroTotal.toFixed(2)}`, 140, 40);
         doc.text(`Margem: ${margem}%`, 200, 40);
 
-        // Tabela
         const rows = Object.entries(resumoProdutos)
             .sort(([,a], [,b]) => b.lucro - a.lucro)
             .map(([nome, p]) => [
@@ -3264,12 +3417,10 @@ function setupClientAutocomplete() {
 
     if (searchTerm.length < 2) return;
 
-    // Filtra clientes existentes
     const matchingClients = clients
       .filter((client) => client.name.toLowerCase().includes(searchTerm))
       .slice(0, 5); // Limita a 5 sugestões
 
-    // Adiciona sugestões
     matchingClients.forEach((client) => {
       const suggestion = document.createElement("div");
       suggestion.className = "client-suggestion";
@@ -3281,7 +3432,6 @@ function setupClientAutocomplete() {
       suggestionsContainer.appendChild(suggestion);
     });
 
-    // Sugere adicionar novo cliente se não encontrado
     if (matchingClients.length === 0 && searchTerm.length >= 2) {
       const newSuggestion = document.createElement("div");
       newSuggestion.className = "client-suggestion new-client";
@@ -3294,7 +3444,6 @@ function setupClientAutocomplete() {
     }
   });
 
-  // Fecha sugestões ao clicar fora
   document.addEventListener("click", (e) => {
     if (
       !clientInput.contains(e.target) &&
@@ -3319,7 +3468,6 @@ function addNewClient(clientName) {
   clients.push(newClient);
   persistData();
 
-  // Preenche o campo com o novo cliente
   document.getElementById("client-name").value = newClient.name;
 
   console.log(`Novo cliente adicionado: ${newClient.name}`);
@@ -3331,7 +3479,6 @@ function filterSalesTable(searchTerm) {
     const rows = document.querySelectorAll("#sales-report-table tbody tr");
     let visibleCount = 0;
 
-    // Remove mensagem de "nenhum resultado" anterior se existir
     const existingNoResults = document.querySelector(
       "#sales-report-table .no-results"
     );
@@ -3339,7 +3486,6 @@ function filterSalesTable(searchTerm) {
       existingNoResults.remove();
     }
 
-    // Se pesquisa vazia, mostra todas as linhas
     if (searchLower === "") {
       rows.forEach((row) => {
         row.style.display = "";
@@ -3348,7 +3494,6 @@ function filterSalesTable(searchTerm) {
       return;
     }
 
-    // Filtra as linhas
     rows.forEach((row) => {
       if (row.cells.length < 6) {
         row.style.display = "none";
@@ -3374,7 +3519,6 @@ function filterSalesTable(searchTerm) {
       if (matches) visibleCount++;
     });
 
-    // Mostra mensagem se nenhum resultado for encontrado
     if (visibleCount === 0 && searchLower !== "") {
       const tbody = document.querySelector("#sales-report-table tbody");
       if (tbody) {
@@ -3417,25 +3561,21 @@ function setupSalesSearch() {
   const searchInput = document.getElementById("sales-search");
   if (!searchInput) return;
 
-  // Pesquisa em tempo real
   searchInput.addEventListener("input", function (e) {
     filterSalesTable(e.target.value);
   });
 
-  // Limpa com Escape
   searchInput.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
       clearSalesSearch();
     }
   });
 
-  // Foca no input quando a página carrega
   setTimeout(() => {
     searchInput.focus();
   }, 1000);
 }
 
-// Função para formatar data automaticamente com "/"
 function formatarData(input) {
   let value = input.value.replace(/\D/g, "");
 
@@ -3449,34 +3589,27 @@ function formatarData(input) {
   input.value = value;
 }
 
-// Função para validar e filtrar
 function filtrarPorPeriodo() {
   const dataInicio = document.getElementById("data-inicio").value;
   const dataFim = document.getElementById("data-fim").value;
 
-  // Validação básica
   if (!dataInicio || !dataFim) {
     alert("Por favor, preencha ambas as datas.");
     return;
   }
 
-  // Validação de formato
   const regexData = /^\d{2}\/\d{2}\/\d{4}$/;
   if (!regexData.test(dataInicio) || !regexData.test(dataFim)) {
     alert("Por favor, use o formato DD/MM/AAAA.");
     return;
   }
 
-  // Aqui você adiciona a lógica de filtro real
   console.log("Filtrando de:", dataInicio, "até:", dataFim);
 
-  // Exemplo: Atualizar os dados na tela
   alert(`Filtro aplicado!\nPeríodo: ${dataInicio} à ${dataFim}`);
 }
 
-// Inicialização quando a página carregar
 document.addEventListener("DOMContentLoaded", function () {
-  // Adicionar eventos de formatação automática
   const dataInicio = document.getElementById("data-inicio");
   const dataFim = document.getElementById("data-fim");
 
@@ -3485,7 +3618,6 @@ document.addEventListener("DOMContentLoaded", function () {
       formatarData(this);
     });
 
-    // Placeholder dinâmico
     dataInicio.placeholder = "DD/MM/AAAA";
   }
 
@@ -3494,11 +3626,9 @@ document.addEventListener("DOMContentLoaded", function () {
       formatarData(this);
     });
 
-    // Placeholder dinâmico
     dataFim.placeholder = "DD/MM/AAAA";
   }
 
-  // Adicionar evento ao botão filtrar
   const btnFiltrar = document.querySelector(
     ".period-filter-custom .filter-btn"
   );
@@ -3506,7 +3636,6 @@ document.addEventListener("DOMContentLoaded", function () {
     btnFiltrar.addEventListener("click", filtrarPorPeriodo);
   }
 
-  // Também filtrar ao pressionar Enter nos campos
   if (dataInicio) {
     dataInicio.addEventListener("keypress", function (e) {
       if (e.key === "Enter") filtrarPorPeriodo();
@@ -3520,7 +3649,6 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-// Inicializar gráfico de distribuição por categoria
 
 function inicializarGraficoCategoria() {
   try {
@@ -3530,7 +3658,6 @@ function inicializarGraficoCategoria() {
       return;
     }
 
-    // Chama a função principal de renderização
     renderCategorySalesChart(salesHistory);
 
     console.log("✅ Gráfico de barras por categoria renderizado com sucesso!");
@@ -3539,15 +3666,12 @@ function inicializarGraficoCategoria() {
   }
 }
 
-// Chamar a função quando a página carregar
 document.addEventListener("DOMContentLoaded", function () {
   inicializarGraficoCategoria();
 
-  // Seu código existente do filtro aqui...
 });
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Garante que as funções estejam disponíveis globalmente
   window.viewSaleDetails = viewSaleDetails;
   window.closeSaleDetails = closeSaleDetails;
   window.filterSalesTable = filterSalesTable;
@@ -3697,8 +3821,6 @@ const saleDetailsStyles = `
 </style>
 `;
 
-// Adiciona os estilos ao head do documento
-// CORREÇÃO: Adiciona os estilos ao head do documento
 if (!document.querySelector("#sale-details-styles")) {
   try {
     const styleElement = document.createElement("style");
@@ -3817,10 +3939,8 @@ if (!document.querySelector("#sale-details-styles")) {
   }
 }
 
-// CORREÇÃO: Atualizar métricas da análise visual
 function updateReportMetrics() {
   try {
-    // Pega todas as vendas (ou você pode filtrar por período se quiser)
     const sales = salesHistory;
 
     if (!sales || sales.length === 0) {
@@ -3828,7 +3948,6 @@ function updateReportMetrics() {
       return;
     }
 
-    // Calcula as métricas
     let totalSales = 0;
     let totalRevenue = 0;
     let totalCost = 0;
@@ -3853,7 +3972,6 @@ function updateReportMetrics() {
     const totalProfit = totalRevenue - totalCost;
     const averageTicket = totalSales / sales.length;
 
-    // Atualiza os elementos HTML
     const totalSalesEl = document.getElementById("report-total-sales");
     const totalProfitEl = document.getElementById("report-total-profit");
     const productsSoldEl = document.getElementById("report-products-sold");
@@ -3896,7 +4014,6 @@ function updateReportMetrics() {
   }
 }
 
-// Função para resetar métricas
 function resetReportMetrics() {
   const elements = [
     "report-total-sales",
@@ -3922,62 +4039,45 @@ function resetReportMetrics() {
 }
 
 
-// ==========================================
-// 1. FUNÇÃO SIMPLIFICADA DE DATAS
-// ==========================================
 function obterDataTexto(input) {
     if (!input) return null;
 
     let data;
 
-    // Tenta criar a data normalmente
     data = new Date(input);
 
-    // Se falhar (data inválida), tenta corrigir formato brasileiro DD/MM/AAAA
     if (isNaN(data.getTime()) && typeof input === 'string') {
         const partes = input.split(' ')[0].split('/'); // Pega só a data
         if (partes.length === 3) {
-            // Recria como AAAA-MM-DDT12:00:00 (Meio dia para evitar fuso)
             data = new Date(`${partes[2]}-${partes[1]}-${partes[0]}T12:00:00`);
         }
     }
 
-    // Se ainda for inválida, desiste
     if (isNaN(data.getTime())) return null;
 
-    // Retorna APENAS o texto: "03/12/2023"
     return data.toLocaleDateString("pt-BR");
 }
 
-// =========================================================
-// 1. FUNÇÃO INFALÍVEL DE TEXTO (DD/MM/AAAA)
-// =========================================================
 function normalizarDataParaTexto(input) {
     if (!input) return null;
 
-    // Se já veio como string "03/12/2025, 14:30:00"
     if (typeof input === 'string') {
-        // Pega só a parte da data (antes da vírgula ou espaço)
         const parteData = input.split(' ')[0].replace(',', '').trim();
         
-        // Se já estiver em DD/MM/AAAA, retorna direto!
         if (parteData.includes('/') && parteData.split('/')[0].length === 2) {
             return parteData; 
         }
 
-        // Se estiver em YYYY-MM-DD (ISO do banco antigo/novo)
         if (parteData.includes('-')) {
             const p = parteData.split('-'); // [2025, 12, 03]
             return `${p[2]}/${p[1]}/${p[0]}`; // Retorna 03/12/2025
         }
     }
 
-    // Se for um objeto Date do Javascript
     if (input instanceof Date) {
         return input.toLocaleDateString("pt-BR");
     }
 
-    // Tenta converter em último caso
     try {
         const d = new Date(input);
         if (!isNaN(d.getTime())) return d.toLocaleDateString("pt-BR");
@@ -3986,34 +4086,19 @@ function normalizarDataParaTexto(input) {
     return null;
 }
 
-// ==========================================
-// PDF DE VENDAS (CORRIGIDO)
-// ==========================================
-// ==========================================
-// PDF DE VENDAS (VERSÃO BLINDADA)
-// ==========================================
-// =========================================================
-// 1. FUNÇÃO AUXILIAR: Converte texto/ISO para Data Real
-// =========================================================
 function normalizarData(input) {
     if (!input) return null;
 
-    // Se já for data real, retorna ela
     if (input instanceof Date && !isNaN(input.getTime())) return input;
 
-    // Se for texto (String)
     if (typeof input === 'string') {
-        // Caso 1: Formato Brasileiro "25/12/2023" ou "25/12/2023 14:30"
         if (input.includes('/')) {
             const partesData = input.split(' ')[0].split('/'); // Pega só a data: ["25", "12", "2023"]
             if (partesData.length === 3) {
-                // Cria data: Ano, Mês (0-11), Dia. 
-                // Fixamos hora 12:00 para evitar problemas de fuso horário voltando o dia
                 return new Date(partesData[2], partesData[1] - 1, partesData[0], 12, 0, 0);
             }
         }
         
-        // Caso 2: Formato ISO "2023-12-25" (Comum em backups JSON)
         const d = new Date(input);
         if (!isNaN(d.getTime())) return d;
     }
@@ -4021,29 +4106,20 @@ function normalizarData(input) {
     return null;
 }
 
-// =================================================================
-// 2. CORREÇÃO DE DATAS "BLINDADA" (Para o PDF ler datas antigas)
-// =================================================================
 function forcarData(input) {
     if (!input) return null;
 
-    // Se já for objeto Date
     if (input instanceof Date && !isNaN(input)) return input;
 
-    // Se for texto
     if (typeof input === 'string') {
-        // Tenta formato ISO (2023-11-25)
         if (input.includes('-')) {
-            // Adiciona meio-dia para evitar bug de fuso horário
             const d = new Date(input.length <= 10 ? input + "T12:00:00" : input);
             if (!isNaN(d)) return d;
         }
 
-        // Tenta formato BR (25/11/2023)
         if (input.includes('/')) {
             const partes = input.split(' ')[0].split('/'); // Pega [25, 11, 2023]
             if (partes.length === 3) {
-                // Mês no JS começa em 0, então subtrai 1
                 return new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
             }
         }
@@ -4051,26 +4127,19 @@ function forcarData(input) {
     return null;
 }
 
-// =================================================================
-// 3. PDF DE VENDAS (USANDO A NOVA LÓGICA DE DATAS)
-// =================================================================
 function generateSalesPDF(doc, startDate, endDate) {
     try {
         console.log("Iniciando PDF...");
 
-        // Configura datas de filtro (começo do dia inicial até fim do dia final)
         const inicio = new Date(startDate); inicio.setHours(0,0,0,0);
         const fim = new Date(endDate); fim.setHours(23,59,59,999);
 
-        // Filtra usando a função forcarData
         const vendasFiltradas = salesHistory.filter(venda => {
-            // Verifica 'timestamp' E 'date' (para compatibilidade com backups antigos)
             const dataBruta = venda.timestamp || venda.date; 
             const dataReal = forcarData(dataBruta);
 
             if (!dataReal) return false; // Se a data estiver corrompida, ignora
 
-            // Compara
             return dataReal >= inicio && dataReal <= fim;
         });
 
@@ -4079,7 +4148,6 @@ function generateSalesPDF(doc, startDate, endDate) {
             return;
         }
 
-        // Gera o PDF
         doc.setFontSize(18);
         doc.text("Relatório de Vendas", 14, 20);
         doc.setFontSize(10);
@@ -4096,7 +4164,6 @@ function generateSalesPDF(doc, startDate, endDate) {
             ];
         });
 
-        // Calcula total
         const total = vendasFiltradas.reduce((acc, v) => acc + (parseFloat(v.total)||0), 0);
 
         doc.autoTable({
@@ -4113,7 +4180,6 @@ function generateSalesPDF(doc, startDate, endDate) {
     }
 }
 
-// NOVA FUNÇÃO: Janela de Detalhes do Carrinho Salvo
 function viewCartDetails(cartId) {
     const savedCart = savedCarts.find(c => c.id == cartId);
     if (!savedCart) return;
@@ -4133,27 +4199,19 @@ function viewCartDetails(cartId) {
     alert(msg);
 }
 
-// =========================================================
-// FUNÇÃO PARA CORRIGIR DATAS (ISO OU TEXTO)
-// =========================================================
 function parseDataSegura(input) {
     if (!input) return null;
 
-    // 1. Se já for um objeto Date
     if (input instanceof Date && !isNaN(input.getTime())) return input;
 
-    // 2. Tenta converter String
     if (typeof input === 'string') {
-        // Se for data BR (DD/MM/AAAA)
         if (input.includes('/')) {
             const partes = input.split(' ')[0].split('/');
             if (partes.length === 3) {
-                // Cria data no meio do dia para evitar erro de fuso horário
                 return new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
             }
         }
         
-        // Se for ISO do Banco (YYYY-MM-DD...)
         const d = new Date(input);
         if (!isNaN(d.getTime())) return d;
     }
@@ -4162,11 +4220,9 @@ function parseDataSegura(input) {
 }
 
 function criarNovoArquivo() {
-    // 1. Pergunta de segurança
     const confirmacao = confirm("⚠️ ATENÇÃO: Isso vai apagar TODOS os dados atuais para começar do zero.\n\nDeseja fazer um backup automático antes de limpar?");
 
     if (confirmacao) {
-        // Tenta exportar os dados atuais antes de apagar
         try {
             exportData(); // Chama sua função de exportar/download
             alert("Backup realizado! Agora vamos limpar o sistema.");
@@ -4175,16 +4231,13 @@ function criarNovoArquivo() {
             return;
         }
     } else {
-        // Se o usuário cancelar o backup, pergunta se quer continuar mesmo assim
         if (!confirm("Tem certeza que deseja apagar tudo SEM fazer backup? Essa ação é irreversível.")) {
             return;
         }
     }
 
-    // 2. Limpa tudo
     localStorage.clear();
     
-    // 3. Reinicia as variáveis
     produtos = [];
     vendas = [];
     clientes = [];
@@ -4193,91 +4246,143 @@ function criarNovoArquivo() {
     window.location.reload();
 }
 
-// =================================================================
-// CORREÇÃO DEFINITIVA - IMPORTAÇÃO E PDF
-// Cole isso no FINAL do seu arquivo script.js
-// =================================================================
 
-// 1. IMPORTAÇÃO CORRIGIDA (Lê o ID correto do HTML)
+
+
 async function importData() {
-    // Agora busca o ID que colocamos no passo 1
     const input = document.getElementById('arquivo-backup-input');
     
-    // Debug para ver se achou o input
-    if (!input) {
-        alert("ERRO FATAL: Não encontrei o input com id 'arquivo-backup-input' no HTML.");
-        return;
-    }
-
-    if (!input.files || input.files.length === 0) {
-        alert("⚠️ ATENÇÃO: Você precisa clicar em 'Escolher arquivo' antes de clicar em Importar.");
-        return;
+    if (!input || !input.files.length) {
+        return showToast("Selecione um arquivo de backup primeiro.", "info");
     }
 
     const file = input.files[0];
     const reader = new FileReader();
 
+    // Evento ao terminar de ler o arquivo
     reader.onload = function(event) {
         try {
-            const jsonContent = event.target.result;
-            const data = JSON.parse(jsonContent);
+            // 1. Tenta ler o JSON primeiro (pra ver se o arquivo é válido)
+            const data = JSON.parse(event.target.result);
 
-            if (!confirm(`Arquivo lido com sucesso!\n\nDeseja substituir todos os dados atuais pelo backup?`)) {
-                return;
-            }
-
-            // Limpa tudo
-            localStorage.clear();
-
-            // Salva cada chave do backup
-            Object.keys(data).forEach(key => {
-                const valor = typeof data[key] === 'object' ? JSON.stringify(data[key]) : data[key];
-                localStorage.setItem(key, valor);
-            });
-
-            alert("✅ Backup restaurado! A página será recarregada.");
-            window.location.reload();
+            // 2. CHAMA A JANELA BONITA (customConfirm)
+            // A lógica de importação agora vai dentro da função callback (segundo argumento)
+            customConfirm(
+                "⚠️ ATENÇÃO CRÍTICA: Isso vai apagar TODOS os dados atuais e restaurar o backup selecionado. Tem certeza?", 
+                function() {
+                    // O usuário clicou em "Sim", então roda o processo:
+                    processarImportacao(data);
+                }
+            );
 
         } catch (error) {
-            console.error("Erro importação:", error);
-            alert("O arquivo selecionado não é um JSON válido.");
+            console.error(error);
+            showToast("O arquivo selecionado não é um JSON válido.", "error");
+            input.value = ""; // Limpa o input
         }
     };
+    
     reader.readAsText(file);
 }
 
-// 2. FUNÇÃO MÁGICA DE DATA (Lê qualquer formato antigo ou novo)
+async function processarImportacao(data) {
+    try {
+        showLoadingScreen("Iniciando Restauração...", "Aguarde, não feche a página.");
+
+        const user = auth.currentUser;
+        if (!user) throw new Error("Usuário não autenticado.");
+
+        // ETAPA 1: LIMPEZA
+        updateLoadingMessage("Limpando Banco de Dados...", "Removendo registros antigos...");
+        if(typeof clearCollection === 'function') {
+            await clearCollection('products');
+            await clearCollection('sales');
+        }
+
+        // ETAPA 2: RESTAURAÇÃO DE DADOS (FIREBASE)
+        if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+            updateLoadingMessage("Restaurando Estoque...", `Importando ${data.products.length} produtos...`);
+            await importCollection('products', data.products);
+        }
+
+        if (data.salesHistory && Array.isArray(data.salesHistory) && data.salesHistory.length > 0) {
+            updateLoadingMessage("Restaurando Vendas...", `Importando ${data.salesHistory.length} vendas...`);
+            await importCollection('sales', data.salesHistory);
+        }
+
+        // ETAPA 3: RESTAURAÇÃO DE CONFIGURAÇÕES (IMPORTANTE!)
+        updateLoadingMessage("Configurações...", "Sincronizando preferências com a nuvem...");
+        
+        localStorage.clear(); // Limpa lixo local
+
+        // --- AQUI ESTÁ A MÁGICA PARA CATEGORIAS E PAGAMENTOS ---
+        if (data.config) {
+            // 1. Salva no LocalStorage
+            localStorage.setItem("config", JSON.stringify(data.config));
+            
+            // 2. Atualiza a variável global na hora
+            config = data.config; 
+
+            // 3. SALVA NA NUVEM (Para não perder ao reiniciar)
+            try {
+                const settingsRef = doc(db, "users", user.uid, "settings", "general");
+                await setDoc(settingsRef, { 
+                    categories: data.config.categories || [], 
+                    paymentTypes: data.config.paymentTypes || [] 
+                }, { merge: true });
+                console.log("✅ Configurações restauradas na nuvem.");
+            } catch (e) {
+                console.error("Erro ao sincronizar config na nuvem:", e);
+            }
+        }
+
+        // Restaura Clientes
+        if (data.clients) {
+            localStorage.setItem("clients", JSON.stringify(data.clients));
+            // Se você tiver uma coleção de clientes no Firebase no futuro, salve aqui também
+        }
+
+        // Restaura Outros Dados Locais
+        if (data.logHistory) localStorage.setItem("logHistory", JSON.stringify(data.logHistory));
+        if (data.savedCarts) localStorage.setItem("savedCarts", JSON.stringify(data.savedCarts));
+        if (data.systemConfig) localStorage.setItem("systemConfig", JSON.stringify(data.systemConfig));
+        if (data.hiddenAlerts) localStorage.setItem("hiddenAlerts", JSON.stringify(data.hiddenAlerts));
+
+        // SUCESSO
+        updateLoadingMessage("Sucesso!", "Recarregando sistema...");
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+
+    } catch (err) {
+        console.error("Erro fatal na importação:", err);
+        hideLoadingScreen();
+        alert("Erro crítico ao importar: " + err.message);
+    }
+}
+
 function normalizarDataParaFiltro(input) {
     if (!input) return null;
 
-    // Se for string ISO (2023-10-25) ou BR (25/10/2023)
     if (typeof input === 'string') {
-        // Formato BR
         if (input.includes('/')) {
             const partes = input.split(' ')[0].split('/'); 
             if (partes.length === 3) {
-                // Cria data ano, mes-1, dia
                 return new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
             }
         }
-        // Formato ISO
         const d = new Date(input);
         if (!isNaN(d.getTime())) {
             d.setHours(12,0,0,0); // Força meio dia pra evitar erro de fuso
             return d;
         }
     }
-    // Se já for data
     if (input instanceof Date && !isNaN(input)) return input;
     
     return null;
 }
 
-// =================================================================
-// RELATÓRIOS PDF - PADRÃO ENTERPRISE (PROFISSIONAL)
-// =================================================================
 
-// 1. CONVERSOR DE DATAS (Mantido pois funciona perfeitamente)
 function converterDataNaMarra(input) {
     if (!input) return null;
     if (input instanceof Date && !isNaN(input)) return input;
@@ -4298,23 +4403,18 @@ function converterDataNaMarra(input) {
     return null;
 }
 
-// Função NOVA: Apenas formata o visual (Data + Hora) sem alterar o valor
 function formatarDataHoraVisual(input) {
     if (!input) return "-";
     
-    // Converte para texto
     const str = String(input).trim();
 
-    // Se for o formato do seu backup: "17/06/2024, 15:30:00"
     if (str.includes(',')) {
         const partes = str.split(',');
         const data = partes[0].trim();
         const hora = partes[1].trim(); 
-        // Retorna "17/06/2024 15:30" (corta os segundos se quiser)
         return `${data} ${hora.slice(0, 5)}`; 
     }
 
-    // Se for objeto Date ou ISO
     const d = new Date(input);
     if (!isNaN(d.getTime())) {
         return d.toLocaleString("pt-BR").slice(0, 16); // "dd/mm/aaaa hh:mm"
@@ -4323,49 +4423,73 @@ function formatarDataHoraVisual(input) {
     return str; // Retorna original se não souber formatar
 }
 
-// 2. GERENTE DE PDF
 function generatePDF(type) {
-    if (!window.jspdf) { alert("Biblioteca jsPDF não carregada."); return; }
+    if (!window.jspdf) return customAlert("Erro: Biblioteca PDF não carregada.", "error");
 
-    if (type === 'inventory-report') { imprimirRelatorioEstoque(); return; }
+    // Relatório de Estoque (imprime direto)
+    if (type === 'inventory-report') { 
+        if(typeof imprimirRelatorioEstoque === 'function') {
+            imprimirRelatorioEstoque();
+        } else {
+            customAlert("Erro: Função de imprimir estoque não encontrada.", "error");
+        }
+        return; 
+    }
 
-    let startDate, endDate;
     const periodElem = document.getElementById("pdf-period");
     const periodValue = periodElem ? periodElem.value : "30";
 
     if (periodValue === "custom") {
-        const startInput = prompt("Data INICIAL (Dia/Mês/Ano):", "01/01/2023");
-        if (!startInput) return;
-        const endInput = prompt("Data FINAL (Dia/Mês/Ano):", new Date().toLocaleDateString("pt-BR"));
-        startDate = converterDataNaMarra(startInput);
-        endDate = converterDataNaMarra(endInput);
+        customPrompt("Data Inicial", "Digite a data inicial (DD/MM/AAAA):", (startInput) => {
+            if(!startInput) return;
+            customPrompt("Data Final", "Digite a data final (DD/MM/AAAA):", (endInput) => {
+                if(!endInput) return;
+                
+                // Usa a função que já existe no seu arquivo
+                const start = converterDataNaMarra(startInput);
+                const end = converterDataNaMarra(endInput);
+
+                if (!start || !end) { 
+                    return customAlert("Datas inválidas.", "error"); 
+                }
+                
+                start.setHours(0,0,0,0);
+                end.setHours(23,59,59,999);
+                
+                if (type === 'sales-report' || type === 'detailed-sales') imprimirRelatorioVendas(start, end);
+                else if (type === 'profit-report') imprimirRelatorioLucro(start, end);
+            });
+        });
     } else {
         const days = parseInt(periodValue) || 30;
-        endDate = new Date();
-        startDate = new Date();
-        startDate.setDate(endDate.getDate() - days);
-    }
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - days);
+        start.setHours(0,0,0,0);
+        end.setHours(23,59,59,999);
 
-    if (!startDate || !endDate) { alert("Datas inválidas."); return; }
-
-    startDate.setHours(0,0,0,0);
-    endDate.setHours(23,59,59,999);
-
-    if (type === 'sales-report' || type === 'detailed-sales') {
-        imprimirRelatorioVendas(startDate, endDate);
-    } else if (type === 'profit-report') {
-        imprimirRelatorioLucro(startDate, endDate);
+        if (type === 'sales-report' || type === 'detailed-sales') imprimirRelatorioVendas(start, end);
+        else if (type === 'profit-report') imprimirRelatorioLucro(start, end);
     }
 }
 
-// =================================================================
-// 3. RELATÓRIO DE VENDAS (LAYOUT CORPORATIVO)
-// =================================================================
+// Função auxiliar para não repetir código
+function executarRelatorio(type, start, end) {
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+
+    if (type === 'sales-report' || type === 'detailed-sales') {
+        imprimirRelatorioVendas(start, end);
+    } else if (type === 'profit-report') {
+        imprimirRelatorioLucro(start, end);
+    }
+}
+
+
 function imprimirRelatorioVendas(startDate, endDate) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    // 1. FILTRAGEM (Usa a função bruta para comparar datas corretamente)
     const vendasFiltradas = salesHistory.filter(venda => {
         const d = converterDataNaMarra(venda.timestamp || venda.date || venda.data);
         return d && d >= startDate && d <= endDate;
@@ -4378,7 +4502,6 @@ function imprimirRelatorioVendas(startDate, endDate) {
     const ticketMedio = totalGeral / qtdVendas;
     const maiorVenda = Math.max(...vendasFiltradas.map(v => parseFloat(v.total)||0));
 
-    // --- CABEÇALHO ---
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(44, 62, 80);
@@ -4393,7 +4516,6 @@ function imprimirRelatorioVendas(startDate, endDate) {
     doc.setLineWidth(0.1);
     doc.line(14, 22, 196, 22);
 
-    // --- KPIs ---
     doc.setFillColor(245, 247, 250); 
     doc.rect(14, 25, 182, 20, 'F');
     
@@ -4423,9 +4545,7 @@ function imprimirRelatorioVendas(startDate, endDate) {
     doc.setFont("helvetica", "normal");
     doc.text(`Período: ${startDate.toLocaleDateString("pt-BR")} a ${endDate.toLocaleDateString("pt-BR")}`, 14, 52);
 
-    // --- AQUI ESTÁ A CORREÇÃO DA HORA ---
     const rows = vendasFiltradas.map(v => {
-        // Usa a NOVA função visual para exibir a hora certa
         const dataHoraVisual = formatarDataHoraVisual(v.timestamp || v.date || v.data);
         const idVisivel = v.id ? String(v.id).slice(-6) : "---";
         
@@ -4480,9 +4600,6 @@ function imprimirRelatorioVendas(startDate, endDate) {
     doc.save(`Relatorio_Vendas_${new Date().toISOString().slice(0,10)}.pdf`);
 }
 
-// =================================================================
-// 4. PÁGINA DE GRÁFICOS (VISUAL LIMPO)
-// =================================================================
 function adicionarPaginaGraficos(doc, vendas, total, ticket) {
     doc.addPage();
     
@@ -4492,7 +4609,6 @@ function adicionarPaginaGraficos(doc, vendas, total, ticket) {
     doc.setDrawColor(200);
     doc.line(14, 25, 196, 25);
 
-    // Dados
     const pagamentos = {};
     const categorias = {};
     vendas.forEach(v => {
@@ -4508,7 +4624,6 @@ function adicionarPaginaGraficos(doc, vendas, total, ticket) {
         }
     });
 
-    // --- GRÁFICO 1 ---
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text("FATURAMENTO POR MÉTODO", 14, 40);
@@ -4522,7 +4637,6 @@ function adicionarPaginaGraficos(doc, vendas, total, ticket) {
         doc.setTextColor(60);
         doc.text(nome, 14, y+4);
         
-        // Barra Sólida (Elegante)
         doc.setFillColor(52, 152, 219);
         doc.rect(50, y, width, 5, 'F');
         
@@ -4531,7 +4645,6 @@ function adicionarPaginaGraficos(doc, vendas, total, ticket) {
         y += 10;
     });
 
-    // --- GRÁFICO 2 ---
     let yCat = y + 20;
     doc.setFontSize(10);
     doc.setTextColor(100);
@@ -4556,9 +4669,6 @@ function adicionarPaginaGraficos(doc, vendas, total, ticket) {
 
 
 
-// =================================================================
-// 5. RELATÓRIOS SIMPLES (ESTOQUE E LUCRO)
-// =================================================================
 function imprimirRelatorioEstoque() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
@@ -4631,7 +4741,6 @@ function imprimirRelatorioLucro(startDate, endDate) {
         });
     });
 
-    // KPI Box
     doc.setFillColor(245, 247, 250);
     doc.rect(14, 30, 182, 18, 'F');
     doc.setFontSize(10);
@@ -4659,31 +4768,8 @@ function imprimirRelatorioLucro(startDate, endDate) {
 
 
 
-// Função para abrir o perfil ao clicar no retângulo
-function openProfileSettings() {
-    // Redireciona para Configurações
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    
-    const configLink = document.querySelector('a[href="#config"]');
-    if(configLink) configLink.classList.add('active');
-    
-    const configSection = document.getElementById('config');
-    if (configSection) {
-        configSection.style.display = 'block';
-        showConfigTab('categories');
-        document.getElementById('current-page-title').textContent = "Configurações";
-    }
-    document.getElementById('sidebar-profile-dropdown').classList.remove('show');
-}
-// Pendura a função no window para o HTML enxergar
+
 window.openProfileSettings = openProfileSettings;
-
-
-
-// =================================================================
-// 6. EXPORTAÇÃO GLOBAL (FUNÇÕES ONCLICK DO HTML)
-// =================================================================
-
 window.loadAllData = loadAllData;
 window.handleProductForm = handleProductForm;
 window.deleteProduct = deleteProduct;
@@ -4694,7 +4780,6 @@ window.toggleSidebar = toggleSidebar;
 window.toggleAlertsWindow = toggleAlertsWindow;
 window.clearAllAlerts = clearAllAlerts;
 
-// Funções de Vendas/PDV/Carrinho
 window.addToCart = addToCart;
 window.updateCartQuantity = updateCartQuantity; // FUNÇÃO QUE ESTAVA FALTANDO
 window.removeItemFromCart = removeItemFromCart;
@@ -4706,7 +4791,6 @@ window.loadSavedCart = loadSavedCart;
 window.deleteSavedCart = deleteSavedCart;
 window.setupNavigation = setupNavigation; // Para o DOMContentLoaded
 
-// Funções de Relatórios/Configurações
 window.generatePDF = generatePDF; // FUNÇÃO QUE ESTAVA FALTANDO (Erro Principal)
 window.viewSaleDetails = viewSaleDetails;
 window.closeSaleDetails = closeSaleDetails;
@@ -4726,68 +4810,287 @@ window.imprimirRelatorioVendas = imprimirRelatorioVendas;
 window.imprimirRelatorioEstoque = imprimirRelatorioEstoque;
 window.imprimirRelatorioLucro = imprimirRelatorioLucro;
 window.resetProductForm = resetProductForm; 
-window.logout = logout;
 window.openProfileSettings = openProfileSettings;
+window.logout = logout;
 window.toggleSidebarProfileMenu = toggleSidebarProfileMenu;
-// -----------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+    setupNavigation();
+    
+    // ... outros códigos ...
 
-// ... o resto das suas exportações globais
+    setupFormValidation(); // <--- ADICIONE ISSO PARA LIGAR O SISTEMA
+    
+    // Se não estiver na tela de login...
+    if (!window.location.pathname.endsWith('auth.html')) {
+        loadAllData();
+    }
+});
 
-// --- NO SEU script.js (ADICIONE ESTA FUNÇÃO SE ELA ESTIVER FALTANDO) ---
+
 
 // =================================================================
-// FUNÇÃO CORRIGIDA: MENU DE PERFIL LATERAL
+// 1. FUNÇÕES DE NAVEGAÇÃO E SISTEMA (BOTOES EDITAR/SAIR)
 // =================================================================
-function toggleSidebarProfileMenu() {
+
+// Redireciona para a página de edição de perfil
+function openProfileSettings() {
+    window.location.href = "profile.html";
+}
+
+// Função de Logout (Sair)
+async function logout() {
+    // Usa o novo modal customConfirm em vez de confirm()
+    customConfirm("Deseja realmente sair do sistema?", async () => {
+        try {
+            await signOut(auth);
+            window.location.href = "auth.html";
+        } catch (error) {
+            console.error("Erro ao sair:", error);
+        }
+    });
+    
+}
+// =================================================================
+// 2. FUNÇÃO DE ABRIR/FECHAR MENU (COM LÓGICA DE SETA)
+// =================================================================
+
+// --- NOVO CÓDIGO PARA A FUNÇÃO toggleSidebarProfileMenu ---
+function toggleSidebarProfileMenu(event) {
+    if(event) event.stopPropagation(); 
+
     const sidebar = document.getElementById('sidebar');
     const menu = document.getElementById('sidebar-profile-dropdown');
-    const arrow = document.querySelector('.sidebar-profile-card .arrow-icon'); // Pega a setinha
+    const arrow = document.querySelector('.arrow-icon');
 
-    if (!sidebar || !menu) return;
+    if (!menu) return;
 
-    // 1. Se a sidebar estiver colapsada (fechada), abre ela primeiro
-    if (sidebar.classList.contains('collapsed')) {
-        sidebar.classList.remove('collapsed');
-        const mainContent = document.getElementById('main-content');
-        if(mainContent) mainContent.classList.remove('expanded');
-        
-        // Espera 300ms (tempo da animação) para abrir o menu
+    // Se a sidebar estiver fechada, abre ela e mostra o menu
+    if (sidebar && sidebar.classList.contains('collapsed')) {
+        toggleSidebar(); // Abre a sidebar
         setTimeout(() => {
-            menu.style.display = 'block';
+            menu.style.display = 'flex'; // Liga o display
             menu.classList.add('show');
-            if(arrow) arrow.style.transform = 'rotate(180deg)'; // Gira a seta
-        }, 300);
-    } 
-    // 2. Se a sidebar já estiver aberta, apenas alterna o menu
-    else {
-        // Verifica se está visível (checa display ou classe)
-        const isVisible = menu.style.display === 'block' || menu.classList.contains('show');
+            if(arrow) arrow.style.transform = 'rotate(180deg)';
+        }, 300); // 300ms é a transição da barra
+    } else {
+        // Se a barra já estiver aberta, alterna o menu
+        const isVisible = menu.classList.contains('show');
 
         if (isVisible) {
-            // Esconde
-            menu.style.display = 'none';
-            menu.classList.remove('show');
-            if(arrow) arrow.style.transform = 'rotate(0deg)'; // Volta a seta ao normal
+            closeProfileMenu(); // Usa a função de fechar suave
         } else {
-            // Mostra
-            menu.style.display = 'block';
-            menu.classList.add('show');
-            if(arrow) arrow.style.transform = 'rotate(180deg)'; // Gira a seta
+            // Abre imediatamente
+            menu.style.display = 'flex';
+            setTimeout(() => menu.classList.add('show'), 10); 
+            if(arrow) arrow.style.transform = 'rotate(180deg)';
         }
     }
 }
 
-async function logout() {
-    // Certifique-se de que 'auth' e 'signOut' estejam importados no topo
-    try {
-        await signOut(auth);
-        console.log("Usuário deslogado com sucesso.");
-    } catch (error) {
-        console.error("Erro ao fazer logout:", error);
-        alert("Erro ao sair da conta. Verifique a conexão.");
+
+// --- VERIFIQUE TAMBÉM A FUNÇÃO closeProfileMenu ---
+function closeProfileMenu() {
+    const menu = document.getElementById('sidebar-profile-dropdown');
+    const arrow = document.querySelector('.arrow-icon');
+    
+    if (menu) {
+        menu.classList.remove('show');
+        // Adicionando um pequeno delay para que a transição de opacidade/transform ocorra
+        setTimeout(() => {
+            // Só esconde totalmente se a classe 'show' não tiver sido re-adicionada
+            if (!menu.classList.contains('show')) {
+                 menu.style.display = 'none'; // Desliga o display
+            }
+        }, 200); 
     }
+    if (arrow) arrow.style.transform = 'rotate(0deg)';
 }
 
 
+// =================================================================
+// 3. O SEGREDO: FECHAR JANELAS AO CLICAR FORA
+// =================================================================
 
-//--------------------- seta do perfil ---------------------
+document.addEventListener('click', function(event) {
+    // --- A. FECHAR MENU DE PERFIL ---
+    const profileMenu = document.getElementById('sidebar-profile-dropdown');
+    const profileCard = document.querySelector('.sidebar-profile-card');
+
+    // Se o menu está aberto E o clique NÃO foi no menu E NEM no cartão de perfil
+    if (profileMenu && profileMenu.classList.contains('show')) {
+        if (!profileMenu.contains(event.target) && !profileCard.contains(event.target)) {
+            closeProfileMenu();
+        }
+    }
+
+    // --- B. FECHAR NOTIFICAÇÕES (SINO) ---
+    const notifWindow = document.getElementById('alerts-floating-window');
+    const bellIcon = document.getElementById('bell-icon');
+
+    // Se a janela está visível
+    if (notifWindow && notifWindow.style.display === 'block') {
+        // Se o clique NÃO foi na janela E NEM no sino
+        if (!notifWindow.contains(event.target) && !bellIcon.contains(event.target)) {
+            notifWindow.style.display = 'none';
+        }
+    }
+});
+
+// =================================================================
+// 5. SISTEMA DE MODAIS PERSONALIZADOS (Adeus Alert/Confirm)
+// =================================================================
+
+// --- SUBSTITUTO DO ALERT ---
+window.customAlert = function(message, type = 'info') {
+    const modal = document.getElementById('custom-alert');
+    const title = document.getElementById('alert-title');
+    const msg = document.getElementById('alert-message');
+    const icon = document.getElementById('alert-icon');
+
+    msg.textContent = message;
+    modal.style.display = 'flex';
+
+    // Configura ícone e cor baseada no tipo
+    if (type === 'success') {
+        icon.innerHTML = '<i class="fas fa-check-circle" style="color: var(--color-accent-green);"></i>';
+        title.textContent = "Sucesso!";
+    } else if (type === 'error') {
+        icon.innerHTML = '<i class="fas fa-times-circle" style="color: var(--color-accent-red);"></i>';
+        title.textContent = "Erro";
+    } else {
+        icon.innerHTML = '<i class="fas fa-info-circle" style="color: var(--color-accent-blue);"></i>';
+        title.textContent = "Informação";
+    }
+}
+
+window.closeCustomAlert = function() {
+    document.getElementById('custom-alert').style.display = 'none';
+}
+
+// --- SUBSTITUTO DO CONFIRM ---
+let confirmCallback = null;
+
+window.customConfirm = function(message, callback) {
+    const modal = document.getElementById('custom-confirm');
+    const msg = document.getElementById('confirm-message');
+    const btnYes = document.getElementById('btn-confirm-yes');
+
+    msg.textContent = message;
+    modal.style.display = 'flex';
+    
+    // Guarda a função que deve ser executada se ele clicar em SIM
+    confirmCallback = callback;
+
+    // Configura o botão SIM para executar a função guardada
+    btnYes.onclick = function() {
+        if (confirmCallback) confirmCallback();
+        closeCustomConfirm();
+    };
+}
+
+window.closeCustomConfirm = function() {
+    document.getElementById('custom-confirm').style.display = 'none';
+    confirmCallback = null;
+}
+
+function setupFormValidation() {
+    // 1. Mapeia os campos que queremos validar
+    const fields = [
+        { id: 'nome', type: 'text', msg: 'O nome do produto é obrigatório.' },
+        { id: 'preco', type: 'number', min: 0.01, msg: 'O preço deve ser maior que zero.' },
+        { id: 'custo', type: 'number', min: 0, msg: 'O custo não pode ser negativo.' },
+        { id: 'quantidade', type: 'number', min: 0, msg: 'O estoque não pode ser negativo.' },
+        { id: 'minimo', type: 'number', min: 0, msg: 'O estoque mínimo não pode ser negativo.' }
+    ];
+
+    fields.forEach(field => {
+        const input = document.getElementById(field.id);
+        if (!input) return;
+
+        // Cria a mensagem de erro no HTML dinamicamente (para não sujar seu index.html)
+        let errorSpan = input.parentNode.querySelector('.error-message');
+        if (!errorSpan) {
+            errorSpan = document.createElement('div');
+            errorSpan.className = 'error-message';
+            errorSpan.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${field.msg}`;
+            input.parentNode.appendChild(errorSpan);
+        }
+
+        // Função de validação individual
+        const validate = () => {
+            let isValid = true;
+            const val = input.value.trim();
+
+            if (field.type === 'text') {
+                isValid = val.length > 0;
+            } else if (field.type === 'number') {
+                isValid = val !== '' && parseFloat(val) >= field.min;
+            }
+
+            // Aplica ou remove estilo de erro
+            if (!isValid) {
+                input.classList.add('input-error');
+                errorSpan.style.display = 'block';
+            } else {
+                input.classList.remove('input-error');
+                errorSpan.style.display = 'none';
+            }
+            
+            return isValid;
+        };
+
+        // Ouve quando o usuário digita (input) ou sai do campo (blur)
+        input.addEventListener('input', validate);
+        input.addEventListener('blur', validate);
+    });
+}
+
+window.importData = importData;
+
+// =================================================================
+// BLOCO DE INICIALIZAÇÃO FINAL E EXPOSIÇÃO GLOBAL
+// =================================================================
+
+// 1. Funções de Exposição Global (Obrigatório para o HTML)
+window.openProfileSettings = openProfileSettings;
+window.logout = logout;
+window.toggleSidebarProfileMenu = toggleSidebarProfileMenu;
+window.renderProductTable = renderProductTable;
+window.updateDashboardMetrics = updateDashboardMetrics;
+
+window.addToCart = addToCart;
+window.updateCartQuantity = updateCartQuantity;
+window.removeItemFromCart = removeItemFromCart;
+window.clearCart = clearCart;
+window.exportData = exportData;
+window.importData = importData;
+window.checkout = checkout;
+window.saveCurrentCart = saveCurrentCart;
+window.confirmSaveCart = confirmSaveCart;
+window.loadSavedCart = loadSavedCart;
+window.deleteSavedCart = deleteSavedCart;
+window.generatePDF = generatePDF;
+window.viewSaleDetails = viewSaleDetails;
+window.closeSaleDetails = closeSaleDetails;
+window.imprimirRelatorioVendas = imprimirRelatorioVendas;
+window.imprimirRelatorioEstoque = imprimirRelatorioEstoque;
+window.imprimirRelatorioLucro = imprimirRelatorioLucro;
+window.resetProductForm = resetProductForm; 
+window.filterPdvProducts = filterPdvProducts;
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    
+    // --- ADICIONE ESTA LINHA AQUI NA PRIMEIRA POSIÇÃO ---
+    showLoadingState();
+    setupNavigation()
+    if(typeof setupFormValidation === 'function') setupFormValidation();
+    if(typeof renderHistoryLog === 'function') renderHistoryLog();
+    if(typeof setupCartClientAutocomplete === 'function') setupCartClientAutocomplete();
+    //console.log("✅ Sistema inicializado.");
+});
+
+
+
+// Expor para usar no console ou HTML
+window.showToast = showToast;

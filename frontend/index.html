@@ -28,7 +28,9 @@
     
 <div class="sidebar" id="sidebar">
     
-    <div class="sidebar-profile-card" onclick="toggleSidebarProfileMenu()">
+   <div class="profile-menu-container">
+    
+   <div class="sidebar-profile-card" onclick="toggleSidebarProfileMenu(event)">
         <img src="images/default-avatar.png" id="sidebar-user-photo" alt="Perfil">
         <div class="sidebar-profile-info">
             <span id="sidebar-user-name">Carregando...</span>
@@ -36,6 +38,12 @@
         </div>
         <i class="fas fa-chevron-down arrow-icon"></i>
     </div>
+
+    <div id="sidebar-profile-dropdown" class="sidebar-dropdown">
+        <a href="#" onclick="openProfileSettings()"><i class="fas fa-user-cog"></i> Editar</a>
+        <a href="#" onclick="logout()" style="color: #ff453a;"><i class="fas fa-sign-out-alt"></i> Sair</a>
+    </div>
+</div>
 
     <div id="sidebar-profile-dropdown" class="sidebar-dropdown">
         <a href="#" onclick="openProfileSettings()"><i class="fas fa-user-cog"></i> Editar</a>
@@ -140,7 +148,6 @@
             <div class="tabs">
                 <button class="tab-button active" data-tab-content="product-list-tab"><i class="fas fa-clipboard-list"></i> Lista de Produtos</button>
                 <button class="tab-button" data-tab-content="product-form-tab"><i class="fas fa-plus-circle"></i> Cadastrar/Editar</button>
-                <button class="tab-button" data-tab-content="historico-tab"><i class="fas fa-history"></i> Histórico de Ações</button>
             </div>
 
             <div id="product-list-tab" class="tab-content active">
@@ -208,28 +215,7 @@
                 </div>
             </div>
 
-            
-
-            <div id="historico-tab" class="tab-content" style="display: none;">
-                <div class="card">
-                    <h3 class="card-title">Log de Ações Recentes</h3>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ID do Log</th>
-                                    <th>Data/Hora</th>
-                                    <th>Ação</th>
-                                    <th>Detalhe</th>
-                            
-                                </tr>
-                            </thead>
-                            <tbody id="history-log-tbody">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+        
         </section>
 
         <section id="vendas" class="content-section" style="display: none;">
@@ -641,6 +627,47 @@
     
     
 </div>
+
+<div id="custom-alert" class="modal-overlay" style="display: none; z-index: 20000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div id="alert-icon" style="font-size: 3rem; margin-bottom: 15px;"></div>
+        <h3 id="alert-title" style="margin-bottom: 10px;">Atenção</h3>
+        <p id="alert-message" style="color: var(--color-text-secondary); margin-bottom: 20px;">Mensagem aqui</p>
+        <button class="submit-btn blue-btn" onclick="closeCustomAlert()" style="width: 100%; justify-content: center;">Entendi</button>
+    </div>
+</div>
+
+<div id="custom-confirm" class="modal-overlay" style="display: none; z-index: 20000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <i class="fas fa-question-circle" style="font-size: 3rem; color: var(--color-accent-blue); margin-bottom: 15px;"></i>
+        <h3 style="margin-bottom: 10px; justify-content: center;">🚨 PERIGO</h3>
+        <p id="confirm-message" style="color: var(--color-text-secondary); margin-bottom: 20px;">Essa ação não pode ser desfeita.</p>
+        
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button class="submit-btn delete-btn" onclick="closeCustomConfirm(false)" style="flex: 1; justify-content: center;">Cancelar</button>
+            <button class="submit-btn green-btn" id="btn-confirm-yes" style="flex: 1; justify-content: center;">Sim, Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div id="custom-prompt" class="modal-overlay" style="display: none; z-index: 20000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div style="width: 100%; display: flex; justify-content: center; margin-bottom: 15px;">
+            <i class="fas fa-keyboard" style="font-size: 3rem; color: var(--color-accent-blue);"></i>
+        </div>
+        
+        <h3 id="prompt-title" style="margin-bottom: 10px; width: 100%; text-align: center;">Digite a informação</h3>
+        <p id="prompt-message" style="color: var(--color-text-secondary); margin-bottom: 15px; width: 100%; text-align: center;"></p>
+        
+        <input type="text" id="prompt-input" class="config-input" style="width: 100%; margin-bottom: 20px; text-align: center; font-size: 1.2rem; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff;" placeholder="...">
+
+        <div style="display: flex; gap: 10px; justify-content: center; width: 100%;">
+            <button class="submit-btn delete-btn" onclick="closeCustomPrompt()" style="flex: 1; justify-content: center;">Cancelar</button>
+            <button class="submit-btn blue-btn" id="btn-prompt-confirm" style="flex: 1; justify-content: center;">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 <script type="module" src="script.js"></script>
 </body>
 </html>

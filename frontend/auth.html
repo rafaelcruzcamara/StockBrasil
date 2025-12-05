@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acesso StockBrasil PRO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="shortcut icon" href="./images/StockBrasilPRO-removebg-preview.png">
+    
     <style>
+
+
         :root {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
@@ -161,6 +165,93 @@
         .toast.success { border-left-color: #2ecc71; }
         .toast i { margin-right: 12px; font-size: 1.2rem; }
 
+        /* Estilo do Botão Google e Separador */
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.separator::before, .separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.separator span {
+    padding: 0 10px;
+}
+
+.google-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: white; /* Padrão Google é branco */
+    color: #333;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: 0.3s;
+}
+
+.google-btn:hover {
+    background-color: #f1f1f1;
+    transform: translateY(-2px);
+}
+
+.google-btn i {
+    color: #db4437; /* Vermelho Google */
+    font-size: 1.1rem;
+}
+
+/* Link Esqueceu a Senha */
+.forgot-link {
+    text-align: right;
+    margin-bottom: 15px;
+}
+.forgot-link a {
+    color: var(--accent-blue);
+    font-size: 0.9rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+.forgot-link a:hover { text-decoration: underline; }
+
+/* Estilo do Modal de Auth (Específico para esta página) */
+.auth-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+}
+
+.auth-modal {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 400px;
+    border: 1px solid var(--border-color);
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.auth-modal h3 { color: #fff; margin-bottom: 10px; }
+.auth-modal p { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px; }
+
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
         @keyframes fadeOut { to { opacity: 0; transform: translateY(-20px); } }
 
@@ -188,7 +279,21 @@
                     <input type="password" id="login-password" class="auth-input" placeholder="Senha" required>
                 </div>
 
-                <button type="submit" class="submit-btn">Entrar</button>
+                <div class="forgot-link">
+                    <a onclick="openResetModal()">Esqueceu a senha?</a>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-sign-in-alt"></i> Entrar
+                </button>
+
+                <div class="separator">
+                    <span>ou continue com</span>
+                </div>
+
+                <button type="button" class="google-btn" onclick="handleGoogleLogin()">
+                    <i class="fab fa-google"></i> Entrar com Google
+                </button>
             </form>
 
             <div class="toggle-link">
@@ -232,6 +337,20 @@
             document.getElementById('login-section').classList.add('active');
         }
     </script>
+
+    <div id="reset-modal" class="auth-modal-overlay" style="display: none;">
+    <div class="auth-modal">
+        <h3><i class="fas fa-key"></i> Recuperar Acesso</h3>
+        <p>Digite seu e-mail para receber o link de redefinição.</p>
+        
+        <input type="email" id="reset-email-input" class="auth-input" placeholder="Seu e-mail cadastrado" style="margin: 15px 0;">
+        
+        <div class="modal-actions">
+            <button class="submit-btn" onclick="handlePasswordReset()" style="background: var(--accent-green);">Enviar Link</button>
+            <button class="submit-btn" onclick="closeResetModal()" style="background: #555; margin-top: 10px;">Cancelar</button>
+        </div>
+    </div>
+</div>
 
     <script type="module" src="auth.js"></script>
 
