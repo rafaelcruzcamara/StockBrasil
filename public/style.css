@@ -4282,3 +4282,738 @@ tbody tr:nth-child(even) {
 .dropdown-arrow:hover {
     color: var(--color-accent-blue);
 }
+
+/* --- MURAL DE ANIVERSARIANTES MINIMALISTA --- */
+.birthday-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    padding: 10px;
+}
+
+.birthday-card {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.birthday-card:hover {
+    transform: translateY(-2px);
+    border-color: #FF4081;
+}
+
+.birthday-card.is-today {
+    border: 1px solid #FF4081;
+    background: rgba(255, 64, 129, 0.05);
+}
+
+.b-day {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--color-text-primary);
+    line-height: 1;
+}
+
+.b-month {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: #FF4081;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.b-name {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.b-badge-today {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 8px;
+    height: 8px;
+    background: #FF4081;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #FF4081;
+}
+
+/* --- FICHA TÉCNICA PROFISSIONAL (SEM EMOJIS) --- */
+.pro-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.pro-detail-section h4 {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+}
+
+.pro-info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dashed #333;
+    font-size: 0.95rem;
+}
+
+.pro-info-label { color: #888; }
+.pro-info-value { color: var(--color-text-primary); font-weight: 500; }
+
+.timeline-clean li {
+    padding: 10px 0;
+    border-left: 2px solid #444;
+    padding-left: 15px;
+    margin-left: 5px;
+    position: relative;
+}
+
+.timeline-clean li::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 15px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-accent-blue);
+}
+
+/* --- CORREÇÃO GERAL DE INPUTS (Pra não vazar) --- */
+.config-input, select.config-input, textarea.config-input {
+    width: 100%;
+    box-sizing: border-box; /* ISSO IMPEDE O VAZAMENTO */
+    padding: 10px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    font-size: 0.95rem;
+}
+
+.form-grid {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* --- MURAL ANIVERSÁRIO COMPACTO E MINIMALISTA --- */
+.birthday-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); /* Cards menores */
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.birthday-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.birthday-card:hover {
+    border-color: #FF4081;
+    transform: translateY(-2px);
+}
+
+.birthday-card.is-today {
+    border: 1px solid #FF4081;
+    background: rgba(255, 64, 129, 0.1);
+}
+
+.b-date {
+    font-size: 0.8rem;
+    color: #FF4081;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.b-day-big {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1;
+}
+
+.b-name {
+    margin-top: 5px;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- FICHA TÉCNICA LIMPA (SEM EMOJIS) --- */
+.partner-detail-wrapper {
+    padding: 20px;
+}
+
+.partner-header-clean {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.partner-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+@media (max-width: 768px) {
+    .partner-info-grid { grid-template-columns: 1fr; }
+}
+
+.info-block h4 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    border-bottom: 1px dashed rgba(255,255,255,0.05);
+    padding-bottom: 4px;
+}
+
+.info-row span:first-child { color: #888; }
+.info-row span:last-child { color: #fff; font-weight: 500; text-align: right; }
+
+/* --- CORREÇÃO DE LAYOUT DO MODAL (FORÇA BRUTA) --- */
+
+/* 1. Impede que o modal fique maior que a tela */
+.modal-content {
+    width: 95% !important;
+    max-width: 600px !important;
+    overflow-x: hidden !important; /* Corta o que vazar pros lados */
+}
+
+/* 2. Força os inputs a respeitarem as bordas */
+.config-input, 
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important; /* O SEGREDO: Inclui borda e padding no tamanho */
+}
+
+/* 3. Ajusta o Grid para não quebrar em telas pequenas */
+.form-grid {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* No mobile, força uma coluna só para não vazar */
+@media (max-width: 600px) {
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ============================================================
+   CORREÇÃO VISUAL DE CADASTROS E MODAIS
+   ============================================================ */
+
+/* 1. Trava a largura dos modais para não vazar na tela */
+.modal-content {
+    box-sizing: border-box !important;
+    width: 95% !important;
+    max-width: 750px !important; /* Largura ideal para cadastro */
+    overflow-x: hidden !important; /* Corta o que passar */
+    padding: 25px !important;
+}
+
+/* 2. Força TOTAL nos inputs para não estourarem o grid */
+.config-input, 
+input[type="text"], 
+input[type="email"], 
+input[type="number"], 
+input[type="date"], 
+select, 
+textarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important; /* O SEGREDO: Inclui borda no tamanho */
+    height: 42px; /* Altura padrão bonita */
+}
+
+/* textarea precisa ser mais alta */
+textarea.config-input {
+    height: auto !important;
+    min-height: 80px;
+}
+
+/* 3. Grid de Formulário Responsivo */
+.form-grid {
+    display: grid;
+    gap: 15px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 15px;
+}
+
+/* Labels mais bonitas */
+.form-group label {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-bottom: 5px;
+    display: block;
+    font-weight: 600;
+}
+
+/* No celular, tudo vira uma coluna só */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .modal-content {
+        padding: 15px !important;
+        max-height: 90vh;
+    }
+}
+
+/* ============================================================
+   CUPOM FISCAL DIGITAL (MODAL VENDA)
+   ============================================================ */
+
+   /* ============================================================
+   MODAL DETALHES DA VENDA - VISUAL PREMIUM
+   ============================================================ */
+
+/* 1. O Container do Modal */
+.sale-details-modal {
+    background-color: var(--color-bg-secondary) !important;
+    border: 1px solid var(--color-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); /* Sombra profunda */
+    border-radius: 12px;
+    padding: 0 !important; /* Remove padding padrão para controlar layout */
+    overflow: hidden;
+    max-width: 650px !important;
+}
+
+/* 2. Cabeçalho (Topo azulado/escuro) */
+.sale-details-modal .modal-header {
+    background: var(--color-bg-tertiary);
+    padding: 20px 25px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sale-details-modal .modal-header h3 {
+    font-size: 1.1rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sale-details-modal .modal-header h3 i {
+    color: var(--color-accent-blue);
+    font-size: 1.2rem;
+}
+
+/* 3. Grade de Informações (ID, Data, Cliente) */
+.sale-info {
+    padding: 25px;
+    background: transparent; /* Remove fundo cinza antigo */
+    margin: 0;
+    border-radius: 0;
+}
+
+.sale-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Duas colunas perfeitas */
+    gap: 20px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.meta-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-secondary);
+    font-weight: 600;
+}
+
+.meta-value {
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    font-weight: 500;
+    font-family: 'Segoe UI', sans-serif; /* Fonte limpa */
+}
+
+/* Destaque para o Cliente */
+.client-value {
+    color: var(--color-accent-blue) !important;
+    font-weight: 600;
+}
+
+/* 4. O Grande Total (Caixa de Destaque) */
+.meta-item.total-item {
+    grid-column: 1 / -1; /* Ocupa largura total */
+    margin-top: 15px;
+    background: rgba(48, 209, 88, 0.1); /* Fundo verde bem suave */
+    border: 1px solid rgba(48, 209, 88, 0.2);
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: row; /* Lado a lado */
+    justify-content: space-between;
+    align-items: center;
+}
+
+.meta-item.total-item .meta-label {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-accent-green);
+}
+
+.meta-item.total-item .meta-value {
+    font-size: 1.8rem; /* Gigante */
+    font-weight: 700;
+    color: var(--color-accent-green);
+    letter-spacing: -1px;
+}
+
+/* 5. Lista de Itens (Tabela Limpa) */
+.sale-items {
+    padding: 0 25px 25px 25px;
+}
+
+.sale-items h4 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.items-list {
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 5px; /* Espaço para scrollbar */
+}
+
+/* Cada Item da Lista */
+.item-detail {
+    display: grid;
+    grid-template-columns: 1fr auto; /* Nome na esquerda, preço na direita */
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--color-border); /* Linha pontilhada estilo cupom */
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.item-detail:last-child {
+    border-bottom: none;
+}
+
+/* Nome do Produto */
+.item-header .item-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Quantidade e Unitário */
+.item-details .item-qty-price {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+/* Preço Total do Item (Direita) */
+.item-header .item-total {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    text-align: right;
+}
+
+/* Badge de Lucro (Pequeno e sutil) */
+.profit-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+    margin-top: 4px;
+}
+
+.profit-badge.profit-positive { color: var(--color-accent-green); }
+.profit-badge.profit-negative { color: var(--color-accent-red); }
+
+/* 6. Rodapé do Modal (Botão Fechar) */
+.sale-details-modal .modal-actions {
+    background: var(--color-bg-tertiary);
+    padding: 15px 25px;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 !important; /* Remove margem padrão */
+}
+
+.sale-details-modal .submit-btn {
+    padding: 10px 25px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+}
+
+/* Scrollbar fina para a lista */
+.items-list::-webkit-scrollbar {
+    width: 4px;
+}
+.items-list::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+}
+
+/* Remove estilos antigos conflitantes */
+.sale-details-modal {
+    background-color: #1a1d21 !important; /* Fundo bem escuro */
+    border: 1px solid #333;
+    border-radius: 16px !important;
+    max-width: 500px !important; /* Mais estreito, parece notinha */
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+/* Esconde cabeçalho antigo se estiver duplicado */
+.sale-details-modal .modal-header {
+    border-bottom: 1px dashed #444;
+    padding: 15px 20px;
+    background: #15181c;
+}
+
+.sale-info {
+    padding: 0 !important;
+    background: transparent !important;
+    margin: 0 !important;
+}
+
+/* Cabeçalho do Cupom */
+.receipt-header {
+    padding: 20px;
+    background: linear-gradient(180deg, #22262b 0%, #1a1d21 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px dashed #333; /* Efeito de destaque */
+}
+
+.status-pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-pill.success {
+    background: rgba(48, 209, 88, 0.15);
+    color: #30D158;
+    border: 1px solid rgba(48, 209, 88, 0.2);
+}
+
+.receipt-date {
+    color: #888;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace; /* Fonte de máquina */
+}
+
+/* Grid de Informações */
+.receipt-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 20px;
+    background: #1a1d21;
+}
+
+.receipt-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.receipt-box .lbl {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #666;
+    font-weight: 600;
+}
+
+.receipt-box .val {
+    font-size: 1rem;
+    color: #fff;
+    font-weight: 500;
+}
+
+.receipt-box .val.client { color: var(--color-accent-blue); }
+.receipt-box .val.payment { color: var(--color-accent-purple); }
+
+/* Tabela de Itens (Estilo Nota) */
+.receipt-items-container {
+    padding: 0 20px;
+    background: #1a1d21;
+}
+
+.receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.receipt-table th {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: #555;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #333;
+}
+
+.receipt-table td {
+    padding: 12px 0;
+    border-bottom: 1px dashed #2a2e33;
+    color: #ddd;
+    vertical-align: top;
+}
+
+.item-name {
+    line-height: 1.4;
+}
+
+.unit-price {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* Totais */
+.receipt-summary {
+    padding: 20px;
+    background: #15181c; /* Fundo levemente diferente */
+    border-top: 2px dashed #333;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    color: #aaa;
+}
+
+.summary-row.total {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #333;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.summary-row.total span:last-child {
+    color: var(--color-accent-green);
+}
+
+/* Rodapé ID técnico */
+.receipt-footer-id {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #444;
+    padding-bottom: 15px;
+    font-family: monospace;
+    background: #15181c;
+}
+
+/* ============================================================
+   CORREÇÃO DO SCROLL NA LISTA DE ITENS (CUPOM)
+   ============================================================ */
+
+.receipt-items-container {
+    padding: 0 20px;
+    background: #1a1d21;
+    
+    /* --- AQUI ESTÁ A CORREÇÃO --- */
+    max-height: 300px; /* Define um limite de altura (ajuste se quiser maior) */
+    overflow-y: auto;  /* Cria a barra de rolagem se a lista for grande */
+    border-bottom: 1px dashed #333; /* Mantém a estética de cupom */
+}
+
+/* --- ESTILO DA BARRA DE ROLAGEM (SCROLLBAR PREMIUM) --- */
+/* Isso deixa a barra fina e cinza escura para não estragar o visual */
+
+.receipt-items-container::-webkit-scrollbar {
+    width: 6px; /* Largura fina */
+}
+
+.receipt-items-container::-webkit-scrollbar-track {
+    background: #15181c; /* Cor do fundo do trilho */
+}
+
+.receipt-items-container::-webkit-scrollbar-thumb {
+    background: #333; /* Cor da barra */
+    border-radius: 10px; /* Arredondada */
+}
+
+.receipt-items-container::-webkit-scrollbar-thumb:hover {
+    background: #444; /* Cor ao passar o mouse */
+}
+

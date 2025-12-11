@@ -148,12 +148,19 @@ function getUserDocumentRef(collectionName, documentId) {
 onAuthStateChanged(auth, async (user) => {
     const nomeEl = document.getElementById("sidebar-user-name");
     
+    // 1. Inicia o progresso visual (Assume 10% para o processo de autenticação)
+    // Isso usa a função auxiliar que criamos dentro do loadAllData
+    if (typeof updateLoader === 'function') {
+        updateLoader(10, "Verificando sessão do usuário...");
+    }
+    
     if (user) {
-        console.log("Usuário conectado:", user.email);
+        // --- LÓGICA DO USUÁRIO LOGADO ---
         
         let nomeFinal = user.email.split('@')[0];
 
         try {
+            // Busca o nome da empresa ou nome completo (Consome a fatia inicial do loader)
             const docRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(docRef);
 
@@ -169,18 +176,27 @@ onAuthStateChanged(auth, async (user) => {
             console.error("Erro ao buscar nome do usuário:", error);
         }
         
+        // 2. Atualiza a interface
         if(nomeEl) {
             nomeEl.textContent = nomeFinal;
             nomeEl.style.color = "var(--color-text-primary)";
             nomeEl.style.opacity = "1";
         }
         
+        // 3. Dispara o carregamento de dados (onde o loader vai de 10% a 100%)
         loadAllData();
 
     } else {
+        // --- SE O USUÁRIO NÃO ESTÁ LOGADO ---
         console.log("Nenhum usuário logado.");
         if(nomeEl) nomeEl.textContent = "Visitante";
         
+        // 4. Oculta a tela de carregamento para mostrar a tela de login
+        const loader = document.getElementById('initial-loader');
+        if(loader) {
+            loader.style.opacity = '0'; // Fade out
+            setTimeout(() => loader.remove(), 500); // Remove após a transição
+        }
     }
 });
 
@@ -480,77 +496,126 @@ function getPagamentoBadge(metodo) {
 }
 
 
-async function loadAllData() {
+// ============================================================
+// CARREGAMENTO REAL COM BARRA DE PROGRESSO
+// ============================================================
+
+// Função auxiliar para atualizar a tela de loading
+// ============================================================
+// CARREGAMENTO REAL COM BARRA DE PROGRESSO (CORRIGIDO)
+// ============================================================
+
+// 1. Função Auxiliar que faltava
+function updateLoader(percent, message) {
+    const bar = document.getElementById('loader-bar');
+    const text = document.getElementById('loader-text');
+    const status = document.getElementById('loader-status');
+    const loader = document.getElementById('initial-loader');
     
-    await loadPartnersData();
+    // Se o loader não existir no HTML, tenta remover esqueletos antigos
+    if (!loader) {
+        if(percent >= 100) hideLoadingScreen();
+        return;
+    }
+
+    if (bar) bar.style.width = percent + '%';
+    if (text) text.innerText = percent + '%';
+    if (status) status.innerText = message;
+
+    // Se chegar a 100%, some
+    if (percent >= 100) {
+        setTimeout(() => {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
+        }, 500);
+    }
+}
+
+// 2. A Função Principal
+async function loadAllData() {
     try {
         const user = auth.currentUser;
         if (!user) return;
 
-        // 1. BUSCA TUDO DE UMA VEZ (Produtos, Vendas e CONFIGURAÇÕES)
-        const [produtosSnap, vendasSnap, settingsSnap] = await Promise.all([
-            getDocs(getUserCollectionRef("products")),
-            getDocs(getUserCollectionRef("sales")),
-            getDoc(doc(db, "users", user.uid, "settings", "general"))
-        ]);
+        updateLoader(10, "Conectando ao banco de dados...");
 
-        // Processa Produtos
+        // 1. Prepara as promessas (buscas)
+        const pProdutos = getDocs(getUserCollectionRef("products"));
+        const pVendas = getDocs(getUserCollectionRef("sales"));
+        const pClientes = getDocs(getUserCollectionRef("clients"));
+        const pFornecedores = getDocs(getUserCollectionRef("suppliers"));
+        const pConfig = getDoc(doc(db, "users", user.uid, "settings", "general"));
+        const pDespesas = getDocs(query(getUserCollectionRef("expenses"), orderBy("data", "desc")));
+
+        // 2. Executa e Atualiza a Barra
+        
+        // Produtos (30%)
+        const produtosSnap = await pProdutos;
         products = [];
         produtosSnap.forEach((doc) => products.push({ id: doc.id, ...doc.data() }));
+        updateLoader(40, `Carregados ${products.length} produtos...`);
 
-        // Processa Vendas
+        // Vendas (30%)
+        const vendasSnap = await pVendas;
         salesHistory = [];
         vendasSnap.forEach((doc) => salesHistory.push({ id: doc.id, ...doc.data() }));
         salesHistory.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+        updateLoader(70, `Carregadas ${salesHistory.length} vendas...`);
 
-        // 2. RECUPERA AS CONFIGURAÇÕES SALVAS (Categorias e Pagamentos)
+        // Parceiros (15%)
+        const [clientsSnap, suppSnap] = await Promise.all([pClientes, pFornecedores]);
+        clientesReais = [];
+        clientsSnap.forEach(doc => clientesReais.push({id: doc.id, ...doc.data()}));
+        fornecedoresReais = [];
+        suppSnap.forEach(doc => fornecedoresReais.push({id: doc.id, ...doc.data()}));
+        updateLoader(85, "Sincronizando parceiros...");
+
+        // Configurações e Financeiro (10%)
+        const [settingsSnap, despesasSnap] = await Promise.all([pConfig, pDespesas]);
+        
         if (settingsSnap.exists()) {
-            const dadosConfig = settingsSnap.data();
-            // Aqui ele substitui os dados padrão (Fantasmas) pelos dados reais
-            if (dadosConfig.categories) config.categories = dadosConfig.categories;
-            if (dadosConfig.paymentTypes) config.paymentTypes = dadosConfig.paymentTypes;
-            if (dadosConfig.productGroups) config.productGroups = dadosConfig.productGroups;
-
+            const d = settingsSnap.data();
+            if (d.categories) config.categories = d.categories;
+            if (d.paymentTypes) config.paymentTypes = d.paymentTypes;
+            if (d.productGroups) config.productGroups = d.productGroups;
         }
 
-        // Carrega dados locais (backup e configs visuais)
-        savedCarts = safeLocalStorageParse("savedCarts", []);
-        clients = safeLocalStorageParse("clients", []);
-        systemConfig = safeLocalStorageParse("systemConfig", systemConfig);
+        expensesData = [];
+        despesasSnap.forEach(d => expensesData.push({id: d.id, ...d.data()}));
+        updateLoader(95, "Finalizando interface...");
 
+        // 3. Renderiza Tudo
+        savedCarts = safeLocalStorageParse("savedCarts", []);
+        systemConfig = safeLocalStorageParse("systemConfig", systemConfig);
         if (document.body) document.body.setAttribute('data-theme', systemConfig.theme || 'dark');
 
-        // Remove Skeletons (Animação de carga)
-        document.querySelectorAll('.skeleton').forEach(el => {
-            el.classList.remove('skeleton');
-            el.style.color = '';
+        // Funções de Renderização Seguras
+        const renderFunctions = [
+            renderProductTable,
+            updateDashboardMetrics,
+            updateCategorySelect,
+            updateGroupDatalist,
+            renderClientsTable,
+            renderSuppliersTable,
+            renderExpensesTable,
+            initializeDashboardCharts,
+            atualizarDashboardExecutivo
+        ];
+
+        renderFunctions.forEach(fn => {
+            if (typeof fn === 'function') fn();
         });
-        document.querySelectorAll('.skeleton-row').forEach(row => row.remove());
-        document.querySelectorAll('.chart-container canvas').forEach(el => el.style.opacity = '1'); 
 
-        // 3. ATUALIZA A TELA IMEDIATAMENTE (AQUI ESTAVA FALTANDO COISA)
-        if(typeof updateDashboardMetrics === 'function') updateDashboardMetrics();
-        if(typeof renderProductTable === 'function') renderProductTable();
-        
-        // Atualiza os menus suspensos (Criar Produto)
-        if(typeof updateCategorySelect === 'function') updateCategorySelect(); 
-
-        if(typeof updateGroupDatalist === 'function') updateGroupDatalist();
-        
-        // === AS LINHAS MÁGICAS PARA REMOVER O FANTASMA: ===
-        if(typeof renderCategoriesManager === 'function') renderCategoriesManager(); // <--- Atualiza a lista visual de categorias
-        if(typeof renderPaymentsManager === 'function') renderPaymentsManager();     // <--- Atualiza a lista visual de pagamentos
-        if(typeof renderConfigFields === 'function') renderConfigFields();           // <--- Atualiza os campos de texto
-        
-        if(typeof initializeDashboardCharts === 'function') initializeDashboardCharts();
+        // 100% - FIM
+        updateLoader(100, "Bem-vindo!");
 
     } catch (error) {
-        console.error("❌ ERRO ao carregar dados:", error);
-        document.querySelectorAll('.skeleton').forEach(el => el.classList.remove('skeleton'));
+        console.error("❌ ERRO FATAL:", error);
+        updateLoader(100, "Erro ao carregar."); // Força o fim para não travar
+        alert("Erro ao carregar dados: " + error.message);
     }
-
-
 }
+
 
 /**
  * Envia uma coleção de itens (com IDs originais) para o Firebase.
@@ -679,9 +744,13 @@ function setupNavigation() {
             break;
 
           case "relatorios":
-            // Carrega a tabela e os cards
+            // Carrega a tabela
             if(typeof renderSalesDetailsTable === 'function') renderSalesDetailsTable();
-            // FORÇA abrir a primeira aba (Pesquisa de Vendas - ID NOVO)
+            
+            // FORÇA O CÁLCULO DOS CARDS AGORA
+            if(typeof atualizarDashboardExecutivo === 'function') atualizarDashboardExecutivo();
+            
+            // Abre a primeira aba
             showTab("rel-vendas"); 
             break;
 
@@ -1719,63 +1788,64 @@ function renderPaymentOptions() {
     // 1. Calcula totais iniciais
     const { total } = calculateTotals();
     
-    // Atualiza o display principal (Valor Cheio)
-    if(totalDisplay) totalDisplay.textContent = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-    if(totalDisplay) totalDisplay.dataset.originalTotal = total; // Guarda valor original para conta do desconto
+    if(totalDisplay) {
+        totalDisplay.textContent = total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        totalDisplay.dataset.originalTotal = total;
+    }
 
     container.innerHTML = "";
     pagamentoSelecionado = null;
 
-    // --- SELEÇÃO DE CLIENTE (DROPDOWN INTELIGENTE) ---
+    // --- SELEÇÃO DE CLIENTE ---
     const divCliente = document.createElement("div");
     divCliente.style.marginBottom = "15px";
     
-    // Cria as opções do select baseado nos clientes cadastrados
-    let optionsClientes = '<option value="">Consumidor não identificado)</option>';
+    let optionsClientes = '';
     if (typeof clientesReais !== 'undefined') {
-        clientesReais.forEach(c => {
-            optionsClientes += `<option value="${c.nome}">${c.nome} (${c.doc || 'S/Doc'})</option>`;
+        const listaAtivos = clientesReais
+            .filter(c => c.statusManual !== 'Bloqueado')
+            .sort((a,b) => a.nome.localeCompare(b.nome));
+
+        listaAtivos.forEach(c => {
+            optionsClientes += `<option value="${c.nome}" data-id="${c.id}">ID: ${c.id.slice(-4)} | ${c.doc || 'S/Doc'}</option>`;
         });
     }
 
     divCliente.innerHTML = `
         <label style="display:block; font-weight:bold; margin-bottom:5px; color:#aaa;">
-            <i class="fas fa-user"></i> Cliente
+            <i class="fas fa-user"></i> Destinatário / Cliente
         </label>
-        <select id="modal-client-select" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-bg-tertiary); color: white;">
-            ${optionsClientes}
-        </select>
+        <input list="clientes-list-pdv" id="modal-client-input" 
+               placeholder="Digite o nome..." 
+               style="width: 100%; padding: 10px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-bg-tertiary); color: white;"
+               autocomplete="off">
+        <datalist id="clientes-list-pdv">${optionsClientes}</datalist>
     `;
     container.appendChild(divCliente);
 
-    // --- CAMPO DE DESCONTO ---
+    // --- DESCONTO (Escondido se for Consumo, mas mantido aqui) ---
     const divDesconto = document.createElement("div");
-    divDesconto.style.marginBottom = "15px";
-    divDesconto.style.display = "flex";
-    divDesconto.style.gap = "10px";
-    divDesconto.style.alignItems = "flex-end";
-
     divDesconto.innerHTML = `
-        <div style="flex: 1;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px; color:#aaa;">Desconto (R$)</label>
-            <input type="number" id="modal-discount" placeholder="0,00" min="0" step="0.01" 
-                style="width: 100%; padding: 10px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-bg-tertiary); color: #FF453A; font-weight:bold;"
-                oninput="aplicarDescontoVisual()">
-        </div>
-        <div style="flex: 1;">
-            <label style="display:block; font-weight:bold; margin-bottom:5px; color:#aaa;">Total Final</label>
-            <input type="text" id="modal-final-total" readonly 
-                style="width: 100%; padding: 10px; border: 1px solid var(--color-accent-green); border-radius: 5px; background: rgba(48, 209, 88, 0.1); color: var(--color-accent-green); font-weight:bold; font-size: 1.1rem;"
-                value="R$ ${total.toFixed(2)}">
-        </div>
-    `;
+        <div style="display:flex; gap:10px; margin-bottom:15px; align-items:flex-end;">
+            <div style="flex:1;">
+                <label style="display:block; font-weight:bold; margin-bottom:5px; color:#aaa;">Desconto (R$)</label>
+                <input type="number" id="modal-discount" placeholder="0,00" min="0" step="0.01" 
+                    style="width: 100%; padding: 10px; border: 1px solid var(--color-border); border-radius: 5px; background: var(--color-bg-tertiary); color: #FF453A; font-weight:bold;"
+                    oninput="aplicarDescontoVisual()">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:bold; margin-bottom:5px; color:#aaa;">Total Final</label>
+                <input type="text" id="modal-final-total" readonly 
+                    style="width: 100%; padding: 10px; border: 1px solid var(--color-accent-green); border-radius: 5px; background: rgba(48, 209, 88, 0.1); color: var(--color-accent-green); font-weight:bold; font-size: 1.1rem;"
+                    value="R$ ${total.toFixed(2)}">
+            </div>
+        </div>`;
     container.appendChild(divDesconto);
 
     // --- OPÇÕES DE PAGAMENTO ---
     const labelPgto = document.createElement("p");
     labelPgto.innerHTML = '<i class="fas fa-wallet"></i> Forma de Pagamento';
     labelPgto.style.marginBottom = "10px";
-    labelPgto.style.marginTop = "20px";
     labelPgto.style.color = "#aaa";
     labelPgto.style.fontWeight = "bold";
     container.appendChild(labelPgto);
@@ -1784,57 +1854,52 @@ function renderPaymentOptions() {
         const btn = document.createElement("button");
         btn.className = "payment-option-btn"; 
         btn.innerHTML = `<i class="fas fa-credit-card"></i> ${type}`;
-        
-        btn.onclick = () => {
-            document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            pagamentoSelecionado = type;
-            
-            const btnConfirmar = document.getElementById('btn-finalizar-venda');
-            if(btnConfirmar) {
-                btnConfirmar.disabled = false;
-                btnConfirmar.style.opacity = "1";
-                btnConfirmar.style.cursor = "pointer";
-                btnConfirmar.innerHTML = `<i class="fas fa-check"></i> Finalizar Venda`;
-            }
-        };
+        btn.onclick = () => { selecionarPagamento(btn, type); };
         container.appendChild(btn);
     });
 
-    // --- BOTÕES DE AÇÃO ---
+    // --- BOTÃO ESPECIAL: CONSUMO PRÓPRIO ---
+    const btnConsumo = document.createElement("button");
+    btnConsumo.className = "payment-option-btn";
+    btnConsumo.style.borderColor = "#FF9F0A"; // Laranja
+    btnConsumo.style.color = "#FF9F0A";
+    btnConsumo.innerHTML = `<i class="fas fa-box-open"></i> Consumo Interno / Baixa `;
+    btnConsumo.onclick = () => {
+        // Zera o total visualmente para indicar que é grátis
+        document.getElementById("modal-final-total").value = "R$ 0,00";
+        document.getElementById("modal-final-total").style.color = "#FF9F0A";
+        document.getElementById("modal-final-total").style.borderColor = "#FF9F0A";
+        
+        document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
+        btnConsumo.classList.add('selected');
+        pagamentoSelecionado = "Consumo Interno";
+        
+        const btnConfirmar = document.getElementById('btn-finalizar-venda');
+        btnConfirmar.disabled = false;
+        btnConfirmar.style.opacity = "1";
+        btnConfirmar.style.cursor = "pointer";
+        btnConfirmar.className = "submit-btn"; // Remove cor verde
+        btnConfirmar.style.backgroundColor = "#FF9F0A"; // Põe laranja
+        btnConfirmar.style.color = "#fff";
+        btnConfirmar.innerHTML = `<i class="fas fa-check"></i> Confirmar Baixa`;
+    };
+    container.appendChild(btnConsumo);
+
+    // --- AÇÕES ---
     const row = document.createElement("div");
     row.className = "modal-actions-row";
     row.style.display = "flex";
     row.style.gap = "10px";
     row.style.marginTop = "20px";
 
-   // ... (Código anterior de criação de Pagamentos) ...
-
-    // --- BOTÕES DE AÇÃO (BLOCO SUBSTITUÍDO) ---
-  
-    row.className = "modal-actions-row";
-    row.style.display = "flex";
-    row.style.gap = "10px";
-    row.style.marginTop = "20px";
-
-    // 1. Botão Cancelar Venda (Limpa Carrinho - MANTIDO)
-    const btnCancelSale = document.createElement("button");
-    btnCancelSale.className = "submit-btn delete-btn";
-    btnCancelSale.innerHTML = 'Cancelar';
-    btnCancelSale.style.flex = "1";
-    btnCancelSale.onclick = () => {
-        // Usa o customConfirm para ter certeza
-        customConfirm("Tem certeza que deseja cancelar esta venda e limpar o carrinho?", () => {
-            cart = [];
-            renderCart();
-            document.getElementById('payment-modal').style.display = 'none';
-            showToast("Venda cancelada e carrinho limpo.", "info");
-        });
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "submit-btn delete-btn";
+    btnCancel.innerHTML = 'Cancelar';
+    btnCancel.style.flex = "1";
+    btnCancel.onclick = () => {
+        document.getElementById('payment-modal').style.display = 'none';
     };
 
-    // 2. Botão Fechar Modal (O VOLTAR foi REMOVIDO para simplificar)
-
-    // 3. Botão Confirmar (FINALIZAR VENDA - MANTIDO)
     const btnConfirm = document.createElement("button");
     btnConfirm.id = "btn-finalizar-venda";
     btnConfirm.className = "submit-btn green-btn";
@@ -1845,26 +1910,43 @@ function renderPaymentOptions() {
     btnConfirm.style.cursor = "not-allowed";
 
     btnConfirm.onclick = () => {
-        if (!pagamentoSelecionado) {
-            showToast("⚠️ Selecione uma forma de pagamento.", "error");
-            return;
-        }
-        const clienteSelecionado = document.getElementById('modal-client-select').value;
-        const descontoValor = parseFloat(document.getElementById('modal-discount').value) || 0;
-        
-        // CORREÇÃO: Só pede senha se tiver desconto
-        if (descontoValor > 0) {
-            processSaleWithAuth(pagamentoSelecionado, clienteSelecionado, descontoValor);
+        const clienteInput = document.getElementById('modal-client-input').value.trim();
+        const desconto = parseFloat(document.getElementById('modal-discount').value) || 0;
+
+        if (pagamentoSelecionado === "Consumo Interno") {
+            processarBaixaEstoque(clienteInput || "Consumo Próprio");
         } else {
-            // Sem desconto, processa direto (passando null ou bypass na senha)
-            processSaleDirect(pagamentoSelecionado, clienteSelecionado, 0);
+            if (!pagamentoSelecionado) return showToast("Selecione o pagamento.", "error");
+            if (desconto > 0) processSaleWithAuth(pagamentoSelecionado, clienteInput, desconto);
+            else processSaleDirect(pagamentoSelecionado, clienteInput, 0);
         }
     };
 
-    row.appendChild(btnCancelSale);
-    // REMOVIDO: row.appendChild(btnClose);
+    row.appendChild(btnCancel);
     row.appendChild(btnConfirm);
     container.appendChild(row);
+}
+
+// Auxiliar para clique nos botões normais
+function selecionarPagamento(btn, type) {
+    document.querySelectorAll('.payment-option-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    pagamentoSelecionado = type;
+    
+    // Restaura visual normal
+    const totalOriginal = document.getElementById("payment-total-display").dataset.originalTotal;
+    aplicarDescontoVisual(); // Recalcula total com desconto se houver
+    
+    const display = document.getElementById("modal-final-total");
+    display.style.color = "var(--color-accent-green)";
+    display.style.borderColor = "var(--color-accent-green)";
+
+    const btnConfirmar = document.getElementById('btn-finalizar-venda');
+    btnConfirmar.disabled = false;
+    btnConfirmar.style.opacity = "1";
+    btnConfirmar.style.cursor = "pointer";
+    btnConfirmar.className = "submit-btn green-btn";
+    btnConfirmar.innerHTML = `<i class="fas fa-check"></i> Finalizar Venda`;
 }
 // Processa venda COM verificação de senha (apenas para descontos)
 async function processSaleWithAuth(paymentType, clientName, discountValue) {
@@ -1891,14 +1973,11 @@ async function processSaleWithAuth(paymentType, clientName, discountValue) {
 }
 
 // Processa a venda diretamente (lógica core)
-async function processSaleDirect(paymentType, clientName, discountValue) {
+// Processa a venda diretamente
+async function processSaleDirect(paymentType, clientNameInput, discountValue) {
     const btn = document.getElementById("btn-finalizar-venda");
     try {
         setBtnLoading(btn, true);
-        
-        // ... (Sua lógica original de estoque e addDoc aqui) ...
-        // Vou resumir para não ficar gigante, use a lógica que já existia no seu processSale
-        // mas remova a parte de pedir senha de dentro dela.
         
         const totalOriginal = cart.reduce((acc, i) => acc + (i.preco * i.quantity), 0);
         const finalTotal = totalOriginal - discountValue;
@@ -1915,6 +1994,26 @@ async function processSaleDirect(paymentType, clientName, discountValue) {
             await updateDoc(getUserDocumentRef("products", up.id), { quantidade: up.novaQtd });
         }
 
+        // --- LÓGICA DE VÍNCULO DE CLIENTE ---
+        let finalClientName = clientNameInput || "Consumidor Final";
+        let finalClientId = null; // Se for avulso, fica null
+
+        if (typeof clientesReais !== 'undefined') {
+            // Tenta achar o cliente pelo nome exato digitado
+            const clienteEncontrado = clientesReais.find(c => c.nome.toLowerCase() === finalClientName.toLowerCase());
+            
+            if (clienteEncontrado) {
+                // Se o cliente existe e ESTÁ BLOQUEADO, impedimos a venda (segurança extra)
+                if (clienteEncontrado.statusManual === 'Bloqueado') {
+                    throw new Error(`O cliente "${clienteEncontrado.nome}" está BLOQUEADO e não pode realizar compras.`);
+                }
+                finalClientId = clienteEncontrado.id;
+                // Usa o nome oficial do cadastro para garantir grafia correta
+                finalClientName = clienteEncontrado.nome; 
+            }
+        }
+        // ------------------------------------
+
         // Salva Venda
         const sale = {
             timestamp: new Date().toISOString(),
@@ -1923,8 +2022,10 @@ async function processSaleDirect(paymentType, clientName, discountValue) {
             discount: discountValue,
             total: finalTotal, 
             payment: paymentType,
-            client: clientName || "Consumidor Final"
+            client: finalClientName,
+            clientId: finalClientId // Salva o ID se existir (útil para relatórios futuros)
         };
+        
         await addDoc(getUserCollectionRef("sales"), sale);
 
         // Finaliza
@@ -1936,11 +2037,12 @@ async function processSaleDirect(paymentType, clientName, discountValue) {
 
     } catch (error) {
         console.error(error);
-        showToast("Erro ao processar venda: " + error.message, "error");
+        showToast("Erro: " + error.message, "error");
     } finally {
         setBtnLoading(btn, false);
     }
 }
+
 // Função auxiliar para atualizar o total visualmente quando digita desconto
 window.aplicarDescontoVisual = function() {
     const totalOriginal = parseFloat(document.getElementById("payment-total-display").dataset.originalTotal);
@@ -2392,76 +2494,70 @@ function renderTopSellingTable(sales) {
     } catch (e) { console.error(e); }
 }
 
-function renderSalesDetailsTable(vendasParaMostrar = null) {
-    // Atualiza os cards do topo (Dashboard Executivo) sempre que a tabela muda
-    if(typeof atualizarDashboardExecutivo === 'function') atualizarDashboardExecutivo();
+window.renderSalesDetailsTable = function(vendasParaMostrar = null) {
+    
+    // 1. FORÇA A ATUALIZAÇÃO DOS CARDS (Estoque, Ticket, Top Cliente)
+    // Isso é o que estava faltando!
+    if(typeof atualizarDashboardExecutivo === 'function') {
+        atualizarDashboardExecutivo();
+    }
 
-    try {
-        const tbody = document.getElementById("sales-table-body");
-        const target = tbody || document.querySelector("#sales-report-table tbody");
+    const tbody = document.getElementById("sales-table-body") || document.querySelector("#sales-report-table tbody");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+    const lista = vendasParaMostrar || salesHistory;
+
+    if (!lista || lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #888;">Nenhum registro encontrado.</td></tr>`;
+        return;
+    }
+
+    // Ordena: Mais recentes primeiro
+    const listaOrdenada = [...lista].sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
+
+    listaOrdenada.forEach((sale) => {
+        const row = tbody.insertRow();
         
-        if (!target) return;
+        const saleId = sale.id || "N/A";
+        // Tenta converter data com segurança
+        let d = null;
+        if(typeof converterDataNaMarra === 'function') d = converterDataNaMarra(sale.timestamp || sale.date);
+        else d = new Date(sale.timestamp || sale.date);
 
-        target.innerHTML = "";
-
-        // Se não passou nenhuma lista específica, usa o histórico completo
-        const lista = vendasParaMostrar || salesHistory;
-
-        // --- BLOCO 1: SE A LISTA ESTIVER VAZIA (MENSAGEM DE ERRO) ---
-        if (!lista || lista.length === 0) {
-            target.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--color-text-secondary);">
-                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
-                        <br>Nenhum registro encontrado.
-                    </td>
-                </tr>`;
-            return;
+        const dataVisual = (d && !isNaN(d)) ? d.toLocaleString("pt-BR") : "-";
+        const total = parseFloat(sale.total) || 0;
+        const clientName = sale.client || "-";
+        
+        // Busca ID do cliente para o filtro funcionar
+        let clientId = "";
+        if (typeof clientesReais !== 'undefined') {
+            const clienteObj = clientesReais.find(c => c.nome === clientName);
+            if (clienteObj) clientId = String(clienteObj.id);
         }
 
-        // Ordena por data (mais recente primeiro)
-        const listaOrdenada = [...lista].sort((a, b) => {
-            const dateA = new Date(a.timestamp || a.date);
-            const dateB = new Date(b.timestamp || b.date);
-            return dateB - dateA;
-        });
-
-        // --- BLOCO 2: SE TIVER VENDAS (DESENHA OS BOTÕES AQUI) ---
-        listaOrdenada.forEach((sale) => {
-            const row = target.insertRow();
-            
-            const saleId = sale.id || "N/A";
-            const d = parseDataSegura(sale.timestamp || sale.date);
-            const dataVisual = d ? d.toLocaleString("pt-BR") : "-";
-            const total = parseFloat(sale.total) || 0;
-            const client = sale.client || "-";
-            
-            // Dados para pesquisa
-            const searchText = `${saleId} ${dataVisual} ${client} ${sale.payment}`.toLowerCase();
-            row.setAttribute("data-search", searchText);
-
-            row.innerHTML = `
-                <td><span style="opacity:0.6">#${saleId.slice(-4)}</span></td>
-                <td>${dataVisual}</td>
-                <td style="font-weight:bold; color:var(--color-accent-green);">R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-                <td>${getPagamentoBadge(sale.payment)}</td>
-                <td>${(sale.items || []).length}</td>
-                <td>${client}</td>
-                <td>
-                    <button class="action-btn view-btn" onclick="viewSaleDetails('${saleId}')" title="Ver Detalhes">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    
-                    <button class="action-btn delete-btn" onclick="reverseSale('${saleId}')" title="Estornar Venda">
-                        <i class="fas fa-undo"></i>
-                    </button>
-                </td>
-            `;
-        });
-
-    } catch (error) {
-        console.error("Erro render tabela:", error);
-    }
+        // Carimbo de busca (invisível)
+        const dadosBusca = `${saleId} ${dataVisual} ${clientName} ${clientId} ${sale.payment} R$${total.toFixed(2)}`.toLowerCase();
+        row.setAttribute("data-search", dadosBusca);
+        
+        row.innerHTML = `
+            <td><span style="opacity:0.6">#${saleId.slice(-4)}</span></td>
+            <td>${dataVisual}</td>
+            <td style="font-weight:bold; color:var(--color-accent-green);">R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+            <td>${typeof getPagamentoBadge === 'function' ? getPagamentoBadge(sale.payment) : sale.payment}</td>
+            <td>${(sale.items || []).length}</td>
+            <td>
+                ${clientName}
+                ${clientId ? `<i class="fas fa-id-badge" title="Cliente Cadastrado" style="font-size:0.7rem; color:#0A84FF; margin-left:5px;"></i>` : ''}
+            </td>
+            <td>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn view-btn" onclick="viewSaleDetails('${saleId}')" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn delete-btn" onclick="reverseSale('${saleId}')" title="Estornar"><i class="fas fa-undo"></i></button>
+                </div>
+            </td>
+        `;
+    });
 }
 
 // --- SUBSTITUA ESTA FUNÇÃO NO SEU script.js ---
@@ -2640,144 +2736,116 @@ document.addEventListener("click", function (event) {
 
 let currentSaleView = null;
 
-function viewSaleDetails(saleId) {
-  try {
-    console.log("Abrindo detalhes da venda:", saleId);
+window.viewSaleDetails = function(saleId) {
+    try {
+        const sale = salesHistory.find((s) => s.id === saleId);
+        if (!sale) return alert("Venda não encontrada!");
 
-    const sale = salesHistory.find((s) => s.id === saleId);
-    if (!sale) {
-      alert("Venda não encontrada!");
-      return;
-    }
+        // Ícone e Cor do Pagamento
+        let iconPgto = '<i class="fas fa-money-bill-wave"></i>';
+        if(sale.payment?.toLowerCase().includes('pix')) iconPgto = '<i class="fa-brands fa-pix"></i>';
+        if(sale.payment?.toLowerCase().includes('crédito')) iconPgto = '<i class="fas fa-credit-card"></i>';
 
-    document.getElementById("detail-sale-id").textContent = `#${sale.id}`;
-    document.getElementById("detail-sale-date").textContent =
-      sale.timestamp || "Data não disponível";
-    document.getElementById("detail-sale-payment").textContent =
-      sale.payment || "Não informado";
-    document.getElementById("detail-sale-total").textContent = (
-      sale.total || 0
-    ).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        // Conteúdo do Modal (Novo Layout)
+        const modalContent = document.querySelector('#sale-details-modal .sale-info');
+        
+        // 1. Cabeçalho do Cupom
+        let html = `
+            <div class="receipt-header">
+                <div class="receipt-status">
+                    <span class="status-pill success"><i class="fas fa-check-circle"></i> Venda Aprovada</span>
+                </div>
+                <div class="receipt-date">
+                    ${sale.timestamp ? new Date(sale.timestamp).toLocaleString("pt-BR") : "-"}
+                </div>
+            </div>
 
-    const existingClient = document.querySelector(".client-meta-item");
-    if (existingClient) {
-      existingClient.remove();
-    }
+            <div class="receipt-grid">
+                <div class="receipt-box">
+                    <span class="lbl">Cliente</span>
+                    <span class="val client">${sale.client || "Consumidor Final"}</span>
+                </div>
+                <div class="receipt-box">
+                    <span class="lbl">Pagamento</span>
+                    <span class="val payment">${iconPgto} ${sale.payment || "Dinheiro"}</span>
+                </div>
+            </div>
+        `;
 
-    const saleMeta = document.querySelector(".sale-meta");
-    if (sale.client && sale.client.trim() !== "") {
-      const clientItem = document.createElement("div");
-      clientItem.className = "meta-item client-meta-item";
-      clientItem.innerHTML = `
-                <span class="meta-label"><i class="fas fa-user"></i> Cliente:</span>
-                <span class="meta-value client-value">${sanitizeHTML(
-                  sale.client
-                )}</span>
-            `;
-      const totalItem = saleMeta.querySelector(".total-item");
-      if (totalItem) {
-        saleMeta.insertBefore(clientItem, totalItem);
-      } else {
-        saleMeta.appendChild(clientItem);
-      }
-    }
+        // 2. Lista de Itens (Estilo Cupom)
+        html += `<div class="receipt-items-container"><table class="receipt-table">
+            <thead>
+                <tr>
+                    <th style="text-align:left">Item</th>
+                    <th style="text-align:center">Qtd</th>
+                    <th style="text-align:right">Total</th>
+                </tr>
+            </thead>
+            <tbody>`;
 
-    const itemsContainer = document.getElementById("detail-sale-items");
-    itemsContainer.innerHTML = "";
-
-    if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
-      let subtotal = 0;
-
-      sale.items.forEach((item, index) => {
-        const itemElement = document.createElement("div");
-        itemElement.className = "item-detail";
-
-        const preco = parseFloat(item.preco) || 0;
-        const quantidade = parseInt(item.quantity) || 0;
-        const totalItem = preco * quantidade;
-        subtotal += totalItem;
-
-        const custo = parseFloat(item.custo) || 0;
-        const lucroItem = totalItem - custo * quantidade;
-        const margem = totalItem > 0 ? (lucroItem / totalItem) * 100 : 0;
-
-        itemElement.innerHTML = `
-                    <div class="item-header">
-                        <span class="item-name">${sanitizeHTML(
-                          item.nome || "Produto sem nome"
-                        )}</span>
-                        <span class="item-total">R$ ${totalItem.toLocaleString(
-                          "pt-BR",
-                          { minimumFractionDigits: 2 }
-                        )}</span>
-                    </div>
-                    <div class="item-details">
-                        <div class="item-qty-price">
-                            <span class="qty">${quantidade} Uni. -- R$ ${preco.toLocaleString(
-          "pt-BR",
-          { minimumFractionDigits: 2 }
-        )}</span>
-                        </div>
-                        <div class="item-profit-info">
-                            <span class="profit-badge ${
-                              lucroItem >= 0
-                                ? "profit-positive"
-                                : "profit-negative"
-                            }">
-                                <i class="fas ${
-                                  lucroItem >= 0
-                                    ? "fa-arrow-up"
-                                    : "fa-arrow-down"
-                                }"></i>
-                                Lucro: R$ ${lucroItem.toLocaleString("pt-BR", {
-                                  minimumFractionDigits: 2,
-                                })} (${margem.toFixed(1)}%)
-                            </span>
-                        </div>
-                    </div>
+        let subtotal = 0;
+        if (sale.items) {
+            sale.items.forEach(item => {
+                const totalItem = (item.preco * item.quantity);
+                subtotal += totalItem;
+                html += `
+                    <tr>
+                        <td class="item-name">
+                            ${item.nome}
+                            <div class="unit-price">${parseFloat(item.preco).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} un.</div>
+                        </td>
+                        <td style="text-align:center">x${item.quantity}</td>
+                        <td style="text-align:right; font-weight:bold;">${totalItem.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+                    </tr>
                 `;
-        itemsContainer.appendChild(itemElement);
-      });
+            });
+        }
 
-      const totalElement = document.createElement("div");
-      totalElement.className = "sale-totals";
-      totalElement.innerHTML = `
-                <div class="total-line">
-                    <span class="total-label">Subtotal:</span>
-                    <span class="total-value">R$ ${subtotal.toLocaleString(
-                      "pt-BR",
-                      { minimumFractionDigits: 2 }
-                    )}</span>
+        html += `</tbody></table></div>`;
+
+        // 3. Totais e Rodapé
+        html += `
+            <div class="receipt-summary">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span>${subtotal.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span>
                 </div>
-                <div class="total-line main-total">
-                    <span class="total-label">Total da Venda:</span>
-                    <span class="total-value">R$ ${(
-                      sale.total || 0
-                    ).toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}</span>
+                ${sale.discount > 0 ? `
+                <div class="summary-row discount">
+                    <span>Desconto</span>
+                    <span>- ${parseFloat(sale.discount).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span>
+                </div>` : ''}
+                <div class="summary-row total">
+                    <span>TOTAL</span>
+                    <span>${(parseFloat(sale.total)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</span>
                 </div>
+            </div>
+            
+            <div class="receipt-footer-id">ID: ${sale.id}</div>
+        `;
+
+        // Injeta no HTML (Atenção: A estrutura do seu HTML deve ter uma div com classe .sale-info dentro do modal)
+        // Se não tiver, vamos injetar direto no modal-content se necessário, mas o padrão é .sale-info
+        if(modalContent) {
+            modalContent.innerHTML = html;
+            // Esconde a div antiga de itens se ela existir separada
+            const oldItems = document.getElementById('detail-sale-items');
+            if(oldItems) oldItems.style.display = 'none'; 
+        } else {
+            // Fallback se a estrutura mudou
+            document.querySelector('#sale-details-modal .modal-content').innerHTML = `
+                <div class="modal-header"><h3><i class="fas fa-receipt"></i> Cupom</h3><button class="close-modal-btn" onclick="closeSaleDetails()">×</button></div>
+                <div class="sale-info">${html}</div>
+                <div class="modal-actions"><button class="submit-btn blue-btn" onclick="closeSaleDetails()">Fechar</button></div>
             `;
-      itemsContainer.appendChild(totalElement);
-    } else {
-      itemsContainer.innerHTML = `
-                <div class="no-items-message">
-                    <i class="fas fa-shopping-cart"></i>
-                    <h4>Nenhum item encontrado</h4>
-                    <p>Esta venda não contém itens registrados.</p>
-                </div>
-            `;
+        }
+
+        document.getElementById("sale-details-modal").style.display = "flex";
+
+    } catch (error) {
+        console.error(error);
+        alert("Erro ao gerar cupom.");
     }
-
-    document.getElementById("sale-details-modal").style.display = "flex";
-
-    console.log("Detalhes da venda carregados com sucesso");
-  } catch (error) {
-    console.error("Erro ao abrir detalhes da venda:", error);
-    alert(
-      "Erro ao carregar detalhes da venda. Verifique o console para mais informações."
-    );
-  }
 }
 
 function closeSaleDetails() {
@@ -4659,10 +4727,11 @@ window.filterSalesTable = function(valor) {
     const rows = document.querySelectorAll("#sales-report-table tbody tr");
 
     rows.forEach(row => {
-        // Pega o texto que guardamos no atributo data-search ou o texto visível
-        const text = row.getAttribute("data-search") || row.innerText.toLowerCase();
+        // Pega os dados invisíveis que colocamos no atributo data-search
+        const searchData = row.getAttribute("data-search") || row.innerText.toLowerCase();
         
-        if (text.includes(termo)) {
+        // Se o termo estiver em QUALQUER lugar (ID Venda, ID Cliente, Nome, Data), mostra.
+        if (searchData.includes(termo)) {
             row.style.display = "";
         } else {
             row.style.display = "none";
@@ -5469,14 +5538,11 @@ window.filterPdvProducts = filterPdvProducts;
 
 
 document.addEventListener("DOMContentLoaded", () => {
-    
-    // --- ADICIONE ESTA LINHA AQUI NA PRIMEIRA POSIÇÃO ---
-    showLoadingState();
-    setupNavigation()
+    // showLoadingState(); // REMOVIDO! Deixe o onAuthStateChanged cuidar disso.
+    setupNavigation();
     if(typeof setupFormValidation === 'function') setupFormValidation();
     if(typeof renderHistoryLog === 'function') renderHistoryLog();
     if(typeof setupCartClientAutocomplete === 'function') setupCartClientAutocomplete();
-    //console.log("✅ Sistema inicializado.");
 });
 
 
@@ -5553,71 +5619,145 @@ let fornecedoresReais = [];
 
 // --- CLIENTES ---
 
-async function handleClientForm(e) {
+window.handleClientForm = async function(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     setBtnLoading(btn, true);
 
     const id = document.getElementById('client-id').value;
+    
     const data = {
+        // Dados Básicos
         nome: document.getElementById('cliNome').value,
-        doc: document.getElementById('cliDoc').value,
-        tel: document.getElementById('cliTel').value,
+        tipo: document.getElementById('cliTipo').value,
+        statusManual: document.getElementById('cliStatusManual').value,
+        doc: document.getElementById('cliDoc').value, // CPF/CNPJ
+        ie: document.getElementById('cliIe').value,   // Inscrição Estadual
         nascimento: document.getElementById('cliNasc').value,
+        
+        // Contato
+        email: document.getElementById('cliEmail').value,
+        tel: document.getElementById('cliTel').value,
+        
+        // Endereço Completo
+        cep: document.getElementById('cliCep').value,
+        rua: document.getElementById('cliRua').value,
+        num: document.getElementById('cliNum').value,
+        bairro: document.getElementById('cliBairro').value,
+        cidade: document.getElementById('cliCidade').value,
+        uf: document.getElementById('cliUf').value,
+        
+        // Financeiro
+        limite: document.getElementById('cliLimite').value,
+        obs: document.getElementById('cliObs').value,
+        
         timestamp: new Date().toISOString()
     };
 
     try {
         if (id) {
             await updateDoc(getUserDocumentRef("clients", id), data);
-            showToast("Cliente atualizado!", "success");
+            showToast("Cliente atualizado com sucesso!", "success");
         } else {
             await addDoc(getUserCollectionRef("clients"), data);
-            showToast("Cliente cadastrado!", "success");
+            showToast("Novo cliente cadastrado!", "success");
         }
-        clearClientForm();
-        await loadPartnersData(); // Recarrega listas
+        fecharModalCliente();
+        await loadPartnersData(); // Recarrega a tabela
     } catch (error) {
         console.error(error);
-        showToast("Erro ao salvar cliente.", "error");
+        showToast("Erro ao salvar: " + error.message, "error");
     } finally {
         setBtnLoading(btn, false);
     }
 }
 
-function renderClientsTable() {
+window.renderClientsTable = function() {
     const tbody = document.querySelector('#clientes-table tbody');
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    if (clientesReais.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#888;">Nenhum cliente cadastrado.</td></tr>';
+    if (!clientesReais || clientesReais.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Nenhum cliente cadastrado.</td></tr>';
         return;
     }
 
-    clientesReais.forEach(c => {
+    const lista = [...clientesReais].sort((a,b) => a.nome.localeCompare(b.nome));
+
+    lista.forEach(c => {
+        // A. CÁLCULO FINANCEIRO
+        let total = 0;
+        let count = 0;
+        let ultimaData = null;
+        
+        salesHistory.forEach(s => {
+            if(s.client === c.nome) {
+                total += parseFloat(s.total)||0;
+                count++;
+                const d = parseDataSegura(s.timestamp || s.date);
+                if(!ultimaData || d > ultimaData) ultimaData = d;
+            }
+        });
+
+        // B. STATUS INTELIGENTE
+        let status = '<span class="badge" style="background:#333; color:#aaa;">Novo</span>'; // Padrão: Nunca comprou
+        
+        if (count > 0 && ultimaData) {
+            const diasSemCompra = Math.floor((new Date() - ultimaData) / (1000 * 60 * 60 * 24));
+            
+            if (diasSemCompra <= 60) status = '<span class="badge" style="background:rgba(48, 209, 88, 0.15); color:#30D158;">Ativo</span>';
+            else if (diasSemCompra <= 120) status = '<span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A;">Inativo</span>';
+            else status = '<span class="badge" style="background:rgba(255, 69, 58, 0.15); color:#FF453A;">Perdido</span>';
+        }
+        
+        // Bloqueio manual sobrepõe tudo
+        if(c.statusManual === 'Bloqueado') status = '<span class="badge badge-danger"><i class="fas fa-ban"></i> Bloqueado</span>';
+
+        // C. ANIVERSÁRIO (BOLO)
+        let iconeBolo = '';
+        if(c.nascimento) {
+            const parts = c.nascimento.split('-');
+            if(parts.length === 3) {
+                const hoje = new Date();
+                const niver = new Date(hoje.getFullYear(), parseInt(parts[1])-1, parseInt(parts[2]));
+                const diff = Math.ceil((niver - hoje) / (1000*60*60*24));
+                // Mostra se for hoje ou nos próximos 7 dias
+                if (diff >= 0 && diff <= 7) {
+                    iconeBolo = `<i class="fas fa-birthday-cake" style="color:#FF4081; margin-right:5px; animation: pulse 1s infinite;" title="Aniversário em breve!"></i>`;
+                }
+            }
+        }
+
+        const idLimpo = String(c.id);
+
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td><strong>${c.nome}</strong></td>
-            <td>${c.doc || '-'}</td>
-            <td>${c.tel || '-'}</td>
+            <td>${status}</td>
             <td>
-                <button class="action-btn edit-btn" onclick="editClient('${c.id}')"><i class="fas fa-pencil-alt"></i></button>
-                <button class="action-btn delete-btn" onclick="deletePartner('clients', '${c.id}')"><i class="fas fa-trash"></i></button>
+                <div style="font-weight:bold; color:var(--color-text-primary);">
+                    ${iconeBolo} ${c.nome}
+                </div>
+                <div style="font-size:0.8rem; color:#888;">${c.doc || 'S/ Doc'}</div>
+            </td>
+            <td>
+                <div style="font-size:0.85rem;">${c.tel || c.email || '-'}</div>
+                <div style="font-size:0.8rem; color:#666;">${c.cidade ? c.cidade + '-' + c.uf : ''}</div>
+            </td>
+            <td>
+                <div style="font-weight:bold; color:var(--color-accent-green);">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                <small style="color:#888;">${ultimaData ? ultimaData.toLocaleDateString() : 'Nunca'}</small>
+            </td>
+            <td>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn edit-btn" onclick="editClient('${idLimpo}')" title="Editar"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="action-btn view-btn" onclick="openEnterpriseCard('client', '${idLimpo}')" title="Ficha Completa"><i class="fas fa-id-card"></i></button>
+                    <button class="action-btn delete-btn" onclick="deletePartner('clients', '${idLimpo}')" title="Excluir"><i class="fas fa-trash"></i></button>
+                </div>
             </td>
         `;
     });
 }
-function editClient(id) {
-    const c = clientesReais.find(x => x.id === id);
-    if(!c) return;
-    document.getElementById('client-id').value = c.id;
-    document.getElementById('cliNome').value = c.nome;
-    document.getElementById('cliDoc').value = c.doc || '';
-    document.getElementById('cliTel').value = c.tel || '';
-    // Foca no input
-    document.getElementById('cliNome').focus();
-}
+
 
 function clearClientForm() {
     document.getElementById('client-id').value = '';
@@ -5636,8 +5776,15 @@ async function handleSupplierForm(e) {
     const id = document.getElementById('supp-id').value;
     const data = {
         nome: document.getElementById('suppNome').value,
+        fantasia: document.getElementById('suppFantasia').value,
         cnpj: document.getElementById('suppCnpj').value,
-        contato: document.getElementById('suppContato').value,
+        ie: document.getElementById('suppIe').value,
+        contatoNome: document.getElementById('suppContatoNome').value,
+        tel: document.getElementById('suppTel').value,
+        cel: document.getElementById('suppCel').value,
+        email: document.getElementById('suppEmail').value,
+        endereco: document.getElementById('suppEndereco').value,
+        prazo: document.getElementById('suppPrazo').value,
         timestamp: new Date().toISOString()
     };
 
@@ -5647,44 +5794,134 @@ async function handleSupplierForm(e) {
             showToast("Fornecedor atualizado!", "success");
         } else {
             await addDoc(getUserCollectionRef("suppliers"), data);
-            showToast("Fornecedor cadastrado!", "success");
+            showToast("Fornecedor salvo!", "success");
         }
-        clearSupplierForm();
-        await loadPartnersData(); // Recarrega listas e DROPDOWNS
-    } catch (error) {
-        console.error(error);
-        showToast("Erro ao salvar fornecedor.", "error");
-    } finally {
-        setBtnLoading(btn, false);
-    }
+        fecharModalFornecedor();
+        await loadPartnersData();
+    } catch (error) { console.error(error); showToast("Erro ao salvar.", "error"); }
+    finally { setBtnLoading(btn, false); }
 }
 
-function renderSuppliersTable() {
+
+window.renderSuppliersTable = function() {
     const tbody = document.querySelector('#fornecedores-table tbody');
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    fornecedoresReais.forEach(s => {
+    if (typeof fornecedoresReais === 'undefined' || fornecedoresReais.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#888;">Nenhum fornecedor cadastrado.</td></tr>';
+        return;
+    }
+
+    fornecedoresReais.forEach(f => {
+        // Conta produtos
+        const prods = products.filter(p => p.fornecedor === f.id);
+        const qtd = prods.length;
+        
+        // Status simples
+        let status = '<span class="badge" style="background:#333; color:#aaa; font-size:0.7rem;">Inativo</span>';
+        if(qtd > 0) status = '<span class="badge" style="background:rgba(48, 209, 88, 0.15); color:#30D158; font-size:0.7rem;">Ativo</span>';
+
+        // Contato Formatado
+        let contatoHtml = '<span style="opacity:0.5; font-size:0.8rem">-</span>';
+        if (f.tel || f.email || f.contatoNome) {
+            contatoHtml = `
+                <div style="font-size:0.85rem; font-weight:600;">${f.contatoNome || 'Geral'}</div>
+                <div style="font-size:0.8rem; color:#aaa;">${f.tel || f.email || ''}</div>
+            `;
+        }
+
+        const idLimpo = String(f.id).trim();
+
         const row = tbody.insertRow();
         row.innerHTML = `
-            <td><strong>${s.nome}</strong></td>
-            <td>${s.cnpj || '-'}</td>
+            <td style="width:80px;">${status}</td>
             <td>
-                <button class="action-btn edit-btn" onclick="editSupplier('${s.id}')"><i class="fas fa-pencil-alt"></i></button>
-                <button class="action-btn delete-btn" onclick="deletePartner('suppliers', '${s.id}')"><i class="fas fa-trash"></i></button>
+                <strong style="color:var(--color-text-primary); font-size:0.95rem;">${f.nome}</strong>
+                <div style="font-size:0.8rem; color:#888;">${f.cnpj || 'S/ CNPJ'}</div>
+            </td>
+            <td>${contatoHtml}</td>
+            <td>
+                <span class="badge badge-info" style="font-size:0.8rem;">${qtd} itens</span>
+            </td>
+            <td>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn edit-btn" onclick="editSupplier('${idLimpo}')" title="Editar">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button class="action-btn view-btn" onclick="openEnterpriseCard('supplier', '${idLimpo}')" title="Ficha">
+                        <i class="fas fa-id-card"></i>
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deletePartner('suppliers', '${idLimpo}')" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
     });
 }
+// --- EDITAR CLIENTE (CORRIGIDO) ---
+window.editClient = function(id) {
+    // Converte para string para garantir comparação correta
+    const c = clientesReais.find(x => String(x.id) === String(id));
+    
+    if(!c) {
+        showToast("Erro: Cliente não encontrado na memória.", "error");
+        return;
+    }
 
-function editSupplier(id) {
-    const s = fornecedoresReais.find(x => x.id === id);
+    const modal = document.getElementById('modal-form-cliente');
+    if(!modal) { alert("Erro de HTML: Modal cliente não existe."); return; }
+
+    modal.style.display = 'flex';
+    document.getElementById('titulo-modal-cliente').innerHTML = '<i class="fas fa-user-edit"></i> Editar Cliente';
+    
+    // Helper para preencher sem travar se o campo não existir
+    const set = (eid, val) => { 
+        const el = document.getElementById(eid); 
+        if(el) el.value = val || ''; 
+    };
+
+    set('client-id', c.id);
+    set('cliNome', c.nome);
+    set('cliTipo', c.tipo || 'PF');
+    set('cliStatusManual', c.statusManual || 'Ativo');
+    set('cliDoc', c.doc);
+    set('cliIe', c.ie);
+    set('cliNasc', c.nascimento);
+    set('cliEmail', c.email);
+    set('cliTel', c.tel);
+    
+    set('cliCep', c.cep);
+    set('cliRua', c.rua);
+    set('cliNum', c.num);
+    set('cliBairro', c.bairro);
+    set('cliCidade', c.cidade);
+    set('cliUf', c.uf);
+    
+    set('cliLimite', c.limite);
+    set('cliObs', c.obs);
+}
+
+// --- EDITAR FORNECEDOR (CORRIGIDO) ---
+window.editSupplier = function(id) {
+    const s = fornecedoresReais.find(x => String(x.id) === String(id));
     if(!s) return;
-    document.getElementById('supp-id').value = s.id;
-    document.getElementById('suppNome').value = s.nome;
-    document.getElementById('suppCnpj').value = s.cnpj || '';
-    document.getElementById('suppContato').value = s.contato || '';
-    document.getElementById('suppNome').focus();
+    
+    document.getElementById('modal-form-fornecedor').style.display = 'flex';
+    const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
+
+    set('supp-id', s.id);
+    set('suppNome', s.nome);
+    set('suppFantasia', s.fantasia);
+    set('suppCnpj', s.cnpj);
+    set('suppIe', s.ie);
+    set('suppContatoNome', s.contatoNome);
+    set('suppTel', s.tel);
+    set('suppCel', s.cel);
+    set('suppEmail', s.email);
+    set('suppEndereco', s.endereco);
+    set('suppPrazo', s.prazo);
 }
 
 function clearSupplierForm() {
@@ -5694,9 +5931,6 @@ function clearSupplierForm() {
     document.getElementById('suppContato').value = '';
 }
 
-// --- EXCLUSÃO GENÉRICA ---
-// --- EXCLUSÃO GENÉRICA ---
-// --- EXCLUSÃO GENÉRICA (Fornecedores/Clientes) ---
 async function deletePartner(collectionName, id) {
     customConfirm("Tem certeza que deseja excluir este registro? Esta ação é irreversível.", async () => {
         
@@ -5732,29 +5966,463 @@ async function deletePartner(collectionName, id) {
     });
 }
 
-// --- CARREGAMENTO DE DADOS ---
+// ============================================================
+// MÓDULO ENTERPRISE: CRM & ANALYTICS
+// (Variáveis globais já declaradas anteriormente, removidas daqui para não dar erro)
+// ============================================================
+
+// Função Principal de Carga
+// Função Principal de Carga (CORRIGIDA)
 async function loadPartnersData() {
     try {
-        // Busca Clientes
-        const clientsSnap = await getDocs(getUserCollectionRef("clients"));
+        console.log("🔄 Carregando parceiros...");
+        
+        // Carrega dados do Firebase
+        const [clientsSnap, suppSnap] = await Promise.all([
+            getDocs(getUserCollectionRef("clients")),
+            getDocs(getUserCollectionRef("suppliers"))
+        ]);
+
+        // Limpa e popula os arrays globais
         clientesReais = [];
         clientsSnap.forEach(doc => clientesReais.push({id: doc.id, ...doc.data()}));
-        renderClientsTable();
-
-        // Busca Fornecedores
-        const suppSnap = await getDocs(getUserCollectionRef("suppliers"));
+        
         fornecedoresReais = [];
         suppSnap.forEach(doc => fornecedoresReais.push({id: doc.id, ...doc.data()}));
-        renderSuppliersTable();
 
-        // A MÁGICA: Atualiza o Dropdown na tela de Produtos
-        updateProductSupplierDropdown();
+        console.log(`✅ ${clientesReais.length} Clientes e ${fornecedoresReais.length} Fornecedores carregados.`);
+
+        // --- AQUI ESTAVA O ERRO (NOMES DIFERENTES) ---
+        // Agora chamamos explicitamente as funções que definimos
+        if(typeof renderClientsTable === 'function') {
+            renderClientsTable(); 
+        } else {
+            console.error("❌ Função renderClientsTable não encontrada!");
+        }
+
+        if(typeof renderSuppliersTable === 'function') {
+            renderSuppliersTable();
+        }
+
+        if(typeof updateProductSupplierDropdown === 'function') updateProductSupplierDropdown();
+        
+        // Atualiza os KPIs do topo
+        if(typeof calcularInteligenciaCRM === 'function') calcularInteligenciaCRM();
 
     } catch (error) {
-        console.error("Erro ao carregar parceiros:", error);
+        console.error("Erro CRM:", error);
+        showToast("Erro ao carregar parceiros.", "error");
     }
 }
 
+// 1. INTELIGÊNCIA: Calcula Concentração, Risco e Sazonalidade
+function calcularInteligenciaCRM() {
+    const stats = {};
+    let totalFat = 0;
+    
+    salesHistory.forEach(s => {
+        const cli = s.client || "Outros";
+        if(cli === "Outros" || cli === "Consumidor Final") return;
+        
+        if(!stats[cli]) stats[cli] = { total: 0, ultima: 0 };
+        stats[cli].total += parseFloat(s.total)||0;
+        
+        const d = parseDataSegura(s.timestamp || s.date);
+        if(d > stats[cli].ultima) stats[cli].ultima = d;
+        totalFat += parseFloat(s.total)||0;
+    });
+
+    const hoje = new Date();
+    let ativos = 0;
+    let recuperaveis = 0; // Clientes bons que pararam de comprar (60-120 dias)
+    let perdidos = 0;
+
+    Object.values(stats).forEach(c => {
+        const dias = Math.floor((hoje - c.ultima) / (86400000));
+        if (dias <= 60) ativos++;
+        else if (dias <= 120) recuperaveis++;
+        else perdidos++;
+    });
+
+    // ATUALIZA OS CARDS (Com texto que faz sentido)
+    document.getElementById("crm-active-count").innerText = ativos; // Carteira Ativa
+    
+    // Ticket Médio REAL (Total / Qtd Vendas)
+    const ticket = salesHistory.length > 0 ? totalFat / salesHistory.length : 0;
+    document.getElementById("crm-ticket-avg").innerText = ticket.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+    // Risco de Concentração (Quanto % os top 5 representam)
+    const top5Total = Object.values(stats).sort((a,b)=>b.total-a.total).slice(0,5).reduce((acc,c)=>acc+c.total,0);
+    const conc = totalFat > 0 ? (top5Total/totalFat)*100 : 0;
+    
+    document.getElementById("crm-concentration").innerText = conc.toFixed(0) + "%";
+    document.getElementById("crm-concentration").parentElement.querySelector('small').innerText = "Dependência dos Top 5";
+
+    // Churn agora vira "Oportunidade de Recuperação"
+    const elChurn = document.getElementById("crm-churn-count");
+    if(elChurn) {
+        elChurn.innerText = recuperaveis;
+        elChurn.parentElement.querySelector('.card-label').innerText = "Recuperáveis";
+        elChurn.parentElement.querySelector('small').innerText = "Inativos (60-120d)";
+    }
+
+    // Radar com frases úteis
+    const radar = document.getElementById("crm-radar-list");
+    if(radar) {
+        radar.innerHTML = "";
+        radar.innerHTML += `<li style="padding:10px; border-bottom:1px dashed #333"><strong>${ativos} clientes ativos</strong> compraram recentemente.</li>`;
+        
+        if (recuperaveis > 0) {
+            radar.innerHTML += `<li style="padding:10px; border-bottom:1px dashed #333; color:#FF9F0A">⚠️ <strong>${recuperaveis} clientes</strong> não compram há 2 meses. Ligue para eles!</li>`;
+        }
+        
+        if (conc > 50) {
+            radar.innerHTML += `<li style="padding:10px; color:#FF453A"><strong>Risco Alto:</strong> Sua empresa depende muito de poucos clientes (${conc.toFixed(0)}%).</li>`;
+        } else {
+            radar.innerHTML += `<li style="padding:10px; color:#30D158"><strong>Carteira Saudável:</strong> Vendas bem distribuídas.</li>`;
+        }
+    }
+}
+// 2. TABELA CLIENTES COM CURVA ABC
+function renderClientsTableEnterprise() {
+    const tbody = document.querySelector('#clientes-table tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+
+    // 1. Processamento de Dados
+    let clientesProcessados = clientesReais.map(c => {
+        let total = 0;
+        let ultimaData = null;
+        
+        // Somar vendas
+        salesHistory.forEach(s => {
+            if(s.client === c.nome) {
+                total += parseFloat(s.total)||0;
+                const d = parseDataSegura(s.timestamp || s.date);
+                if(!ultimaData || d > ultimaData) ultimaData = d;
+            }
+        });
+
+        // Verifica Aniversário (Próximos 7 dias)
+        let isNiver = false;
+        if(c.nascimento) {
+            const hoje = new Date();
+            const parts = c.nascimento.split('-'); // YYYY-MM-DD
+            // Cria data no ano atual
+            const niverEsteAno = new Date(hoje.getFullYear(), parseInt(parts[1])-1, parseInt(parts[2]));
+            
+            // Diferença em dias
+            const diff = Math.ceil((niverEsteAno - hoje) / (1000 * 60 * 60 * 24));
+            if(diff >= 0 && diff <= 7) isNiver = true;
+        }
+
+        return { ...c, total, ultimaData, isNiver };
+    });
+
+    // 2. ORDENAÇÃO (Aniversariantes PRIMEIRO, depois LTV)
+    clientesProcessados.sort((a, b) => {
+        if (a.isNiver && !b.isNiver) return -1; // A sobe
+        if (!a.isNiver && b.isNiver) return 1;  // B sobe
+        return b.total - a.total; // Desempate por quem gasta mais
+    });
+
+    // 3. RENDERIZAÇÃO
+    if (clientesProcessados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#888;">Nenhum cliente cadastrado.</td></tr>';
+        return;
+    }
+
+    clientesProcessados.forEach(c => {
+        // Formata Data PT-BR
+        const dataVisual = c.ultimaData ? c.ultimaData.toLocaleDateString('pt-BR') : "Sem compras";
+        
+        // Ícone de Aniversário (BOLO PISCANDO)
+        let nomeDisplay = `<span style="font-weight:bold; color:var(--color-text-primary);">${c.nome}</span>`;
+        
+        if(c.isNiver) {
+            // Ícone FontAwesome de Bolo em vez de Emoji
+            nomeDisplay = `<span style="font-weight:bold; color:#FF4081; display:flex; align-items:center; gap:5px;">
+                             <i class="fas fa-birthday-cake highlight"></i> ${c.nome}
+                           </span>`;
+        }
+
+        // Badges de Status (Sem emojis)
+        let status = '<span class="badge" style="background:#333; color:#aaa;">Novo</span>';
+        if(c.total > 1000) status = '<span class="badge" style="background:rgba(10, 132, 255, 0.2); color:#0A84FF;"><i class="fas fa-check"></i> Ativo</span>';
+        if(c.total > 5000) status = '<span class="badge" style="background:rgba(191, 90, 242, 0.2); color:#BF5AF2;"><i class="fas fa-crown"></i> VIP</span>';
+
+        // Linha da Tabela
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>${status}</td>
+            <td>
+                ${nomeDisplay}
+                <small style="opacity:0.6; display:block; margin-top:2px;">${c.doc || 'CPF n/inf.'}</small>
+            </td>
+            <td style="color:var(--color-accent-green); font-weight:bold;">
+                R$ ${c.total.toLocaleString('pt-BR', {minimumFractionDigits:2})}
+            </td>
+            <td style="font-size:0.9rem; color:#ccc;">${dataVisual}</td>
+            <td>
+                <div style="display:flex; gap:5px;">
+                    <button class="action-btn view-btn" onclick="openEnterpriseCard('client', '${c.id}')" title="Ver Ficha">
+                        <i class="fas fa-id-card"></i>
+                    </button>
+                    <button class="action-btn edit-btn" onclick="editClient('${c.id}')" title="Editar">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deletePartner('clients', '${c.id}')" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+    });
+}
+
+// 3. TABELA FORNECEDORES
+function renderSuppliersTableEnterprise() {
+    const tbody = document.querySelector('#fornecedores-table tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+
+    fornecedoresReais.forEach(f => {
+        const produtosDoFornecedor = products.filter(p => p.fornecedor === f.id);
+        const qtdSkus = produtosDoFornecedor.length;
+        const valorEstoque = produtosDoFornecedor.reduce((acc,p) => acc + (p.custo * p.quantidade), 0);
+
+        let impacto = "Baixo";
+        let corImpacto = "gray";
+        if (valorEstoque > 10000) { impacto = "Alto"; corImpacto = "#FF453A"; }
+        else if (valorEstoque > 2000) { impacto = "Médio"; corImpacto = "#FF9F0A"; }
+
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td><span style="color:${corImpacto}; font-weight:bold;">${impacto}</span></td>
+            <td>
+                <div style="font-weight:bold;">${f.nome}</div>
+                <small style="opacity:0.6">${f.contato || '-'}</small>
+            </td>
+            <td>${qtdSkus} SKUs (R$ ${valorEstoque.toLocaleString('pt-BR', {minimumFractionDigits:0})})</td>
+            <td>7 dias (Est.)</td>
+            <td>
+                <button class="action-btn view-btn" onclick="openEnterpriseCard('supplier', '${f.id}')"><i class="fas fa-id-card"></i></button>
+                <button class="action-btn delete-btn" onclick="deletePartner('suppliers', '${f.id}')"><i class="fas fa-trash"></i></button>
+            </td>
+        `;
+    });
+}
+
+// 4. MODAL FICHA COMPLETA
+// ============================================================
+// FICHA TÉCNICA (CORRIGIDA: CLIENTE vs FORNECEDOR)
+// ============================================================
+window.openEnterpriseCard = function(type, id) {
+    const modal = document.getElementById('partner-details-modal');
+    const content = document.getElementById('partner-modal-content');
+    if(!modal || !content) return;
+
+    // ------------------------------------------
+    // CENÁRIO 1: É UM CLIENTE
+    // ------------------------------------------
+    if (type === 'client') {
+        const c = clientesReais.find(x => String(x.id) === String(id));
+        if(!c) return;
+
+        // Cálculos Financeiros do Cliente
+        let total = 0, count = 0;
+        let lastDate = null;
+        let history = [];
+
+        salesHistory.forEach(s => {
+            if(s.client === c.nome) {
+                total += parseFloat(s.total)||0;
+                count++;
+                const d = parseDataSegura(s.timestamp || s.date);
+                if (!lastDate || d > lastDate) lastDate = d;
+                history.push({d, val: s.total, items: (s.items||[]).length});
+            }
+        });
+
+        content.innerHTML = `
+            <div class="partner-detail-wrapper">
+                <div class="partner-header-clean">
+                    <div>
+                        <h2 style="margin:0; color:var(--color-text-primary);">${c.nome}</h2>
+                        <small style="color:#888;">ID: ${c.id.slice(-4)}</small>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="badge" style="background:rgba(10, 132, 255, 0.1); color:#0A84FF;">${c.tipo || 'Cliente'}</span>
+                    </div>
+                </div>
+
+                <div class="partner-info-grid">
+                    <div class="info-block">
+                        <h4 style="color:var(--color-accent-blue);">Dados Pessoais</h4>
+                        <div class="info-row"><span>CPF/CNPJ</span> <span>${c.doc || '-'}</span></div>
+                        <div class="info-row"><span>Telefone</span> <span>${c.tel || '-'}</span></div>
+                        <div class="info-row"><span>E-mail</span> <span>${c.email || '-'}</span></div>
+                        <div class="info-row"><span>Endereço</span> <span style="font-size:0.8rem; text-align:right;">${c.endereco || '-'}</span></div>
+                        <div class="info-row"><span>Obs</span> <span style="font-size:0.8rem;">${c.obs || '-'}</span></div>
+                    </div>
+
+                    <div class="info-block">
+                        <h4 style="color:var(--color-accent-green);">Histórico de Compras</h4>
+                        <div class="info-row"><span>Total Gasto</span> <span style="color:#30D158; font-weight:bold;">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
+                        <div class="info-row"><span>Qtd. Compras</span> <span>${count}</span></div>
+                        <div class="info-row"><span>Última Compra</span> <span>${lastDate ? lastDate.toLocaleDateString('pt-BR') : '-'}</span></div>
+                        
+                        <h4 style="margin-top:15px; color:#fff;">Últimas 5 Vendas</h4>
+                        <ul class="timeline-clean" style="list-style:none; padding:0; margin:0; max-height:150px; overflow-y:auto;">
+                            ${history.sort((a,b)=>b.d-a.d).slice(0,5).map(h => `
+                                <li>
+                                    <div style="font-size:0.8rem; color:#888;">${h.d ? h.d.toLocaleDateString() : '-'}</div>
+                                    <div style="color:#fff;">Compra de <strong>R$ ${parseFloat(h.val).toFixed(2)}</strong></div>
+                                </li>
+                            `).join('') || '<li style="color:#666; font-size:0.8rem; padding:10px 0;">Nenhuma compra registrada.</li>'}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    } 
+    // ------------------------------------------
+    // CENÁRIO 2: É UM FORNECEDOR
+    // ------------------------------------------
+    else if (type === 'supplier') {
+        const f = fornecedoresReais.find(x => String(x.id) === String(id));
+        if(!f) return;
+
+        // Busca produtos vinculados a este fornecedor
+        const produtosVinculados = products.filter(p => p.fornecedor === f.id);
+
+        content.innerHTML = `
+            <div class="partner-detail-wrapper">
+                <div class="partner-header-clean">
+                    <div>
+                        <h2 style="margin:0; color:var(--color-text-primary);">${f.nome}</h2>
+                        <div style="font-size:0.9rem; color:#aaa;">${f.fantasia || ''}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="badge" style="background:rgba(255, 159, 10, 0.1); color:#FF9F0A;">Fornecedor</span>
+                    </div>
+                </div>
+
+                <div class="partner-info-grid">
+                    <div class="info-block">
+                        <h4 style="color:var(--color-accent-purple);">Dados Empresariais</h4>
+                        <div class="info-row"><span>CNPJ</span> <span>${f.cnpj || '-'}</span></div>
+                        <div class="info-row"><span>Inscr. Est.</span> <span>${f.ie || '-'}</span></div>
+                        <div class="info-row"><span>Contato</span> <span>${f.contatoNome || '-'}</span></div>
+                        <div class="info-row"><span>Telefone</span> <span>${f.tel || '-'}</span></div>
+                        <div class="info-row"><span>Celular</span> <span>${f.cel || '-'}</span></div>
+                        <div class="info-row"><span>E-mail</span> <span>${f.email || '-'}</span></div>
+                        <div class="info-row"><span>Endereço</span> <span style="font-size:0.8rem; text-align:right;">${f.endereco || '-'}</span></div>
+                    </div>
+
+                    <div class="info-block">
+                        <h4 style="color:var(--color-accent-purple);">Produtos Fornecidos (${produtosVinculados.length})</h4>
+                        <div style="max-height:250px; overflow-y:auto; padding-right:5px;">
+                            ${produtosVinculados.length > 0 ? produtosVinculados.map(p => `
+                                <div style="padding:8px; background:rgba(255,255,255,0.03); border-radius:4px; margin-bottom:5px; border-left:2px solid var(--color-accent-purple);">
+                                    <div style="font-weight:bold; font-size:0.9rem;">${p.nome}</div>
+                                    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#aaa; margin-top:2px;">
+                                        <span>Estoque: ${p.quantidade}</span>
+                                        <span>Custo: R$ ${parseFloat(p.custo||0).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            `).join('') : '<div style="color:#666; font-style:italic; padding:10px;">Nenhum produto vinculado.</div>'}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    modal.style.display = 'flex';
+}
+
+window.abrirModalCliente = function() {
+    document.getElementById('client-id').value = ""; // Limpa ID (Modo Criar)
+    document.querySelector('#modal-form-cliente form').reset();
+    document.getElementById('titulo-modal-cliente').innerHTML = '<i class="fas fa-user-plus"></i> Novo Cliente';
+    document.getElementById('modal-form-cliente').style.display = 'flex';
+}
+
+window.fecharModalCliente = function() {
+    document.getElementById('modal-form-cliente').style.display = 'none';
+}
+
+window.abrirModalFornecedor = function() {
+    document.getElementById('supp-id').value = "";
+    document.querySelector('#modal-form-fornecedor form').reset();
+    document.getElementById('titulo-modal-fornecedor').innerHTML = '<i class="fas fa-truck-loading"></i> Novo Fornecedor';
+    document.getElementById('modal-form-fornecedor').style.display = 'flex';
+}
+
+window.fecharModalFornecedor = function() {
+    document.getElementById('modal-form-fornecedor').style.display = 'none';
+}
+
+
+
+
+window.abrirMuralAniversarios = function() {
+    // Define o mês atual no select por padrão
+    const mesAtual = new Date().getMonth();
+    document.getElementById('filtro-mes-niver').value = mesAtual;
+    
+    renderizarMuralAniversarios();
+    document.getElementById('modal-mural-aniversarios').style.display = 'flex';
+}
+
+window.renderizarMuralAniversarios = function() {
+    const container = document.getElementById('grid-aniversariantes');
+    const filtroMes = document.getElementById('filtro-mes-niver').value;
+    
+    if(!container) return;
+    container.innerHTML = '';
+
+    const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+    
+    let lista = clientesReais.filter(c => c.nascimento);
+
+    if (filtroMes !== "todos") {
+        lista = lista.filter(c => (parseInt(c.nascimento.split('-')[1]) - 1) == filtroMes);
+    }
+
+    // Ordena por Mês e Dia
+    lista.sort((a, b) => {
+        const dateA = a.nascimento.split('-');
+        const dateB = b.nascimento.split('-');
+        if (dateA[1] !== dateB[1]) return dateA[1] - dateB[1];
+        return dateA[2] - dateB[2];
+    });
+
+    if (lista.length === 0) {
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:30px; color:#666;">Nenhum aniversariante encontrado.</div>`;
+        return;
+    }
+
+    lista.forEach(c => {
+        const parts = c.nascimento.split('-');
+        const dia = parts[2];
+        const mesIdx = parseInt(parts[1]) - 1;
+        const hoje = new Date();
+        const isHoje = (hoje.getDate() == dia && hoje.getMonth() == mesIdx);
+
+        const card = document.createElement('div');
+        card.className = `birthday-card ${isHoje ? 'is-today' : ''}`;
+        
+        card.innerHTML = `
+            <div class="b-month">${meses[mesIdx]}</div>
+            <div class="b-day-big">${dia}</div>
+            <div class="b-name" title="${c.nome}">${c.nome.split(' ')[0]} ${c.nome.split(' ')[1]?c.nome.split(' ')[1][0]+'.':''}</div>
+            ${isHoje ? '<div style="position:absolute; top:5px; right:5px; width:8px; height:8px; background:#FF4081; border-radius:50%;"></div>' : ''}
+        `;
+        container.appendChild(card);
+    });
+}
 // Essa função preenche o <select> lá no formulário de produtos
 function updateProductSupplierDropdown() {
     const select = document.getElementById('prodFornecedor');
@@ -6935,76 +7603,118 @@ window.resetarFiltroDespesas = function() {
 // RELATÓRIOS AVANÇADOS (KPIs, GMROI, Executivo)
 // ============================================================
 
-// 1. Atualiza o Dashboard Executivo (Topo da aba Relatórios)
-function atualizarDashboardExecutivo() {
-    // --- CÁLCULO 1: LUCRO POTENCIAL DO ESTOQUE ---
-    // (Soma de (Preço - Custo) * Quantidade de todos os produtos)
+// ============================================================
+// ATUALIZA OS CARDS DO TOPO (RELATÓRIOS) - VERSÃO BLINDADA
+// ============================================================
+window.atualizarDashboardExecutivo = function() {
+    // 1. LUCRO POTENCIAL DO ESTOQUE
     let lucroEstoqueTotal = 0;
     
-    if (products && Array.isArray(products)) {
+    if (typeof products !== 'undefined' && Array.isArray(products)) {
         products.forEach(p => {
             const qtd = parseInt(p.quantidade) || 0;
-            const custo = parseFloat(p.custo) || 0;
-            const preco = parseFloat(p.preco) || 0;
+            // Garante conversão de string "100,00" para número 100.00 se necessário
+            let custo = p.custo;
+            let preco = p.preco;
             
-            // Só soma se tiver lucro positivo
+            if (typeof custo === 'string') custo = parseFloat(custo.replace(',', '.')) || 0;
+            if (typeof preco === 'string') preco = parseFloat(preco.replace(',', '.')) || 0;
+            
             const lucroUnitario = preco - custo;
-            if (lucroUnitario > 0) {
+            if (lucroUnitario > 0 && qtd > 0) {
                 lucroEstoqueTotal += (lucroUnitario * qtd);
             }
         });
     }
 
-    // Atualiza o elemento no HTML (Lembre-se de mudar o rótulo no HTML para "Lucro Potencial de Estoque")
     const elEstoque = document.getElementById("exec-estoque-custo");
-    if(elEstoque) {
-        elEstoque.innerText = lucroEstoqueTotal.toLocaleString("pt-BR", {style:'currency', currency:'BRL'});
-        // Muda a cor para verde para indicar lucro
-        elEstoque.style.color = "var(--color-accent-green)"; 
+    if(elEstoque) elEstoque.innerText = lucroEstoqueTotal.toLocaleString("pt-BR", {style:'currency', currency:'BRL'});
+
+    // 2. VENDAS (Ticket e Top Cliente)
+    if (!salesHistory || salesHistory.length === 0) {
+        if(document.getElementById("exec-ticket")) document.getElementById("exec-ticket").innerText = "R$ 0,00";
+        if(document.getElementById("exec-top-cliente")) document.getElementById("exec-top-cliente").innerText = "---";
+        return;
     }
 
-    // --- CÁLCULO 2: TICKET MÉDIO E TOP CLIENTE ---
-    if (!salesHistory || salesHistory.length === 0) return;
+    // Função local segura para data
+    const pegarData = (v) => {
+        if(!v) return null;
+        if(v instanceof Date) return v;
+        // Tenta usar a função global se existir, senão usa new Date
+        if(typeof converterDataNaMarra === 'function') return converterDataNaMarra(v);
+        return new Date(v);
+    };
 
-    const mesAtual = new Date().getMonth();
-    let vendasMes = 0;
-    let qtdVendasMes = 0;
-    const clientesMes = {};
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
 
-    salesHistory.forEach(s => {
-        const d = parseDataSegura(s.timestamp || s.date);
-        if (!d) return;
+    // Filtra pelo mês atual
+    let vendasFiltradas = salesHistory.filter(s => {
+        const d = pegarData(s.timestamp || s.date);
+        return d && !isNaN(d) && d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+    });
 
-        if (d.getMonth() === mesAtual) {
-            const total = parseFloat(s.total) || 0;
-            vendasMes += total;
-            qtdVendasMes++;
-            
-            const cli = s.client || "Consumidor Final";
-            if (cli !== "Consumidor Final") {
-                clientesMes[cli] = (clientesMes[cli] || 0) + total;
-            }
+    let textoPeriodo = "(Mês Atual)";
+
+    // Se não tiver vendas no mês, usa TUDO
+    if (vendasFiltradas.length === 0) {
+        vendasFiltradas = salesHistory;
+        textoPeriodo = "(Geral)";
+    }
+
+    // Cálculos
+    let totalVendas = 0;
+    const clientesMap = {};
+
+    vendasFiltradas.forEach(s => {
+        const total = parseFloat(s.total) || 0;
+        totalVendas += total;
+
+        const cli = s.client || "Consumidor Final";
+        if (cli !== "Consumidor Final") {
+            clientesMap[cli] = (clientesMap[cli] || 0) + total;
         }
     });
 
-    const ticket = qtdVendasMes > 0 ? (vendasMes / qtdVendasMes) : 0;
-
-    let topClienteNome = "Nenhum";
-    let topClienteValor = 0;
-    Object.entries(clientesMes).forEach(([nome, valor]) => {
-        if (valor > topClienteValor) {
-            topClienteValor = valor;
-            topClienteNome = nome;
+    // Ticket Médio
+    const ticket = vendasFiltradas.length > 0 ? (totalVendas / vendasFiltradas.length) : 0;
+    
+    // Top Cliente
+    let topNome = "---";
+    let topValor = 0;
+    Object.entries(clientesMap).forEach(([nome, valor]) => {
+        if (valor > topValor) {
+            topValor = valor;
+            topNome = nome;
         }
     });
 
+    // Atualiza DOM
     const elTicket = document.getElementById("exec-ticket");
-    const elCli = document.getElementById("exec-top-cliente");
-
-    if(elTicket) elTicket.innerText = ticket.toLocaleString("pt-BR", {style:'currency', currency:'BRL'});
-    if(elCli) elCli.innerHTML = `${topClienteNome} <small style='color:#30D158'>(${topClienteValor.toLocaleString("pt-BR", {style:'currency', currency:'BRL'})})</small>`;
+    if(elTicket) {
+        elTicket.innerText = ticket.toLocaleString("pt-BR", {style:'currency', currency:'BRL'});
+        // Atualiza label
+        const label = elTicket.parentElement.querySelector(".card-label");
+        if(label) label.innerText = `Ticket Médio ${textoPeriodo}`;
+    }
+    
+    const elTopCli = document.getElementById("exec-top-cliente");
+    if(elTopCli) {
+        if (topValor > 0) {
+            const nomeCurto = topNome.length > 15 ? topNome.substring(0, 12)+'...' : topNome;
+            elTopCli.innerHTML = `
+                <div style="font-weight:bold; color:var(--color-text-primary); font-size:0.9rem;">${nomeCurto}</div>
+                <div style="color:#30D158; font-size:0.8rem;">${topValor.toLocaleString("pt-BR", {style:'currency', currency:'BRL'})}</div>
+            `;
+        } else {
+            elTopCli.innerText = "---";
+        }
+        const label = elTopCli.parentElement.querySelector(".card-label");
+        if(label) label.innerText = `Top Cliente ${textoPeriodo}`;
+    }
 }
-
 // 2. Inteligência de Estoque (GMROI e Ruptura)
 window.calcularKPIsEstoque = function() {
     if (!products || products.length === 0) return;
@@ -7764,6 +8474,91 @@ document.addEventListener('click', function(e) {
         lista.classList.remove('show');
     }
 });
+
+// ============================================================
+// PROCESSAR CONSUMO PRÓPRIO / BAIXA (CUSTO VIRA DESPESA)
+// ============================================================
+window.processarBaixaEstoque = async function(motivo) {
+    const btn = document.getElementById("btn-finalizar-venda");
+    
+    // Pede senha por segurança (opcional, mas recomendado para evitar fraudes)
+    const senha = await getPasswordViaPrompt("Autorizar Baixa", "Digite a senha para confirmar o consumo/perda:");
+    if (!senha) return showToast("Baixa cancelada.", "info");
+
+    try {
+        setBtnLoading(btn, true);
+        
+        // Valida senha (segurança)
+        const user = auth.currentUser;
+        const credential = EmailAuthProvider.credential(user.email, senha);
+        await reauthenticateWithCredential(user, credential);
+
+        let custoTotalDaBaixa = 0;
+        const updates = [];
+
+        // 1. Calcula Custo Total e Prepara Estoque
+        for (const item of cart) {
+            const prod = products.find(p => (p._id || p.id) == item.id);
+            if (prod) {
+                const custoUnit = parseFloat(prod.custo) || 0;
+                custoTotalDaBaixa += (custoUnit * item.quantity);
+                
+                if (prod.categoria !== "Serviços") {
+                    updates.push({ id: prod.id, novaQtd: prod.quantidade - item.quantity });
+                }
+            }
+        }
+
+        // 2. Atualiza Estoque
+        for (const up of updates) {
+            await updateDoc(getUserDocumentRef("products", up.id), { quantidade: up.novaQtd });
+        }
+
+        // 3. Registra "Venda" zerada (Para constar a saída no histórico de itens)
+        const sale = {
+            timestamp: new Date().toISOString(),
+            items: JSON.parse(JSON.stringify(cart)),
+            subtotal: 0,
+            discount: 0,
+            total: 0, // Venda sai a custo zero
+            payment: "Consumo Interno",
+            client: motivo, // Ex: "Consumo Próprio", "Quebra", "Doação"
+            isWriteOff: true // Flag para identificar que não é venda real
+        };
+        await addDoc(getUserCollectionRef("sales"), sale);
+
+        // 4. LANÇA DESPESA AUTOMÁTICA (O Pulo do Gato!)
+        if (custoTotalDaBaixa > 0) {
+            const despesa = {
+                descricao: `Baixa de Estoque: ${motivo}`,
+                valor: custoTotalDaBaixa,
+                categoria: "Operacional", // Ou 'Perdas', se tiver
+                data: new Date().toISOString().split('T')[0], // Hoje YYYY-MM-DD
+                timestamp: new Date().toISOString()
+            };
+            await addDoc(getUserCollectionRef("expenses"), despesa);
+        }
+
+        // Finaliza
+        cart = [];
+        renderCart();
+        document.getElementById("payment-modal").style.display = "none";
+        
+        await loadAllData();
+        await loadFinancialDashboard(); // Atualiza financeiro
+
+        customAlert(`Baixa realizada!\nCusto de R$ ${custoTotalDaBaixa.toFixed(2)} lançado como despesa.`, "success");
+
+    } catch (error) {
+        console.error(error);
+        if (error.code === 'auth/wrong-password') showToast("Senha incorreta.", "error");
+        else showToast("Erro ao processar baixa: " + error.message, "error");
+    } finally {
+        setBtnLoading(btn, false);
+    }
+}
+
+
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
 // ============================================================
@@ -7786,3 +8581,9 @@ window.handleExpenseForm = handleExpenseForm;
 window.deleteExpense = deleteExpense;
 window.loadFinancialDashboard = loadFinancialDashboard;
 window.reverseSale = reverseSale;
+window.abrirModalCliente = abrirModalCliente;
+window.fecharModalCliente = fecharModalCliente;
+window.abrirModalFornecedor = abrirModalFornecedor;
+window.fecharModalFornecedor = fecharModalFornecedor;
+window.abrirMuralAniversarios = abrirMuralAniversarios;
+window.renderizarMuralAniversarios = renderizarMuralAniversarios;
