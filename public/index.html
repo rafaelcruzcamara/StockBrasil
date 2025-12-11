@@ -3,279 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockBrasil PRO - Gerenciamento de Estoque e Vendas Inteligente</title>
-    <link rel="stylesheet" href="./stilo.css">
-    <link rel="shortcut icon" href="./images/StockBrasilPRO-removebg-preview.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-
+    <title>StockBrasil PRO | Soluções Fiscais e de Gestão Empresarial Escalável</title>
+    <link rel="stylesheet" href="index.css"> 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <header id="top-header">
-        <div class="navbar">
-            <a href="#hero" class="logo">StockBrasil<span class="logo-pro">PRO</span></a>
-            <nav class="main-nav">
-                <a href="#why-choose" class="nav-link">Benefícios</a>
-                <a href="#depoimentos" class="nav-link">Clientes</a>
-                <a href="#planos" class="nav-link">Preços</a>
-                <a href="#contato" class="nav-link accent-text">Contato</a> </nav>
-            <a href="auth.html" class="submit-btn default-btn btn-header">
-                <i class="fa-solid fa-circle-user"></i> Loguin / Cadastro
-            </a>
-        </div>
+    <header class="navbar-container">
+        <nav class="navbar lp-container">
+            <div class="logo">
+                StockBrasil <span class="logo-highlight">PRO</span>
+            </div>
+            <div class="nav-links">
+                <a href="#plataforma">Plataforma</a>
+                <a href="#integracao">Integração</a>
+                <a href="#infraestrutura">Escalabilidade</a>
+                <a href="#licencas">Licenças</a>
+            </div>
+            <div class="nav-actions">
+                <a href="auth.html" class="nav-login">Acesso ao Sistema</a>
+                <a href="#licencas" class="submit-btn blue-btn">Solicitar Consultoria</a>
+            </div>
+        </nav>
     </header>
 
-    <section id="hero" class="animated-section">
-        <div class="container hero-content">
-            <div class="hero-text">
-                <h1>O Controle de <span class="accent-text">Estoque</span> e <span class="accent-text">PDV</span> que Você Merece.</h1>
-                <p class="subtitle">Chega de planilhas. O StockBrasil PRO transforma sua gestão em uma experiência fluida, visual e lucrativa, adaptada ao seu Dark Mode.</p>
-                <div class="hero-actions">
-                    <a href="#planos" class="submit-btn green-btn btn-cta">
-                        Teste Grátis
+    <section class="hero">
+        <div class="hero-content lp-container">
+            <div class="hero-text fade-in-up">
+                <h1>Governança de <span class="text-highlight">Estoque e Fluxo de Caixa</span> com Compliance Integrado.</h1>
+                <p>Desenvolvemos a espinha dorsal operacional para empresas que exigem máxima precisão fiscal, auditoria contábil transparente e escalabilidade ilimitada no PDV.</p>
+                <div class="hero-btns">
+                    <a href="#infraestrutura" class="submit-btn green-btn btn-lg">
+                        Ver Arquitetura Técnica
                     </a>
-                    <a href="#why-choose" class="submit-btn default-btn btn-demo">
-                        Ver Recursos <i class="fas fa-arrow-right"></i>
+                    <a href="#plataforma" class="secondary-btn">
+                        Conhecer Módulos
                     </a>
                 </div>
             </div>
-            <div class="hero-image-mockup">
-                <div class="screen-border">
-                    <img src="./images/Captura de tela 2025-10-29 180612.png" alt="Mockup da Interface Dark Mode do StockBrasil">
+            <div class="hero-image fade-in-up delay-200">
+                <img src="https://via.placeholder.com/1200x650/0A0D12/0A84FF?text=Dashboard+Executivo+KPIs+e+Controle+Fiscal" alt="Dashboard StockBrasil PRO" class="mockup-img">
+            </div>
+        </div>
+    </section>
+
+    <section class="trust-bar bg-secondary">
+        <div class="lp-container trust-grid scroll-reveal">
+            <div class="trust-item">
+                <h3>ISO/IEC</h3>
+                <p>Conformidade em Segurança</p>
+            </div>
+            <div class="trust-item">
+                <h3>Milhares</h3>
+                <p>Transações Processadas/Mês</p>
+            </div>
+            <div class="trust-item">
+                <h3>AWS Cloud</h3>
+                <p>Infraestrutura Escalável</p>
+            </div>
+            <div class="trust-item">
+                <h3>99.999%</h3>
+                <p>SLA de Disponibilidade</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="plataforma" class="section-padding">
+        <div class="lp-container">
+            <div class="section-header scroll-reveal">
+                <span class="text-highlight-small">PLATAFORMA MODULAR</span>
+                <h2>Seu Ecossistema Operacional Unificado.</h2>
+                <p>O StockBrasil PRO é estruturado em três pilares que conversam em tempo real, eliminando inconsistências entre as áreas financeiras, fiscais e operacionais.</p>
+            </div>
+
+            <div class="modules-grid">
+                <div class="module-card scroll-reveal">
+                    <span class="module-icon color-blue">FISCAL</span>
+                    <h3>Governança Fiscal & Tributária</h3>
+                    <p>Controle automatizado de impostos (ICMS, IPI, PIS/COFINS) e validação em lote de documentos eletrônicos. Preparação de SPED Fiscal e ECF/ECF de forma nativa e integrada ao ERP.</p>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> Emissão de NF-e e CT-e em Lote</li>
+                        <li><i class="fas fa-check"></i> Auditoria de Lançamentos Fiscais</li>
+                        <li><i class="fas fa-check"></i> Central de Arquivos XML (5 anos)</li>
+                    </ul>
+                </div>
+                <div class="module-card scroll-reveal delay-100">
+                    <span class="module-icon color-green">FINANÇAS</span>
+                    <h3>Performance Financeira Estratégica</h3>
+                    <p>Visão gerencial instantânea com DRE, Fluxo de Caixa Projetado e Ponto de Equilíbrio. O sistema projeta cenários e alerta sobre desvios orçamentários em tempo real.</p>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> Relatório de Custo-Oportunidade</li>
+                        <li><i class="fas fa-check"></i> Conciliação Bancária Automatizada</li>
+                        <li><i class="fas fa-check"></i> Gestão de Orçamentos e Despesas</li>
+                    </ul>
+                </div>
+                <div class="module-card scroll-reveal delay-200">
+                    <span class="module-icon color-purple">LOGÍSTICA</span>
+                    <h3>Otimização de Ativos (Estoque e PDV)</h3>
+                    <p>Controle de inventário de alta precisão com suporte a múltiplos armazéns e métodos de custeio (FIFO/LIFO/Custo Médio). O PDV é construído para operar em alta velocidade, mesmo em picos de demanda.</p>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check"></i> Alocação e Rastreabilidade de Lotes</li>
+                        <li><i class="fas fa-check"></i> PDV Offline com Sincronização Automática</li>
+                        <li><i class="fas fa-check"></i> Análise de Sazonalidade (Previsão)</li>
+                    </ul>
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="trust-bar" class="animated-section">
-        <div class="container">
-            <h2 class="section-title" style="font-size: 2rem; margin-bottom: 40px;">Construído para Crescer com <span class="accent-text">Confiança</span></h2>
-            
-            <div class="trust-stats-grid">
-                <div class="stat-item animated-card">
-                    <span class="number">2.5K+</span>
-                    <span class="label">Empresas Gerenciadas</span>
-                </div>
-                <div class="stat-item animated-card">
-                    <span class="number">99.9%</span>
-                    <span class="label">Uptime Comprovado</span>
-                </div>
-                <div class="stat-item animated-card">
-                    <span class="number">4.8/5</span>
-                    <span class="label">Avaliação Média</span>
-                </div>
-                <div class="stat-item animated-card">
-                    <span class="number">2h</span>
-                    <span class="label">Tempo Médio de Implementação</span>
-                </div>
-            </div>
-            
-            <p class="section-subtitle" style="margin-bottom: 20px;">Utilizamos tecnologia de ponta para garantir velocidade e segurança:</p>
-
-            <div class="tech-logos animated-card">
-                <i class="fab fa-aws" title="Amazon Web Services"></i>
-                <i class="fas fa-server" title="Banco de Dados Escalável"></i>
-                <i class="fas fa-shield-alt" title="Criptografia SSL"></i>
-                <i class="fab fa-js" title="Tecnologia JavaScript Moderna"></i>
-            </div>
-
-        </div>
-    </section>
-
-    <section id="why-choose" class="animated-section">
-        <div class="container">
-            <h2 class="section-title">Por que Nossos Clientes <span class="accent-text">Amam</span> a StockBrasil?</h2>
-            
-            <div class="features-grid">
+    <section id="integracao" class="section-padding bg-secondary">
+        <div class="lp-container integration-layout">
+            <div class="integration-text scroll-reveal">
+                <span class="text-highlight-small">ECOSSISTEMA ABERTO</span>
+                <h2>Integração Total com seu Legado.</h2>
+                <p class="intro-p">Nossa API RESTful de alto desempenho foi desenhada para conectar o StockBrasil PRO a qualquer ERP, CRM ou sistema de contabilidade existente, garantindo a continuidade dos seus processos.</p>
                 
-                <div class="feature-card animated-card">
-                    <div class="card-icon-wrapper"><i class="fas fa-bolt"></i></div>
-                    <h3>Performance Imediata</h3>
-                    <p>Construído com tecnologias robustas, nosso sistema é incrivelmente rápido e garante que você nunca perca uma transação.</p>
-                </div>
-                
-                <div class="feature-card animated-card">
-                    <div class="card-icon-wrapper"><i class="fas fa-lock"></i></div>
-                    <h3>Segurança em Primeiro Lugar</h3>
-                    <p>Com persistência de dados e logs de auditoria, suas informações financeiras estão seguras e sempre disponíveis.</p>
-                </div>
-                
-                <div class="feature-card animated-card">
-                    <div class="card-icon-wrapper"><i class="fas fa-headset"></i></div>
-                    <h3>Suporte Humanizado</h3>
-                    <p>Nossa equipe de suporte está pronta para ajudar a qualquer momento. Você não falará com robôs, mas com especialistas em gestão.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="depoimentos" class="animated-section">
-        <div class="container">
-            <h2 class="section-title">O que Dizem Nossos <span class="accent-text">Clientes Top</span></h2>
-            
-            <div class="testimonials-grid">
-                
-                <div class="testimonial-card animated-card">
-                    <div class="rating"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
-                    <p class="quote">"O PDV é instantâneo. Conseguimos reduzir o tempo de fila em 40% durante a Black Friday. O Dark Mode é um espetáculo!"</p>
-                    <div class="client-info">
-                        <span class="client-name">Ana Júlia M.</span>
-                        <span class="client-role">CEO, Moda Rápida Express</span>
+                <div class="integration-points">
+                    <div class="point">
+                        <i class="fas fa-cubes"></i>
+                        <h4>Estrutura Modular</h4>
+                        <p>Publique ou consuma dados de estoque, vendas e financeiro com granularidade total.</p>
+                    </div>
+                    <div class="point">
+                        <i class="fas fa-code-branch"></i>
+                        <h4>Ambiente Sandbox</h4>
+                        <p>Teste todas as integrações em um ambiente seguro antes de ir para produção.</p>
                     </div>
                 </div>
-                
-                <div class="testimonial-card animated-card">
-                    <div class="rating"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div>
-                    <p class="quote">"A ferramenta de relatórios é a melhor. Consegui identificar um produto que estava me dando prejuízo e cortei as perdas na hora."</p>
-                    <div class="client-info">
-                        <span class="client-name">Roberto C.</span>
-                        <span class="client-role">Gerente Financeiro, Eletrônicos Top</span>
-                    </div>
-                </div>
-                
+                <a href="#" class="submit-btn delete-btn">Documentação da API (V3.1)</a>
+            </div>
+            <div class="integration-image scroll-reveal delay-200">
+                <img src="https://via.placeholder.com/500x400/151920/8B95A1?text=Diagrama+de+Arquitetura+de+APIs" alt="Diagrama de Integração de Sistemas" class="api-img">
             </div>
         </div>
     </section>
 
-    <section id="planos" class="animated-section">
-        <div class="container">
-            <h2 class="section-title">Escolha Seu Plano e <span class="accent-text">Comece a Dominar</span> Sua Gestão.</h2>
-            <p class="section-subtitle">Planos flexíveis para todas as etapas do seu crescimento. Pague Agora e Tenha Acesso Imediato!</p>
+    <section id="infraestrutura" class="section-padding">
+        <div class="lp-container infrastructure-layout">
+            <div class="infra-header scroll-reveal">
+                <span class="text-highlight-small">CONFIABILIDADE E ESCALABILIDADE</span>
+                <h2>Desenvolvido para Transações de Missão Crítica.</h2>
+            </div>
             
+            <div class="infra-cards-grid">
+                <div class="infra-card scroll-reveal">
+                    <h3>Multi-Region Failover</h3>
+                    <p>Sistema redundante em múltiplas regiões geográficas, garantindo zero downtime em falhas de infraestrutura regionais.</p>
+                </div>
+                <div class="infra-card scroll-reveal delay-100">
+                    <h3>Segurança de Borda</h3>
+                    <p>Proteção DDoS e Firewall de Aplicação Web (WAF) monitorado 24/7 contra vulnerabilidades OWASP Top 10.</p>
+                </div>
+                <div class="infra-card scroll-reveal delay-200">
+                    <h3>Latência Otimizada</h3>
+                    <p>Rede de entrega de conteúdo (CDN) e otimização de banco de dados para garantir que a transação no PDV seja sub-segundo.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="section-padding bg-tertiary">
+        <div class="lp-container">
+            <div class="section-header scroll-reveal">
+                <span class="text-highlight-small">GOVERNANÇA E OPERAÇÃO</span>
+                <h2>Dúvidas Críticas sobre Implantação.</h2>
+            </div>
+
+            <div class="faq-grid scroll-reveal">
+                <div class="faq-item">
+                    <h4>Qual o processo e tempo estimado para a migração de dados do meu sistema legado?</h4>
+                    <p>O processo começa com a análise dos seus dados via API ou exportação XML. Nossa equipe de Consultoria aloca um Gerente de Migração dedicado, e o tempo médio para Go-Live de uma base de médio porte é de 4 a 6 semanas.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Como é tratada a segurança de acesso e a política de usuários em um ambiente com alta rotatividade?</h4>
+                    <p>Utilizamos autenticação SSO (Single Sign-On) e políticas de acesso baseadas em funções (Role-Based Access Control - RBAC). O administrador do sistema pode revogar acessos instantaneamente e auditar todas as ações de qualquer usuário.</p>
+                </div>
+                <div class="faq-item">
+                    <h4>Quais são os níveis de Suporte e SLA oferecidos na Licença Corporativa?</h4>
+                    <p>A Licença Corporativa inclui Suporte Nível 3 (dedicado) com SLA de resposta para incidentes críticos de 1 hora, 24 horas por dia, 7 dias por semana (24/7). Incluímos um Gerente de Sucesso do Cliente (CSM) dedicado.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section id="licencas" class="section-padding">
+        <div class="lp-container">
+            <div class="section-header scroll-reveal">
+                <span class="text-highlight-small">PLANOS DE LICENÇA</span>
+                <h2>Valor que Escala com a sua Estrutura.</h2>
+                <p>Nossas licenças são dimensionadas pela complexidade e pelo nível de suporte exigido, não pelo volume transacionado.</p>
+            </div>
+
             <div class="pricing-grid">
-                
-                <div class="plan-card animated-card">
-                    <h3>Básico</h3>
-                    <p class="tagline">Controle de estoque para iniciantes.</p>
-                    <p class="price-type">Mensal</p>
-                    <p class="price">R$ 60<small>/mês</small></p>
-                    <ul>
-                        <li><i class="fas fa-check-circle check-icon"></i> 1 Usuário / 1 PDV</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Controle de Estoque Básico</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> PDV Rápido (Pix, Cartão, Dinheiro)</li>
-                        <li><i class="fas fa-times-circle close-icon"></i> **Relatórios Avançados (PDF/Gráficos)**</li>
-                        <li><i class="fas fa-times-circle close-icon"></i> Gestão de Clientes e Histórico</li>
-                    </ul>
-                    <a href="#" class="submit-btn blue-btn btn-plan">Assinar Agora</a>
-                </div>
-
-                <div class="plan-card highlight animated-card">
-                    <span class="badge">Economize 20%</span>
-                    <h3>Essencial</h3>
-                    <p class="tagline">O poder do StockBrasil, completo e sem limites.</p>
-                    <p class="price-type">Mensal</p>
-                    <p class="price">R$ 89<small>/mês</small></p>
-                    <ul>
-                        <li><i class="fas fa-check-circle check-icon"></i> **Até 5 Usuários** / Multi PDVs</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Todas as Funções do Básico</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> **Relatórios Avançados (PDF/Chart.js)**</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Gestão de Clientes PRO</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Suporte Prioritário</li>
-                    </ul>
-                    <a href="payment.html" class="submit-btn green-btn btn-plan btn-shimmer">
-                        <i class="fas fa-bolt"></i> Iniciar Agora
-                    </a>
-                </div>
-                
-                <div class="plan-card animated-card">
-                    <h3>Empresarial</h3>
-                    <p class="tagline">Para grandes operações, franquias e alta demanda.</p>
-                    <p class="price-type">Mensal</p>
-                    <p class="price">R$ 170<small>/mês</small></p>
-                    <ul>
-                        <li><i class="fas fa-check-circle check-icon"></i> Usuários e PDVs **Ilimitados**</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Todas as Funções Essenciais</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> **Integração de API** (ERP, E-commerce)</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Histórico de Logs e Auditoria</li>
-                        <li><i class="fas fa-check-circle check-icon"></i> Consultoria de Implementação</li>
-                    </ul>
-                    <a href="#" class="submit-btn default-btn btn-plan">Contatar Vendas</a>
-                </div>
-            </div>
-            <div class="annual-pricing-note">
-                <p>A StockBrasil esta em um mega desconto, aproveite agora.</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="contato" class="animated-section">
-        <div class="container">
-            <h2 class="section-title">Ficou com Dúvidas? <span class="accent-text">Fale Conosco.</span></h2>
-            
-            <div class="contact-content">
-                <div class="contact-info">
-                    <h3>Suporte e Vendas Diretas</h3>
-                    <p style="color: var(--color-text-primary); font-size: 1.15rem;">Nossa equipe está pronta para te ajudar a configurar seu sistema e tirar todas as suas dúvidas sobre planos e funcionalidades.</p>
-
-                    <div class="contact-details">
-                        <p><i class="fas fa-envelope"></i> suporte@stockbrasilpro.com.br</p>
-                        <p><i class="fas fa-phone"></i> (65) 98136-2736</p>
-                        <p><i class="fas fa-map-marker-alt"></i> Cuiabá, MT - Atendimento Nacional</p>
+                <div class="plan-card scroll-reveal">
+                    <h3>Base</h3>
+                    <p class="plan-subtitle">Ideal para prova de conceito e operações pontuais.</p>
+                    <div class="plan-price">
+                        <span class="currency">R$</span>
+                        <span class="amount">69</span>
+                        <span class="period">/mês</span>
                     </div>
-                    
-                    <a href="https://wa.me/5565981367536" target="_blank" class="submit-btn green-btn" style="margin-top: 20px;">
-                        <i class="fab fa-whatsapp"></i> Chamar no WhatsApp
-                    </a>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check"></i> Acesso Padrão (2 usuários)</li>
+                        <li><i class="fas fa-check"></i> PDV e Estoque Padrão</li>
+                        <li><i class="fas fa-check"></i> Suporte via Portal (SLA 48h)</li>
+                        <li class="disabled"><i class="fas fa-times"></i> Módulo Fiscal Completo</li>
+                    </ul>
+                    <a href="auth.html" class="submit-btn delete-btn full-width">Iniciar Teste</a>
                 </div>
 
-                <div class="contact-form-mockup animated-card">
-                    <p style="margin-bottom: 25px; color: var(--color-text-secondary);">Preencha o formulário e retornaremos em até 2 horas.</p>
-                    <input type="text" placeholder="Seu Nome Completo" required>
-                    <input type="email" placeholder="Seu Melhor E-mail" required>
-                    <textarea placeholder="Mensagem / Dúvida sobre o Sistema"></textarea>
-                    <button class="submit-btn blue-btn" style="width: 100%;">
-                        Enviar Mensagem <i class="fas fa-paper-plane"></i>
-                    </button>
+                <div class="plan-card recommended scroll-reveal delay-100">
+                    <div class="recommended-badge">RECOMENDADO PELOS CONSULTORIAS</div>
+                    <h3>Estratégica</h3>
+                    <p class="plan-subtitle">O ponto de equilíbrio entre conformidade, gestão e suporte de ponta.</p>
+                    <div class="plan-price">
+                        <span class="currency">R$</span>
+                        <span class="amount">199</span>
+                        <span class="period">/mês</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check"></i> **Até 10 Usuários Concorrentes**</li>
+                        <li><i class="fas fa-check"></i> Módulos Fiscal e Financeiro PRO</li>
+                        <li><i class="fas fa-check"></i> **Suporte Dedicado Nível 2**</li>
+                        <li><i class="fas fa-check"></i> Backup e DR em Múltiplas Regiões</li>
+                    </ul>
+                    <a href="auth.html" class="submit-btn blue-btn full-width big-btn">Solicitar Implantação Estratégica</a>
+                </div>
+
+                <div class="plan-card scroll-reveal delay-200">
+                    <h3>Corporativa</h3>
+                    <p class="plan-subtitle">Solução completa para grandes redes e integração com sistemas legados.</p>
+                    <div class="plan-price">
+                        <span class="currency">R$</span>
+                        <span class="amount">Sob</span>
+                        <span class="period">Consulta</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li><i class="fas fa-check"></i> Usuários e PDVs Ilimitados</li>
+                        <li><i class="fas fa-check"></i> **API Completa e Suporte Técnico**</li>
+                        <li><i class="fas fa-check"></i> Suporte 24/7 (SLA 1h)</li>
+                        <li><i class="fas fa-check"></i> Gerente de Sucesso Dedicado</li>
+                    </ul>
+                    <a href="#" class="submit-btn purple-btn full-width">Agendar Análise</a>
                 </div>
             </div>
         </div>
     </section>
+    
+    <section class="cta-final section-padding bg-secondary scroll-reveal">
+        <div class="lp-container cta-content">
+            <h2>Pronto para Auditoria e Escalabilidade?</h2>
+            <p>Fale com nossa equipe sênior. Sem compromisso, analisamos sua infraestrutura atual e propomos o plano de migração ideal.</p>
+            <a href="#" class="submit-btn blue-btn btn-lg">
+                Agendar Consultoria Gratuita <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </section>
 
-    <footer>
-        <div class="container">
-            <div class="footer-links">
-                <a href="#">Termos de Uso</a>
-                <a href="#">Política de Privacidade</a>
-                <a href="#">Fale Conosco</a>
+    <footer class="footer">
+        <div class="lp-container footer-content">
+            <div class="footer-logo">
+                StockBrasil <span class="logo-highlight">PRO</span>
+                <p>Governança. Precisão. Escalabilidade.</p>
+                <p style="font-size:0.8rem; margin-top: 15px;">© 2024 StockBrasil PRO. CNPJ: XX.XXX.XXX/0001-XX</p>
             </div>
-            <p>&copy; 2025 StockBrasil PRO. Sua gestão no modo mais rápido.</p>
+            <div class="footer-links">
+                <h4>Plataforma</h4>
+                <a href="#plataforma">Módulos</a>
+                <a href="#infraestrutura">Arquitetura</a>
+                <a href="#integracao">API</a>
+            </div>
+            <div class="footer-links">
+                <h4>Jurídico e Suporte</h4>
+                <a href="#faq">FAQ Empresarial</a>
+                <a href="#">Termos de Serviço</a>
+                <a href="#">Política de Privacidade</a>
+            </div>
+             <div class="footer-contact">
+                <h4>Central de Contato</h4>
+                <p>Vendas Estratégicas: (11) 5555-PRO</p>
+                <p>Suporte 24/7: (11) 4004-STOCK</p>
+                <p>Email: consultoria@stockbrasilpro.com.br</p>
+            </div>
+        </div>
+        <div class="footer-bottom lp-container">
+            <p>Desenvolvido para máxima conformidade e performance em ambientes de missão crítica.</p>
         </div>
     </footer>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Lógica para Animação de Scroll (Fade In)
-            const animatedSections = document.querySelectorAll('.animated-section');
-            const animatedCards = document.querySelectorAll('.animated-card');
-
-            const observerOptions = {
-                root: null,
-                rootMargin: '0px',
-                threshold: 0.1
-            };
-
-            const observerCallback = (entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('reveal');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            };
-
-            const observer = new IntersectionObserver(observerCallback, observerOptions);
-            
-            animatedSections.forEach(section => {
-                observer.observe(section);
-            });
-
-            animatedCards.forEach((card, index) => {
-                card.style.transitionDelay = `${index * 0.1}s`; // Staggered delay
-                observer.observe(card);
-            });
-        });
+        function reveal() {
+            var reveals = document.querySelectorAll(".scroll-reveal");
+            for (var i = 0; i < reveals.length; i++) {
+                var windowHeight = window.innerHeight;
+                var elementTop = reveals[i].getBoundingClientRect().top;
+                var elementVisible = 150; 
+                if (elementTop < windowHeight - elementVisible) {
+                    reveals[i].classList.add("active");
+                }
+            }
+        }
+        window.addEventListener("scroll", reveal);
+        reveal(); 
     </script>
 
 </body>

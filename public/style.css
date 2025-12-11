@@ -5232,3 +5232,211 @@ input:checked + .slider:before {
 .manual-price-mode {
     border-color: #FF9F0A !important; /* Laranja para indicar manual */
 }
+
+/* ============================================================
+   CORREÇÃO DA JANELA DE DETALHES (Botão Fixo)
+   ============================================================ */
+
+/* 1. Trava a altura da janela para não estourar a tela */
+.sale-details-modal {
+    display: flex !important;
+    flex-direction: column !important;
+    max-height: 85vh !important; /* Altura máx 85% da tela */
+    overflow: hidden !important; /* Esconde rolagem externa */
+    padding: 0 !important; /* Remove padding da borda */
+}
+
+/* 2. Cabeçalho Fixo */
+.sale-details-modal .receipt-header {
+    flex-shrink: 0; /* Não deixa esmagar */
+}
+
+/* 3. Área de Rolagem (Apenas o conteúdo do meio rola) */
+.sale-details-modal .sale-info {
+    flex: 1; /* Ocupa todo espaço disponível */
+    overflow-y: auto; /* Cria a barra de rolagem AQUI */
+    padding: 20px; /* Espaço interno */
+    background: #1a1d21;
+}
+
+/* 4. Rodapé Fixo (Onde fica o botão) */
+.sale-details-modal .modal-actions,
+.sale-details-modal .receipt-footer-btn-area {
+    margin-top: 0 !important;
+    padding: 15px 20px;
+    background: #15181c;
+    border-top: 1px solid #333;
+    flex-shrink: 0; /* Garante que sempre aparece */
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+}
+
+/* 5. Ajuste da lista para não ficar desalinhada */
+.receipt-items-container ul li {
+    padding-right: 10px;
+}
+
+/* ============================================================
+   ESTILO DO ENDEREÇO NA FICHA TÉCNICA
+   ============================================================ */
+
+.address-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Alinha à direita para combinar com o layout */
+    text-align: right;
+    gap: 4px;
+}
+
+.addr-street {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary); /* Branco/Cinza claro */
+    letter-spacing: 0.5px;
+}
+
+.addr-street i {
+    color: var(--color-accent-red); /* Ícone de pino vermelho */
+    margin-right: 5px;
+    font-size: 0.9rem;
+}
+
+.addr-city {
+    font-size: 0.85rem;
+    color: #aaa; /* Cinza mais escuro para destaque menor */
+    font-weight: normal;
+}
+
+.addr-cep {
+    font-size: 0.75rem;
+    color: var(--color-accent-blue); /* Azul para o CEP */
+    background: rgba(10, 132, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 2px;
+}
+
+/* Ajuste para mobile */
+@media (max-width: 600px) {
+    .address-container {
+        align-items: flex-start;
+        text-align: left;
+        margin-top: 10px;
+    }
+}
+
+/* ============================================================
+   SIDEBAR 2.0 - ESTRATÉGIA DE ENGENHARIA UX
+   ============================================================ */
+
+/* 1. Correção de Layout da Sidebar (Flexbox Rígido) */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Ocupa exatamente a altura da tela */
+    overflow: hidden; /* Nada vaza para fora */
+}
+
+/* 2. Área de Navegação com Scroll Inteligente */
+.sidebar-nav {
+    flex: 1; /* Ocupa todo o espaço que sobra entre o perfil e o rodapé */
+    overflow-y: auto; /* Cria barra de rolagem se precisar */
+    padding-bottom: 20px;
+    
+    /* Scrollbar Fina e Elegante */
+    scrollbar-width: thin;
+    scrollbar-color: #444 transparent;
+}
+
+/* Estilo do Scroll Webkit (Chrome/Edge) */
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background-color: #444; border-radius: 4px; }
+
+/* 3. Títulos de Seção (Pequenos) */
+.nav-section-label {
+    font-size: 0.7rem;
+    font-weight: bold;
+    color: #666;
+    margin: 15px 0 5px 25px; /* Alinhado com o texto dos ícones */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* 4. Grupos Expansíveis (Accordion) */
+.nav-group {
+    margin-bottom: 5px;
+}
+
+.nav-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.nav-group-header:hover {
+    color: var(--color-text-primary);
+    background: rgba(255,255,255,0.03);
+}
+
+.group-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.group-arrow {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+/* Estado Aberto */
+.nav-group.open .group-arrow {
+    transform: rotate(180deg);
+}
+
+.nav-group.open .nav-group-header {
+    color: var(--color-accent-blue);
+}
+
+/* Itens dentro do grupo (Escondidos por padrão) */
+.nav-group-items {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: rgba(0, 0, 0, 0.15); /* Fundo um pouco mais escuro */
+}
+
+.nav-group.open .nav-group-items {
+    max-height: 500px; /* Altura suficiente para mostrar tudo */
+}
+
+/* Ajuste dos itens dentro do grupo (Indentação) */
+.nav-group-items .nav-item {
+    padding-left: 52px; /* Mais recuado para hierarquia visual */
+    font-size: 0.9rem;
+}
+
+/* Ajuste para quando a sidebar estiver colapsada (Mobile ou fechada) */
+.sidebar.collapsed .nav-section-label,
+.sidebar.collapsed .group-arrow {
+    display: none;
+}
+
+.sidebar.collapsed .nav-group-header {
+    justify-content: center;
+    padding: 15px 0;
+}
+
+.sidebar.collapsed .group-label span {
+    display: none;
+}
+
+/* Se fechado, hover mostra tooltip (opcional, avançado) */

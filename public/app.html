@@ -56,19 +56,40 @@
 
     <hr class="sidebar-divider">
 
-    <nav class="sidebar-nav">
-            <a href="#dashboard" class="nav-item active"><i class="fas fa-home"></i> <span>Dashboard</span></a>
-<a href="#produtos" class="nav-item"><i class="fas fa-boxes"></i> <span>Produtos</span></a>
-<a href="#vendas" class="nav-item"><i class="fas fa-cash-register"></i> <span>Ponto de Venda</span></a>
+    <nav class="sidebar-nav" id="sidebar-nav-container">
+    
+    <div class="nav-section-label">PRINCIPAL</div>
+    <a href="#dashboard" class="nav-item active"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+    <a href="#vendas" class="nav-item"><i class="fas fa-cash-register"></i> <span>PDV (Vender)</span></a>
 
-<a href="#parceiros" class="nav-item"><i class="fas fa-users"></i> <span>Parceiros</span></a>
+    <div class="nav-group">
+        <div class="nav-group-header" onclick="toggleNavGroup(this)">
+            <div class="group-label"><i class="fas fa-boxes"></i> <span>Operacional</span></div>
+            <i class="fas fa-chevron-down group-arrow"></i>
+        </div>
+        <div class="nav-group-items">
+            <a href="#produtos" class="nav-item"><i class="fas fa-box-open"></i> <span>Produtos & Estoque</span></a>
+            <a href="#parceiros" class="nav-item"><i class="fas fa-users"></i> <span>Parceiros (CRM)</span></a>
+            <a href="#carrinhos-salvos" class="nav-item"><i class="fas fa-shopping-basket"></i> <span>Carrinhos Salvos</span></a>
+        </div>
+    </div>
 
-<a href="#carrinhos-salvos" class="nav-item"><i class="fas fa-shopping-basket"></i> <span>Carrinhos Salvos</span></a>
-<a href="#financeiro" class="nav-item"><i class="fas fa-wallet"></i> <span>Financeiro</span></a>
-<a href="#relatorios" class="nav-item"><i class="fas fa-chart-line"></i> <span>Relatórios</span></a>
-<a href="#config" class="nav-item"><i class="fas fa-cogs"></i> <span>Configurações</span></a>
-<a href="#comunidade" class="nav-item"><i class="fas fa-comments"></i> <span>Comunidade & Novidades</span></a>
-    </nav>
+    <div class="nav-group">
+        <div class="nav-group-header" onclick="toggleNavGroup(this)">
+            <div class="group-label"><i class="fas fa-chart-pie"></i> <span>Gestão</span></div>
+            <i class="fas fa-chevron-down group-arrow"></i>
+        </div>
+        <div class="nav-group-items">
+            <a href="#financeiro" class="nav-item"><i class="fas fa-wallet"></i> <span>Financeiro</span></a>
+            <a href="#relatorios" class="nav-item"><i class="fas fa-chart-line"></i> <span>Relatórios & Notas</span></a>
+        </div>
+    </div>
+
+    <div class="nav-section-label">SISTEMA</div>
+    <a href="#comunidade" class="nav-item"><i class="fas fa-comments"></i> <span>Comunidade</span></a>
+    <a href="#config" class="nav-item"><i class="fas fa-cogs"></i> <span>Configurações</span></a>
+
+</nav>
 
     <div class="sidebar-footer">
         <button class="toggle-btn" onclick="toggleSidebar()">
@@ -243,8 +264,16 @@
 </div>
 
 <div class="form-group" style="margin-bottom: 20px;">
-    <label for="prodImagem">Link da Imagem (URL)</label>
-    <input type="text" id="prodImagem" placeholder="http://...">
+    <label>Imagem do Produto</label>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <input type="text" id="prodImagem" class="config-input" placeholder="Cole o link ou envie do PC ->" style="flex:1;">
+        
+        <label class="submit-btn purple-btn" style="cursor:pointer; width:auto; padding: 10px 15px; margin:0; display:flex; align-items:center; gap:5px;" title="Carregar do Computador">
+            <i class="fas fa-camera"></i> Do PC
+            <input type="file" id="prodImagemFile" accept="image/*" style="display:none" onchange="converterImagemParaBase64(this)">
+        </label>
+    </div>
+    <small style="color:#666;">Dica: Use imagens leves para o sistema não ficar lento.</small>
 </div>
 
 <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 20px 0;">
@@ -539,43 +568,49 @@
 <div id="modal-form-fornecedor" class="modal-overlay" style="display:none; z-index:3005;">
     <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y:auto;">
         <div class="modal-header" style="border-bottom: 1px solid var(--color-border); padding-bottom: 10px; margin-bottom: 15px; display:flex; justify-content:space-between;">
-            <h3 id="titulo-modal-fornecedor" style="margin:0;"><i class="fas fa-truck"></i> Cadastro de Fornecedor</h3>
-            <button class="close-modal-btn" onclick="fecharModalFornecedor()"><i class="fas fa-times"></i></button>
-        </div>
+    <h3 id="titulo-modal-fornecedor" style="margin:0;"><i class="fas fa-truck"></i> Cadastro de Fornecedor</h3>
+    <button class="close-modal-btn" onclick="fecharModalFornecedor()"><i class="fas fa-times"></i></button>
+</div>
         
         <form onsubmit="handleSupplierForm(event)">
-            <input type="hidden" id="supp-id">
-            
-            <h5 style="color:var(--color-accent-purple); border-bottom:1px solid #333; margin-bottom:10px;">Dados Empresariais</h5>
-            <div class="form-grid" style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:10px;">
-                <div><label>Razão Social *</label><input type="text" id="suppNome" required class="config-input"></div>
-                <div><label>Nome Fantasia</label><input type="text" id="suppFantasia" class="config-input"></div>
-            </div>
+    <input type="hidden" id="supp-id">
+    
+    <h5 style="color:var(--color-accent-purple); border-bottom:1px solid #333; margin-bottom:10px;">Dados Empresariais</h5>
+    <div class="form-grid" style="display:grid; grid-template-columns: 2fr 1fr; gap:10px; margin-bottom:10px;">
+        <div><label>Razão Social *</label><input type="text" id="suppNome" required class="config-input"></div>
+        <div><label>Nome Fantasia</label><input type="text" id="suppFantasia" class="config-input"></div>
+    </div>
 
-            <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
-                <div><label>CNPJ</label><input type="text" id="suppCnpj" class="config-input" oninput="mascaraCnpj(this)"></div>
-                <div><label>Inscrição Estadual</label><input type="text" id="suppIe" class="config-input"></div>
-            </div>
+    <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div><label>CNPJ</label><input type="text" id="suppCnpj" class="config-input" oninput="mascaraCnpj(this)"></div>
+        <div><label>Inscrição Estadual</label><input type="text" id="suppIe" class="config-input"></div>
+    </div>
 
-            <h5 style="color:var(--color-accent-purple); border-bottom:1px solid #333; margin:15px 0 10px 0;">Contato & Representante</h5>
-            <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                <div><label>Nome Vendedor</label><input type="text" id="suppContatoNome" class="config-input"></div>
-                <div><label>Telefone Fixo</label><input type="text" id="suppTel" class="config-input"></div>
-                <div><label>Celular/Zap</label><input type="text" id="suppCel" class="config-input"></div>
-            </div>
-            <div class="form-group" style="margin-bottom:10px;"><label>E-mail Comercial</label><input type="email" id="suppEmail" class="config-input"></div>
+    <h5 style="color:var(--color-accent-purple); border-bottom:1px solid #333; margin:15px 0 10px 0;">Endereço Completo</h5>
+    <div class="form-grid" style="display:grid; grid-template-columns: 1fr 3fr; gap:10px; margin-bottom:10px;">
+        <div><label>CEP</label><input type="text" id="suppCep" class="config-input" placeholder="00000-000"></div>
+        <div><label>Logradouro (Rua, Av...)</label><input type="text" id="suppRua" class="config-input"></div>
+    </div>
+    <div class="form-grid" style="display:grid; grid-template-columns: 1fr 2fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div><label>Número</label><input type="text" id="suppNum" class="config-input"></div>
+        <div><label>Bairro</label><input type="text" id="suppBairro" class="config-input"></div>
+        <div><label>Cidade</label><input type="text" id="suppCidade" class="config-input"></div>
+        <div><label>UF</label><input type="text" id="suppUf" class="config-input" maxlength="2" style="text-transform:uppercase;"></div>
+    </div>
 
-            <h5 style="color:var(--color-accent-purple); border-bottom:1px solid #333; margin:15px 0 10px 0;">Endereço & Pagamento</h5>
-            <div class="form-grid" style="display:grid; grid-template-columns: 3fr 1fr; gap:10px; margin-bottom:10px;">
-                <div><label>Endereço Completo</label><input type="text" id="suppEndereco" class="config-input"></div>
-                <div><label>Prazo Médio (Dias)</label><input type="number" id="suppPrazo" class="config-input"></div>
-            </div>
+    <h5 style="color:var(--color-accent-purple); border-bottom:1px solid #333; margin:15px 0 10px 0;">Contato & Pagamento</h5>
+    <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div><label>Nome Vendedor</label><input type="text" id="suppContatoNome" class="config-input"></div>
+        <div><label>Telefone/Zap</label><input type="text" id="suppTel" class="config-input" oninput="mascaraTelefone(this)"></div>
+        <div><label>Prazo (Dias)</label><input type="number" id="suppPrazo" class="config-input"></div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px;"><label>E-mail Comercial</label><input type="email" id="suppEmail" class="config-input"></div>
 
-            <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" class="submit-btn delete-btn" onclick="fecharModalFornecedor()">Cancelar</button>
-                <button type="submit" class="submit-btn green-btn">Salvar Ficha</button>
-            </div>
-        </form>
+    <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="button" class="submit-btn delete-btn" onclick="fecharModalFornecedor()">Cancelar</button>
+        <button type="submit" class="submit-btn green-btn">Salvar Ficha</button>
+    </div>
+</form>
     </div>
 </div>
 
@@ -889,7 +924,7 @@
 
         <div class="card">
             <div class="report-header">
-                <h3 class="card-title" style="margin:0;"><i class="fas fa-list"></i> Detalhamento de Vendas</h3>
+                <h3 class="card-title" style="margin:0;">Detalhamento de Vendas</h3>
                 
                 <div class="report-controls">
                     <div class="search-wrapper">
@@ -926,6 +961,39 @@
             </div>
         </div>
     </div>
+
+ <div class="card" >
+    <div class="report-header">
+        <h3 class="card-title" style="margin:0;">
+            Relatório de Entradas (Notas Fiscais)
+        </h3>
+        
+        <div class="report-controls">
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" id="invoices-search" placeholder="Fornecedor, Nº Nota..." onkeyup="filterInvoicesTable(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table" id="invoices-report-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Nº Nota</th>
+                    <th>Fornecedor</th>
+                    <th>Itens</th>
+                    <th>Valor Total</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="invoices-table-body">
+                <tr><td colspan="6" style="text-align:center; padding:20px; color:#888;">Nenhuma nota importada ainda.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 
     <div id="rel-estoque" class="tab-content" style="display: none;">
         <div class="config-grid">

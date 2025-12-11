@@ -207,6 +207,7 @@ let savedCarts = [];
 let produtos = [];
 let vendas = [];
 let clientes = [];
+let inputHistory = [];
 
 let config = {
   categories: ["Vestuário", "Eletrônicos", "Brindes", "Serviços", "Outros"],
@@ -546,7 +547,7 @@ async function loadAllData() {
         const pFornecedores = getDocs(getUserCollectionRef("suppliers"));
         const pConfig = getDoc(doc(db, "users", user.uid, "settings", "general"));
         const pDespesas = getDocs(query(getUserCollectionRef("expenses"), orderBy("data", "desc")));
-
+        const pNotasEntrada = getDocs(query(getUserCollectionRef("input_invoices"), orderBy("dataEmissao", "desc")));
         // 2. Executa e Atualiza a Barra
         
         // Produtos (30%)
@@ -561,6 +562,11 @@ async function loadAllData() {
         vendasSnap.forEach((doc) => salesHistory.push({ id: doc.id, ...doc.data() }));
         salesHistory.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
         updateLoader(70, `Carregadas ${salesHistory.length} vendas...`);
+        
+        //notas
+        const notasSnap = await pNotasEntrada;
+        inputHistory = [];
+        notasSnap.forEach((doc) => inputHistory.push({ id: doc.id, ...doc.data() }));
 
         // Parceiros (15%)
         const [clientsSnap, suppSnap] = await Promise.all([pClientes, pFornecedores]);
@@ -609,11 +615,14 @@ async function loadAllData() {
         // 100% - FIM
         updateLoader(100, "Bem-vindo!");
 
+        if(typeof renderInvoicesTable === 'function') renderInvoicesTable();
+
     } catch (error) {
         console.error("❌ ERRO FATAL:", error);
         updateLoader(100, "Erro ao carregar."); // Força o fim para não travar
         alert("Erro ao carregar dados: " + error.message);
     }
+    
 }
 
 
@@ -2355,13 +2364,6 @@ function renderTopSellingTable(sales) {
 }
 
 window.renderSalesDetailsTable = function(vendasParaMostrar = null) {
-    
-    // 1. FORÇA A ATUALIZAÇÃO DOS CARDS (Estoque, Ticket, Top Cliente)
-    // Isso é o que estava faltando!
-    if(typeof atualizarDashboardExecutivo === 'function') {
-        atualizarDashboardExecutivo();
-    }
-
     const tbody = document.getElementById("sales-table-body") || document.querySelector("#sales-report-table tbody");
     if (!tbody) return;
 
@@ -2373,14 +2375,13 @@ window.renderSalesDetailsTable = function(vendasParaMostrar = null) {
         return;
     }
 
-    // Ordena: Mais recentes primeiro
+    // Ordena por data
     const listaOrdenada = [...lista].sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
 
     listaOrdenada.forEach((sale) => {
         const row = tbody.insertRow();
         
         const saleId = sale.id || "N/A";
-        // Tenta converter data com segurança
         let d = null;
         if(typeof converterDataNaMarra === 'function') d = converterDataNaMarra(sale.timestamp || sale.date);
         else d = new Date(sale.timestamp || sale.date);
@@ -2389,16 +2390,25 @@ window.renderSalesDetailsTable = function(vendasParaMostrar = null) {
         const total = parseFloat(sale.total) || 0;
         const clientName = sale.client || "-";
         
-        // Busca ID do cliente para o filtro funcionar
-        let clientId = "";
+        // --- AQUI ESTÁ A CORREÇÃO DA BUSCA ---
+        let dadosExtrasCliente = "";
+        
+        // 1. Procura o cliente na lista real para pegar o ID e o Documento
         if (typeof clientesReais !== 'undefined') {
             const clienteObj = clientesReais.find(c => c.nome === clientName);
-            if (clienteObj) clientId = String(clienteObj.id);
+            if (clienteObj) {
+                // Adiciona o ID e o CPF/CNPJ na string de busca
+                dadosExtrasCliente = `ID:${clienteObj.id} DOC:${clienteObj.doc}`;
+            }
         }
+        
+        // 2. Se a venda já tiver o clientId salvo (versões novas), usa também
+        if (sale.clientId) dadosExtrasCliente += ` ID:${sale.clientId}`;
 
-        // Carimbo de busca (invisível)
-        const dadosBusca = `${saleId} ${dataVisual} ${clientName} ${clientId} ${sale.payment} R$${total.toFixed(2)}`.toLowerCase();
+        // Cria a string "invisível" que o campo de busca lê
+        const dadosBusca = `${saleId} ${dataVisual} ${clientName} ${sale.payment} R$${total.toFixed(2)} ${dadosExtrasCliente}`.toLowerCase();
         row.setAttribute("data-search", dadosBusca);
+        // -------------------------------------
         
         row.innerHTML = `
             <td><span style="opacity:0.6">#${saleId.slice(-4)}</span></td>
@@ -2408,7 +2418,7 @@ window.renderSalesDetailsTable = function(vendasParaMostrar = null) {
             <td>${(sale.items || []).length}</td>
             <td>
                 ${clientName}
-                ${clientId ? `<i class="fas fa-id-badge" title="Cliente Cadastrado" style="font-size:0.7rem; color:#0A84FF; margin-left:5px;"></i>` : ''}
+                ${dadosExtrasCliente.includes('ID:') ? `<i class="fas fa-id-badge" title="Cliente Cadastrado" style="font-size:0.7rem; color:#0A84FF; margin-left:5px;"></i>` : ''}
             </td>
             <td>
                 <div style="display:flex; gap:5px;">
@@ -2597,6 +2607,8 @@ document.addEventListener("click", function (event) {
 let currentSaleView = null;
 
 window.viewSaleDetails = function(saleId) {
+    const headerTitle = document.querySelector('#sale-details-modal .modal-header h3');
+    if(headerTitle) headerTitle.innerHTML = '<i class="fas fa-receipt"></i> Detalhes da Venda';
     try {
         const sale = salesHistory.find((s) => s.id === saleId);
         if (!sale) return alert("Venda não encontrada!");
@@ -5242,12 +5254,48 @@ window.resetProductForm = function() {
         document.getElementById("submit-btn").innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar';
         document.getElementById("cancel-edit-btn").style.display = "none";
 
-        // Padrão para novo: Automático Ligado
-        document.getElementById('autoMarkupSwitch').checked = true;
-        document.getElementById('prodMarkup').value = 2.0;
+        // CONFIGURAÇÕES PADRÃO (O que você pediu)
         
-        // Limpa visuais
-        calcularPrecificacao();
+        // 1. Estoque Mínimo Padrão = 1
+        const inputMinimo = document.getElementById("minimo");
+        if(inputMinimo) inputMinimo.value = 1;
+
+        // 2. Categoria Padrão (A primeira da lista)
+        const catSelect = document.getElementById("categoria");
+        if(catSelect && config.categories.length > 0) {
+            catSelect.value = config.categories[0];
+        }
+
+        // 3. Automático Ligado
+        const switchAuto = document.getElementById('autoMarkupSwitch');
+        if(switchAuto) {
+            switchAuto.checked = true;
+        }
+        
+        calcularPrecificacao('reset');
+    }
+}
+
+window.converterImagemParaBase64 = function(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Verifica tamanho (Max 1MB para não travar o banco)
+        if(file.size > 1024 * 1024) {
+            showToast("A imagem é muito grande! Use imagens menores que 1MB.", "error");
+            input.value = ""; // Limpa
+            return;
+        }
+
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            // Joga o código da imagem direto no input de texto
+            document.getElementById('prodImagem').value = e.target.result;
+            showToast("Imagem carregada!", "success");
+        }
+        
+        reader.readAsDataURL(file);
     }
 }
 
@@ -5907,7 +5955,7 @@ function clearClientForm() {
 
 // --- FORNECEDORES ---
 
-async function handleSupplierForm(e) {
+window.handleSupplierForm = async function(e) {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     setBtnLoading(btn, true);
@@ -5918,12 +5966,21 @@ async function handleSupplierForm(e) {
         fantasia: document.getElementById('suppFantasia').value,
         cnpj: document.getElementById('suppCnpj').value,
         ie: document.getElementById('suppIe').value,
+        
+        // Endereço Completo
+        cep: document.getElementById('suppCep').value,
+        rua: document.getElementById('suppRua').value,
+        num: document.getElementById('suppNum').value,
+        bairro: document.getElementById('suppBairro').value,
+        cidade: document.getElementById('suppCidade').value,
+        uf: document.getElementById('suppUf').value,
+        
+        // Contato
         contatoNome: document.getElementById('suppContatoNome').value,
         tel: document.getElementById('suppTel').value,
-        cel: document.getElementById('suppCel').value,
         email: document.getElementById('suppEmail').value,
-        endereco: document.getElementById('suppEndereco').value,
         prazo: document.getElementById('suppPrazo').value,
+        
         timestamp: new Date().toISOString()
     };
 
@@ -5940,7 +5997,6 @@ async function handleSupplierForm(e) {
     } catch (error) { console.error(error); showToast("Erro ao salvar.", "error"); }
     finally { setBtnLoading(btn, false); }
 }
-
 
 window.renderSuppliersTable = function() {
     const tbody = document.querySelector('#fornecedores-table tbody');
@@ -6048,18 +6104,27 @@ window.editSupplier = function(id) {
     if(!s) return;
     
     document.getElementById('modal-form-fornecedor').style.display = 'flex';
-    const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val || ''; };
+    
+    // Função auxiliar para preencher
+    const set = (eid, val) => { const el = document.getElementById(eid); if(el) el.value = val || ''; };
 
     set('supp-id', s.id);
     set('suppNome', s.nome);
     set('suppFantasia', s.fantasia);
     set('suppCnpj', s.cnpj);
     set('suppIe', s.ie);
+    
+    // Endereço
+    set('suppCep', s.cep);
+    set('suppRua', s.rua);
+    set('suppNum', s.num);
+    set('suppBairro', s.bairro);
+    set('suppCidade', s.cidade);
+    set('suppUf', s.uf);
+    
     set('suppContatoNome', s.contatoNome);
     set('suppTel', s.tel);
-    set('suppCel', s.cel);
     set('suppEmail', s.email);
-    set('suppEndereco', s.endereco);
     set('suppPrazo', s.prazo);
 }
 
@@ -6354,21 +6419,45 @@ function renderSuppliersTableEnterprise() {
 
 // 4. MODAL FICHA COMPLETA
 // ============================================================
-// FICHA TÉCNICA (CORRIGIDA: CLIENTE vs FORNECEDOR)
+// FICHA TÉCNICA (ATUALIZADA COM ENDEREÇO COMPLETO)
 // ============================================================
 window.openEnterpriseCard = function(type, id) {
     const modal = document.getElementById('partner-details-modal');
     const content = document.getElementById('partner-modal-content');
     if(!modal || !content) return;
 
+    // Função auxiliar para montar o endereço visualmente
+   const montarEndereco = (obj) => {
+        // Se tiver os campos novos
+        if (obj.rua || obj.cidade) {
+            return `
+                <div class="address-container">
+                    <div class="addr-street">
+                        <i class="fas fa-map-marker-alt"></i> 
+                        ${obj.rua || ''}, ${obj.num || 'S/N'}
+                    </div>
+                    <div class="addr-city">
+                        ${obj.bairro || ''} ${obj.bairro ? '•' : ''} ${obj.cidade || ''}/${obj.uf || ''}
+                    </div>
+                    <div class="addr-cep">
+                        CEP: ${obj.cep || '-'}
+                    </div>
+                </div>
+            `;
+        }
+        // Fallback para cadastro antigo
+        return `<div class="address-container old">${obj.endereco || '-'}</div>`;
+    };
+
     // ------------------------------------------
     // CENÁRIO 1: É UM CLIENTE
     // ------------------------------------------
     if (type === 'client') {
+        // Converte ID para string para evitar erro de comparação
         const c = clientesReais.find(x => String(x.id) === String(id));
-        if(!c) return;
+        if(!c) return showToast("Cliente não encontrado.", "error");
 
-        // Cálculos Financeiros do Cliente
+        // Cálculos Financeiros
         let total = 0, count = 0;
         let lastDate = null;
         let history = [];
@@ -6383,35 +6472,48 @@ window.openEnterpriseCard = function(type, id) {
             }
         });
 
+        // HTML DA FICHA DO CLIENTE
         content.innerHTML = `
             <div class="partner-detail-wrapper">
                 <div class="partner-header-clean">
                     <div>
                         <h2 style="margin:0; color:var(--color-text-primary);">${c.nome}</h2>
-                        <small style="color:#888;">ID: ${c.id.slice(-4)}</small>
+                        <small style="color:#888;">ID: ${String(c.id).slice(-4)}</small>
                     </div>
                     <div style="text-align:right;">
                         <span class="badge" style="background:rgba(10, 132, 255, 0.1); color:#0A84FF;">${c.tipo || 'Cliente'}</span>
+                        <div style="margin-top:5px; font-size:0.8rem; color:${c.statusManual === 'Bloqueado' ? '#FF453A' : '#30D158'}">
+                            ${c.statusManual || 'Ativo'}
+                        </div>
                     </div>
                 </div>
 
                 <div class="partner-info-grid">
                     <div class="info-block">
-                        <h4 style="color:var(--color-accent-blue);">Dados Pessoais</h4>
+                        <h4 style="color:var(--color-accent-blue);">Dados Pessoais & Contato</h4>
                         <div class="info-row"><span>CPF/CNPJ</span> <span>${c.doc || '-'}</span></div>
-                        <div class="info-row"><span>Telefone</span> <span>${c.tel || '-'}</span></div>
+                        <div class="info-row"><span>RG/IE</span> <span>${c.ie || '-'}</span></div>
+                        <div class="info-row"><span>Nascimento</span> <span>${c.nascimento ? c.nascimento.split('-').reverse().join('/') : '-'}</span></div>
+                        <div class="info-row"><span>Celular</span> <span>${c.tel || '-'}</span></div>
                         <div class="info-row"><span>E-mail</span> <span>${c.email || '-'}</span></div>
-                        <div class="info-row"><span>Endereço</span> <span style="font-size:0.8rem; text-align:right;">${c.endereco || '-'}</span></div>
+                        
+                        <hr style="border:0; border-top:1px dashed #444; margin:10px 0;">
+                        
+                        <div class="info-row" style="align-items:flex-start;">
+                            <span>Endereço</span> 
+                            <span style="font-size:0.85rem; text-align:right;">${montarEndereco(c)}</span>
+                        </div>
                         <div class="info-row"><span>Obs</span> <span style="font-size:0.8rem;">${c.obs || '-'}</span></div>
                     </div>
 
                     <div class="info-block">
-                        <h4 style="color:var(--color-accent-green);">Histórico de Compras</h4>
-                        <div class="info-row"><span>Total Gasto</span> <span style="color:#30D158; font-weight:bold;">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
-                        <div class="info-row"><span>Qtd. Compras</span> <span>${count}</span></div>
-                        <div class="info-row"><span>Última Compra</span> <span>${lastDate ? lastDate.toLocaleDateString('pt-BR') : '-'}</span></div>
+                        <h4 style="color:var(--color-accent-green);">Performance</h4>
+                        <div class="info-row"><span>LTV (Total)</span> <span style="color:#30D158; font-weight:bold;">R$ ${total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div>
+                        <div class="info-row"><span>Compras</span> <span>${count}</span></div>
+                        <div class="info-row"><span>Última Vez</span> <span>${lastDate ? lastDate.toLocaleDateString('pt-BR') : '-'}</span></div>
+                        <div class="info-row"><span>Limite Crédito</span> <span>R$ ${parseFloat(c.limite||0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></div>
                         
-                        <h4 style="margin-top:15px; color:#fff;">Últimas 5 Vendas</h4>
+                        <h4 style="margin-top:15px; color:#fff;">Últimas Compras</h4>
                         <ul class="timeline-clean" style="list-style:none; padding:0; margin:0; max-height:150px; overflow-y:auto;">
                             ${history.sort((a,b)=>b.d-a.d).slice(0,5).map(h => `
                                 <li>
@@ -6426,15 +6528,15 @@ window.openEnterpriseCard = function(type, id) {
         `;
     } 
     // ------------------------------------------
-    // CENÁRIO 2: É UM FORNECEDOR
+    // CENÁRIO 2: É UM FORNECEDOR (AGORA COM ENDEREÇO COMPLETO)
     // ------------------------------------------
     else if (type === 'supplier') {
         const f = fornecedoresReais.find(x => String(x.id) === String(id));
-        if(!f) return;
+        if(!f) return showToast("Fornecedor não encontrado.", "error");
 
-        // Busca produtos vinculados a este fornecedor
         const produtosVinculados = products.filter(p => p.fornecedor === f.id);
 
+        // HTML DA FICHA DO FORNECEDOR
         content.innerHTML = `
             <div class="partner-detail-wrapper">
                 <div class="partner-header-clean">
@@ -6444,24 +6546,32 @@ window.openEnterpriseCard = function(type, id) {
                     </div>
                     <div style="text-align:right;">
                         <span class="badge" style="background:rgba(255, 159, 10, 0.1); color:#FF9F0A;">Fornecedor</span>
+                        <div style="margin-top:5px; font-size:0.8rem; color:#aaa;">ID: ${String(f.id).slice(-4)}</div>
                     </div>
                 </div>
 
                 <div class="partner-info-grid">
                     <div class="info-block">
-                        <h4 style="color:var(--color-accent-purple);">Dados Empresariais</h4>
+                        <h4 style="color:var(--color-accent-purple);">Dados Cadastrais</h4>
                         <div class="info-row"><span>CNPJ</span> <span>${f.cnpj || '-'}</span></div>
                         <div class="info-row"><span>Inscr. Est.</span> <span>${f.ie || '-'}</span></div>
-                        <div class="info-row"><span>Contato</span> <span>${f.contatoNome || '-'}</span></div>
+                        <div class="info-row"><span>Vendedor</span> <span>${f.contatoNome || '-'}</span></div>
                         <div class="info-row"><span>Telefone</span> <span>${f.tel || '-'}</span></div>
                         <div class="info-row"><span>Celular</span> <span>${f.cel || '-'}</span></div>
                         <div class="info-row"><span>E-mail</span> <span>${f.email || '-'}</span></div>
-                        <div class="info-row"><span>Endereço</span> <span style="font-size:0.8rem; text-align:right;">${f.endereco || '-'}</span></div>
+                        <div class="info-row"><span>Prazo Pag.</span> <span>${f.prazo ? f.prazo + ' dias' : '-'}</span></div>
+
+                        <hr style="border:0; border-top:1px dashed #444; margin:10px 0;">
+
+                        <div class="info-row" style="align-items:flex-start;">
+                            <span>Endereço</span> 
+                            <span style="font-size:0.85rem; text-align:right;">${montarEndereco(f)}</span>
+                        </div>
                     </div>
 
                     <div class="info-block">
-                        <h4 style="color:var(--color-accent-purple);">Produtos Fornecidos (${produtosVinculados.length})</h4>
-                        <div style="max-height:250px; overflow-y:auto; padding-right:5px;">
+                        <h4 style="color:var(--color-accent-purple);">Catálogo de Produtos (${produtosVinculados.length})</h4>
+                        <div style="max-height:300px; overflow-y:auto; padding-right:5px;">
                             ${produtosVinculados.length > 0 ? produtosVinculados.map(p => `
                                 <div style="padding:8px; background:rgba(255,255,255,0.03); border-radius:4px; margin-bottom:5px; border-left:2px solid var(--color-accent-purple);">
                                     <div style="font-weight:bold; font-size:0.9rem;">${p.nome}</div>
@@ -6470,7 +6580,7 @@ window.openEnterpriseCard = function(type, id) {
                                         <span>Custo: R$ ${parseFloat(p.custo||0).toFixed(2)}</span>
                                     </div>
                                 </div>
-                            `).join('') : '<div style="color:#666; font-style:italic; padding:10px;">Nenhum produto vinculado.</div>'}
+                            `).join('') : '<div style="color:#666; font-style:italic; padding:10px;">Nenhum produto vinculado a este fornecedor.</div>'}
                         </div>
                     </div>
                 </div>
@@ -6480,7 +6590,6 @@ window.openEnterpriseCard = function(type, id) {
 
     modal.style.display = 'flex';
 }
-
 window.abrirModalCliente = function() {
     document.getElementById('client-id').value = ""; // Limpa ID (Modo Criar)
     document.querySelector('#modal-form-cliente form').reset();
@@ -6802,116 +6911,232 @@ window.gerarPDFEtiquetasSelecionadas = function() {
 }
 
 // ============================================================
-// IMPORTAÇÃO DE XML (NFe) - Fase 5
+// IMPORTAÇÃO DE XML (NÍVEL CONTÁBIL - CORRIGIDO E ROBUSTO)
 // ============================================================
-
 window.processarXMLNota = async function(input) {
     if (!input.files || input.files.length === 0) return;
 
     const file = input.files[0];
     const reader = new FileReader();
 
-    window.showLoadingScreen("Lendo Nota Fiscal...", "Processando dados do XML");
+    window.showLoadingScreen("Lendo XML Fiscal...", "Extraindo NCM, CFOP e Impostos...");
 
     reader.onload = async function(e) {
         try {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
 
-            // 1. DADOS DO FORNECEDOR (Emitente)
-            const emit = xmlDoc.getElementsByTagName("emit")[0];
+            // --- 1. CABEÇALHO E DADOS GERAIS ---
+            // Helper seguro para pegar tags
+            const getTag = (parent, tag) => parent ? parent.getElementsByTagName(tag)[0] : null;
+            const getVal = (parent, tag) => {
+                const el = getTag(parent, tag);
+                return el ? el.textContent : "";
+            };
+
+            const ide = getTag(xmlDoc, "ide");
+            const emit = getTag(xmlDoc, "emit");
+            const infProt = getTag(xmlDoc, "infProt");
+            const total = getTag(xmlDoc, "total");
+            const infNFe = getTag(xmlDoc, "infNFe");
+
             if (!emit) throw new Error("XML inválido: Emitente não encontrado.");
 
-            const cnpjFornecedor = getTagValue(emit, "CNPJ");
-            const nomeFornecedor = getTagValue(emit, "xNome");
+            // Dados da Nota
+            const nNF = getVal(ide, "nNF");
+            const serie = getVal(ide, "serie");
+            const natOp = getVal(ide, "natOp");
+            const dhEmi = getVal(ide, "dhEmi") || new Date().toISOString();
             
-            // Verifica/Cadastra Fornecedor
-            let fornecedorId = await garantirFornecedor(nomeFornecedor, cnpjFornecedor);
+            // Chave de Acesso e Protocolo
+            let chaveAcesso = infNFe ? infNFe.getAttribute("Id") : "";
+            if (chaveAcesso) chaveAcesso = chaveAcesso.replace("NFe", "");
+            const nProt = infProt ? getVal(infProt, "nProt") : "";
 
-            // 2. DADOS DOS PRODUTOS (Itens)
-            const dets = xmlDoc.getElementsByTagName("det");
-            let novos = 0;
-            let atualizados = 0;
+            // Dados do Fornecedor
+            const nomeFornecedor = getVal(emit, "xNome");
+            const cnpjFornecedor = getVal(emit, "CNPJ");
+            const ieFornecedor = getVal(emit, "IE");
+            
+            // Endereço
+            const enderEmit = getTag(emit, "enderEmit");
+            let enderecoCompleto = "";
+            let enderecoObj = {}; // Para salvar na ficha do fornecedor
 
-            window.updateLoadingMessage("Importando Produtos...", `Processando ${dets.length} itens...`);
+            if (enderEmit) {
+                enderecoObj = {
+                    rua: getVal(enderEmit, "xLgr"),
+                    num: getVal(enderEmit, "nro"),
+                    bairro: getVal(enderEmit, "xBairro"),
+                    cidade: getVal(enderEmit, "xMun"),
+                    uf: getVal(enderEmit, "UF"),
+                    cep: getVal(enderEmit, "CEP")
+                };
+                enderecoCompleto = `${enderecoObj.rua}, ${enderecoObj.num} - ${enderecoObj.bairro}, ${enderecoObj.cidade}/${enderecoObj.uf}`;
+            }
 
-            for (let i = 0; i < dets.length; i++) {
-                const prod = dets[i].getElementsByTagName("prod")[0];
-                const imposto = dets[i].getElementsByTagName("imposto")[0];
-                
-                // Dados do XML
-                const ean = getTagValue(prod, "cEAN");
-                const nome = getTagValue(prod, "xProd");
-                const ncm = getTagValue(prod, "NCM");
-                const qtd = parseFloat(getTagValue(prod, "qCom"));
-                const valorUnit = parseFloat(getTagValue(prod, "vUnCom"));
-                
-                // Tenta calcular custo real (Valor + IPI se houver)
-                let custoFinal = valorUnit;
-                // (Aqui poderíamos somar IPI/Frete rateado se o XML tiver, por simplicidade usamos o unitário)
-
-                // Busca produto existente pelo EAN ou Nome exato
-                // (Se o EAN for "SEM GTIN", busca só pelo nome)
-                let produtoExistente = null;
-                
-                if (ean && ean !== "SEM GTIN") {
-                    produtoExistente = products.find(p => p.codigoBarras === ean);
-                }
-                
-                if (!produtoExistente) {
-                    produtoExistente = products.find(p => p.nome.toLowerCase() === nome.toLowerCase());
-                }
-
-                if (produtoExistente) {
-                    // ATUALIZA ESTOQUE E CUSTO
-                    const novaQtd = (parseInt(produtoExistente.quantidade) || 0) + parseInt(qtd);
-                    
-                    // Atualiza no Banco
-                    await updateDoc(getUserDocumentRef("products", produtoExistente.id), {
-                        quantidade: novaQtd,
-                        custo: custoFinal, // Atualiza o custo para o da última compra
-                        fornecedor: fornecedorId // Vincula ao fornecedor atual
-                    });
-                    atualizados++;
-                } else {
-                    // CRIA NOVO PRODUTO
-                    const novoProduto = {
-                        nome: nome,
-                        codigoBarras: (ean && ean !== "SEM GTIN") ? ean : "",
-                        categoria: "Geral", // Categoria padrão
-                        grupo: "Importado XML",
-                        fornecedor: fornecedorId,
-                        quantidade: parseInt(qtd),
-                        minimo: 0,
-                        custo: custoFinal,
-                        frete: 0,
-                        markup: 2.0, // Markup padrão
-                        preco: custoFinal * 2.0, // Preço sugerido padrão
-                        imagem: "",
-                        ncm: ncm
-                    };
-                    
-                    await addDoc(getUserCollectionRef("products"), novoProduto);
-                    novos++;
+            // Totais
+            let vNF=0, vBC=0, vICMS=0, vST=0, vProd=0, vIPI=0;
+            if (total) {
+                const icmsTot = getTag(total, "ICMSTot");
+                if(icmsTot) {
+                    vNF = parseFloat(getVal(icmsTot, "vNF")) || 0;
+                    vBC = parseFloat(getVal(icmsTot, "vBC")) || 0;
+                    vICMS = parseFloat(getVal(icmsTot, "vICMS")) || 0;
+                    vST = parseFloat(getVal(icmsTot, "vST")) || 0;
+                    vProd = parseFloat(getVal(icmsTot, "vProd")) || 0;
+                    vIPI = parseFloat(getVal(icmsTot, "vIPI")) || 0;
                 }
             }
 
+            // Garante Fornecedor (Cria ou Atualiza)
+            let fornecedorId = await garantirFornecedor(nomeFornecedor, cnpjFornecedor, ieFornecedor, enderecoObj);
+
+            // --- 2. ITENS (DETALHES) ---
+            const dets = xmlDoc.getElementsByTagName("det");
+            let itensNota = [];
+            let somaCalculada = 0;
+
+            for (let i = 0; i < dets.length; i++) {
+                const prod = getTag(dets[i], "prod");
+                const imposto = getTag(dets[i], "imposto");
+
+                // Dados do Produto
+                const cProd = getVal(prod, "cProd");
+                const cEAN = getVal(prod, "cEAN");
+                const xProd = getVal(prod, "xProd");
+                const NCM = getVal(prod, "NCM");
+                const CFOP = getVal(prod, "CFOP");
+                const uCom = getVal(prod, "uCom");
+                const qCom = parseFloat(getVal(prod, "qCom"));
+                const vUnCom = parseFloat(getVal(prod, "vUnCom"));
+                const vProdItem = parseFloat(getVal(prod, "vProd"));
+                
+                somaCalculada += vProdItem;
+
+                // Impostos do Item (ICMS/IPI)
+                let vICMSItem = 0, pICMSItem = 0, vBCItem = 0, CST = "";
+                let vIPIItem = 0, pIPIItem = 0;
+
+                if (imposto) {
+                    // ICMS: Pode estar em várias tags (ICMS00, ICMS20, etc)
+                    const icmsContainer = getTag(imposto, "ICMS");
+                    if (icmsContainer && icmsContainer.children.length > 0) {
+                        const tagICMS = icmsContainer.children[0]; // Pega a primeira tag filha
+                        CST = getVal(tagICMS, "CST") || getVal(tagICMS, "CSOSN");
+                        vBCItem = parseFloat(getVal(tagICMS, "vBC")) || 0;
+                        pICMSItem = parseFloat(getVal(tagICMS, "pICMS")) || 0;
+                        vICMSItem = parseFloat(getVal(tagICMS, "vICMS")) || 0;
+                    }
+                    
+                    // IPI
+                    const ipiContainer = getTag(imposto, "IPI");
+                    if (ipiContainer) {
+                        const ipiTrib = getTag(ipiContainer, "IPITrib");
+                        if (ipiTrib) {
+                            vIPIItem = parseFloat(getVal(ipiTrib, "vIPI")) || 0;
+                            pIPIItem = parseFloat(getVal(ipiTrib, "pIPI")) || 0;
+                        }
+                    }
+                }
+
+                // Monta objeto do item
+                itensNota.push({
+                    cProd: cProd,
+                    ean: cEAN,
+                    nome: xProd,
+                    ncm: NCM,
+                    cfop: CFOP,
+                    cst: CST,
+                    un: uCom,
+                    qtd: qCom,
+                    valorUnit: vUnCom,
+                    total: vProdItem,
+                    vBC: vBCItem,
+                    pICMS: pICMSItem,
+                    vICMS: vICMSItem,
+                    vIPI: vIPIItem,
+                    pIPI: pIPIItem
+                });
+
+                // --- ATUALIZA ESTOQUE (Lógica Mantida) ---
+                let produtoExistente = null;
+                // Busca por EAN (se válido)
+                if (cEAN && cEAN !== "SEM GTIN" && cEAN.trim() !== "") {
+                    produtoExistente = products.find(p => p.codigoBarras === cEAN);
+                }
+                // Se não achou, busca por nome
+                if (!produtoExistente) {
+                    produtoExistente = products.find(p => p.nome.toLowerCase().trim() === xProd.toLowerCase().trim());
+                }
+
+                if (produtoExistente) {
+                    const novaQtd = (parseInt(produtoExistente.quantidade) || 0) + parseInt(qCom);
+                    await updateDoc(getUserDocumentRef("products", produtoExistente.id), {
+                        quantidade: novaQtd,
+                        custo: vUnCom,
+                        fornecedor: fornecedorId
+                    });
+                } else {
+                    const novoProduto = {
+                        nome: xProd,
+                        codigoBarras: (cEAN && cEAN !== "SEM GTIN") ? cEAN : "",
+                        categoria: "Geral",
+                        grupo: "Importado XML",
+                        fornecedor: fornecedorId,
+                        quantidade: parseInt(qCom),
+                        minimo: 1,
+                        custo: vUnCom,
+                        frete: 0,
+                        markup: 2.0,
+                        preco: vUnCom * 2.0, 
+                        autoMarkup: true,
+                        imagem: ""
+                    };
+                    await addDoc(getUserCollectionRef("products"), novoProduto);
+                }
+            }
+
+            if (vNF === 0) vNF = somaCalculada;
+
+            // --- 3. SALVA O REGISTRO DA NOTA (Histórico) ---
+            const notaFiscalData = {
+                numero: nNF,
+                serie: serie,
+                natOp: natOp,
+                chNFe: chaveAcesso,
+                nProt: nProt,
+                dataEmissao: dhEmi,
+                fornecedor: nomeFornecedor,
+                cnpj: cnpjFornecedor,
+                ie: ieFornecedor,
+                endereco: enderecoCompleto,
+                // Totais
+                valorTotal: vNF,
+                vBC: vBC,
+                vICMS: vICMS,
+                vST: vST,
+                vIPI: vIPI,
+                // Itens
+                items: itensNota,
+                timestamp: new Date().toISOString()
+            };
+
+            await addDoc(getUserCollectionRef("input_invoices"), notaFiscalData);
+
             window.hideLoadingScreen();
-            showToast(`Importação Concluída! ${novos} novos, ${atualizados} atualizados.`, "success");
-            
-            // Limpa o input para permitir importar o mesmo arquivo se quiser
-            input.value = "";
-            
-            // Recarrega
-            await loadAllData();
+            showToast(`Sucesso! Nota ${nNF} importada.`, "success");
+            input.value = ""; // Limpa input
+            await loadAllData(); // Recarrega
 
         } catch (error) {
             console.error(error);
             window.hideLoadingScreen();
-            showToast("Erro na importação: " + error.message, "error");
+            showToast("Erro ao processar XML: " + error.message, "error");
         }
     };
-
+    
+    // Leitura como texto para parsing
     reader.readAsText(file);
 };
 
@@ -6921,32 +7146,64 @@ function getTagValue(parent, tagName) {
     return el ? el.textContent : "";
 }
 
-// Função para buscar ou criar fornecedor automaticamente
-async function garantirFornecedor(nome, cnpj) {
+// ============================================================
+// FUNÇÃO GARANTIR FORNECEDOR (AGORA SALVA IE E ENDEREÇO DO XML)
+// ============================================================
+async function garantirFornecedor(nome, cnpj, ie = "", enderecoObj = {}) {
     // 1. Procura na memória se já existe
     let fornecedor = fornecedoresReais.find(f => f.cnpj === cnpj || f.nome === nome);
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuário não autenticado.");
+
+    // Mapeia o objeto de endereço de volta para a ficha do fornecedor
+    const dadosEnderecoParaSalvar = {
+        ie: ie,
+        rua: enderecoObj.rua || '',
+        num: enderecoObj.num || '',
+        bairro: enderecoObj.bairro || '',
+        cidade: enderecoObj.cidade || '',
+        uf: enderecoObj.uf || '',
+        cep: enderecoObj.cep || '',
+    };
 
     if (fornecedor) {
+        const fornecedorRef = getUserDocumentRef("suppliers", fornecedor.id);
+        
+        // 2. Se o fornecedor existe, verifica se precisa preencher os campos vazios (IE/Endereço)
+        // Usamos a lógica: se faltar a rua E o XML tiver a rua, atualiza!
+        if (!fornecedor.rua && dadosEnderecoParaSalvar.rua) {
+            
+            await updateDoc(fornecedorRef, {
+                // Atualiza IE e Endereço com os dados do XML
+                ...dadosEnderecoParaSalvar, 
+                lastUpdate: new Date().toISOString()
+            });
+            
+            // Atualiza a lista local (fornecedoresReais) imediatamente para uso futuro
+            fornecedoresReais = fornecedoresReais.map(f => f.id === fornecedor.id ? {...f, ...dadosEnderecoParaSalvar} : f);
+        }
+        
         return fornecedor.id; // Retorna ID existente
     }
 
-    // 2. Se não existe, cria um novo
+    // 3. Se não existe, cria um novo com todos os detalhes fiscais
     const novoForn = {
         nome: nome,
         cnpj: cnpj,
-        contato: "Importado via XML",
+        contatoNome: "Importado XML",
+        tel: "N/I",
+        ...dadosEnderecoParaSalvar, // Inclui todos os campos (IE, Rua, etc)
         timestamp: new Date().toISOString()
     };
 
     const docRef = await addDoc(getUserCollectionRef("suppliers"), novoForn);
     
-    // Atualiza a lista local para não criar duplicado na mesma importação
+    // Atualiza a lista local
     fornecedoresReais.push({ id: docRef.id, ...novoForn });
     
     return docRef.id;
 }
 
-// ============================================================
 // MÓDULO FINANCEIRO AVANÇADO (Fase 6)
 // ============================================================
 
@@ -8836,9 +9093,403 @@ window.fecharModalPostagem = function() {
     document.getElementById('modal-community-post').style.display = 'none';
 }
 
-// 5. Inicializar ao carregar a aba
-// Adicione isso no seu switch case de navegação (setupNavigation)
-// case "comunidade": loadCommunityPosts(); break;
+// ============================================================
+// RELATÓRIO DE NOTAS DE ENTRADA
+// ============================================================
+
+window.renderInvoicesTable = function(lista = null) {
+    const tbody = document.getElementById("invoices-table-body");
+    if (!tbody) return;
+
+    const dados = lista || inputHistory;
+    tbody.innerHTML = "";
+
+    if (!dados || dados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#888;">Nenhuma nota fiscal registrada. Importe um XML para começar.</td></tr>`;
+        return;
+    }
+
+    // Ordena por data de emissão (mais recente primeiro)
+    const dadosOrdenados = [...dados].sort((a, b) => new Date(b.dataEmissao) - new Date(a.dataEmissao));
+
+    dadosOrdenados.forEach(nota => {
+        const row = tbody.insertRow();
+        
+        // Data formatada
+        const dataVisual = new Date(nota.dataEmissao).toLocaleDateString("pt-BR");
+        const itensQtd = nota.items ? nota.items.length : (nota.itens ? nota.itens.length : 0);
+
+        // Dados para busca
+        const searchString = `${nota.numero} ${nota.fornecedor} ${nota.cnpj} R$${nota.valorTotal}`.toLowerCase();
+        row.setAttribute("data-search", searchString);
+
+        row.innerHTML = `
+            <td>${dataVisual}</td>
+            <td style="font-weight:bold; color:var(--color-text-primary);">${nota.numero}</td>
+            <td>
+                <div>${nota.fornecedor}</div>
+                <small style="color:#888; font-size:0.75rem;">${nota.cnpj || ''}</small>
+            </td>
+            <td><span class="badge badge-info">${itensQtd} itens</span></td>
+            <td style="font-weight:bold; color:var(--color-accent-purple);">R$ ${parseFloat(nota.valorTotal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+            <td>
+                <button class="action-btn view-btn" onclick="verDetalhesNota('${nota.id}')" title="Ver Itens">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+    });
+}
+
+window.filterInvoicesTable = function(termo) {
+    const busca = termo.toLowerCase();
+    const rows = document.querySelectorAll("#invoices-table-body tr");
+
+    rows.forEach(row => {
+        const texto = row.getAttribute("data-search") || "";
+        if (texto.includes(busca)) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+window.verDetalhesNota = function(id) {
+    const nota = inputHistory.find(n => n.id === id);
+    if (!nota) return;
+
+    // 1. CORREÇÃO DO TÍTULO (Muda de "Venda" para "Nota")
+    const headerTitle = document.querySelector('#sale-details-modal .modal-header h3');
+    if(headerTitle) headerTitle.innerHTML = '<i class="fas fa-file-invoice"></i> Detalhes da Nota Fiscal';
+
+    // 2. CORREÇÃO DA DATA (Força padrão brasileiro)
+    let dataFormatada = "-";
+    if(nota.dataEmissao) {
+        // Usa UTC para evitar que o fuso horário mude o dia (ex: 12 virar 11)
+        const d = new Date(nota.dataEmissao);
+        if(!isNaN(d)) {
+            dataFormatada = d.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+        } else {
+            // Fallback se for string simples YYYY-MM-DD
+            const p = nota.dataEmissao.split('-');
+            if(p.length === 3) dataFormatada = `${p[2]}/${p[1]}/${p[0]}`;
+        }
+    }
+
+    // 3. Monta Lista de Itens
+    let htmlItens = `<ul style="list-style:none; padding:0; margin:0;">`;
+    const listaItens = nota.items || nota.itens || [];
+    
+    listaItens.forEach(item => {
+        htmlItens += `
+            <li style="border-bottom:1px dashed #333; padding:10px 0; display:grid; grid-template-columns: 3fr 1fr; align-items:center;">
+                <div style="display:flex; flex-direction:column;">
+                    <span style="color:#fff; font-weight:500;">${item.qtd}x ${item.nome}</span>
+                    <small style="color:#888;">Unitário: R$ ${parseFloat(item.valorUnit).toFixed(2)}</small>
+                </div>
+                <strong style="color:#fff; text-align:right;">R$ ${parseFloat(item.total).toFixed(2)}</strong>
+            </li>
+        `;
+    });
+    htmlItens += `</ul>`;
+
+    // 4. Injeta no Modal (Com o botão PDF novo)
+    const modal = document.getElementById('sale-details-modal');
+    const content = modal.querySelector('.sale-info');
+    
+    content.innerHTML = `
+        <div class="receipt-header" style="border-bottom:2px dashed #7B61FF; background:linear-gradient(180deg, #222 0%, #1a1d21 100%);">
+            <div class="receipt-status">
+                <span class="status-pill" style="background:rgba(123, 97, 255, 0.2); color:#7B61FF; border:1px solid #7B61FF;">
+                    <i class="fas fa-arrow-down"></i> Nota de Entrada
+                </span>
+            </div>
+            <div class="receipt-date" style="color:#aaa; font-family:monospace;">${dataFormatada}</div>
+        </div>
+
+        <div class="receipt-grid" style="background:#1a1d21;">
+            <div class="receipt-box">
+                <span class="lbl">Fornecedor</span>
+                <span class="val" style="color:#fff;">${nota.fornecedor}</span>
+            </div>
+            <div class="receipt-box">
+                <span class="lbl">Nº Nota / CNPJ</span>
+                <span class="val" style="color:#aaa;">${nota.numero} <br> <small>${nota.cnpj || ''}</small></span>
+            </div>
+        </div>
+
+        <div class="receipt-items-container" style="max-height:250px; overflow-y:auto; padding:15px; background:#1a1d21;">
+            ${htmlItens}
+        </div>
+
+        <div class="receipt-summary" style="background:#15181c; border-top:1px dashed #444;">
+            <div class="summary-row total">
+                <span>TOTAL NOTA</span> 
+                <span style="color:#7B61FF;">R$ ${parseFloat(nota.valorTotal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+            </div>
+        </div>
+        
+        <div style="padding:15px; text-align:center; background:#15181c; border-top:1px solid #333;">
+            <button class="submit-btn purple-btn" onclick="imprimirNotaPDF('${nota.id}')" style="width:100%; display:flex; justify-content:center; gap:10px;">
+                <i class="fas fa-file-pdf"></i> Baixar PDF da Nota
+            </button>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+}
+
+// ============================================================
+// GERADOR DE DANFE / ESPELHO DE NOTA (CORRIGIDO)
+// ============================================================
+window.imprimirNotaPDF = function(id) {
+    const nota = inputHistory.find(n => n.id === id);
+    if (!nota) return;
+    
+    // Blindagem: Garante lista de itens
+    const listaItens = nota.items || nota.itens || [];
+    if (listaItens.length === 0) {
+        return alert("Erro: Esta nota não possui itens registrados corretamente.");
+    }
+
+    if (!window.jspdf) return alert("Erro: Biblioteca PDF não carregada.");
+    const { jsPDF } = window.jspdf;
+    
+    const doc = new jsPDF('p', 'mm', 'a4');
+    
+    const corPreta = [0, 0, 0];
+    const linhaFina = 0.1;
+
+    // --- CABEÇALHO ---
+    doc.setLineWidth(0.2);
+    doc.rect(10, 10, 190, 30); 
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("DANFE", 15, 18);
+    doc.setFontSize(8);
+    doc.text("Documento Auxiliar da Nota Fiscal Eletrônica", 15, 23);
+    doc.text("ENTRADA", 15, 27);
+    doc.text(`Nº ${nota.numero || ''}  SÉRIE ${nota.serie || ''}`, 15, 36);
+
+    // Chave
+    doc.rect(90, 12, 105, 14);
+    doc.setFontSize(7);
+    doc.text("CHAVE DE ACESSO", 92, 15);
+    doc.setFontSize(9);
+    doc.text(nota.chNFe || "---", 92, 22);
+
+    // Protocolo
+    doc.rect(90, 28, 105, 10);
+    doc.setFontSize(7);
+    doc.text("PROTOCOLO DE AUTORIZAÇÃO DE USO", 92, 31);
+    doc.setFontSize(9);
+    // Tenta formatar data
+    let dataProt = "-";
+    try { dataProt = new Date(nota.timestamp).toLocaleString(); } catch(e){}
+    doc.text(`${nota.nProt || ''} - ${dataProt}`, 92, 36);
+
+    // --- EMITENTE ---
+    let y = 43;
+    doc.rect(10, y, 190, 22);
+    doc.setFontSize(7);
+    doc.text("NOME / RAZÃO SOCIAL DO EMITENTE", 12, y + 3);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text((nota.fornecedor || "").toUpperCase().substring(0, 60), 12, y + 8);
+    
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text("ENDEREÇO", 12, y + 13);
+    doc.setFontSize(8);
+    doc.text((nota.endereco || "").substring(0, 90), 12, y + 17);
+
+    doc.text(`CNPJ: ${nota.cnpj || ''}`, 130, y + 8);
+    doc.text(`IE: ${nota.ie || ''}`, 130, y + 17);
+
+    y += 25;
+
+    // --- CÁLCULO DO IMPOSTO ---
+    doc.rect(10, y, 190, 14);
+    doc.line(10, y+4, 200, y+4); 
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "bold");
+    doc.text("CÁLCULO DO IMPOSTO", 12, y + 3);
+
+    const desenharTotal = (lbl, val, x) => {
+        doc.setFontSize(6);
+        doc.setFont("helvetica", "normal");
+        doc.text(lbl, x, y + 7);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(fmtMoeda(val), x + 25, y + 12, {align: 'right'});
+    };
+
+    desenharTotal("BASE CÁLC. ICMS", nota.vBC, 12);
+    desenharTotal("VALOR DO ICMS", nota.vICMS, 45);
+    desenharTotal("BASE CÁLC. ST", 0, 80);
+    desenharTotal("VALOR ICMS ST", nota.vST, 115);
+    desenharTotal("VALOR TOTAL PRODUTOS", nota.valorTotal, 150);
+
+    y += 16;
+
+    // --- TABELA DE ITENS ---
+    doc.setFontSize(7);
+    doc.text("DADOS DO PRODUTO / SERVIÇO", 10, y - 1);
+
+    const columns = [
+        { header: 'CÓD', dataKey: 'cod' },
+        { header: 'DESCRIÇÃO', dataKey: 'desc' },
+        { header: 'NCM', dataKey: 'ncm' },
+        { header: 'CST', dataKey: 'cst' },
+        { header: 'CFOP', dataKey: 'cfop' },
+        { header: 'UN', dataKey: 'un' },
+        { header: 'QTD', dataKey: 'qtd' },
+        { header: 'V.UNIT', dataKey: 'vun' },
+        { header: 'V.TOTAL', dataKey: 'vtot' },
+        { header: 'BC.ICMS', dataKey: 'bc' },
+        { header: 'V.ICMS', dataKey: 'vicms' },
+        { header: 'V.IPI', dataKey: 'vipi' },
+        { header: '%ICMS', dataKey: 'aliq' }
+    ];
+
+    const rows = listaItens.map(i => ({
+        cod: (i.cProd || i.ean || "").substring(0, 10),
+        desc: (i.nome || "").substring(0, 38), 
+        ncm: i.ncm || "",
+        cst: i.cst || "",
+        cfop: i.cfop || "",
+        un: i.un || "UN",
+        qtd: parseFloat(i.qtd || 0).toFixed(2),
+        vun: fmtMoeda(i.valorUnit),
+        vtot: fmtMoeda(i.total),
+        bc: fmtMoeda(i.vBC),
+        vicms: fmtMoeda(i.vICMS),
+        vipi: fmtMoeda(i.vIPI),
+        aliq: (i.pICMS || 0).toFixed(0) + "%"
+    }));
+
+    doc.autoTable({
+        startY: y,
+        columns: columns,
+        body: rows,
+        theme: 'plain', 
+        styles: { 
+            fontSize: 6, 
+            cellPadding: 1.5,
+            textColor: corPreta,
+            lineWidth: 0.1,
+            lineColor: [100, 100, 100],
+            overflow: 'ellipsize',
+            valign: 'middle'
+        },
+        headStyles: {
+            fillColor: [220, 220, 220],
+            textColor: corPreta,
+            fontStyle: 'bold',
+            halign: 'center',
+            lineWidth: 0.1,
+            lineColor: [0, 0, 0]
+        },
+        columnStyles: {
+            0: { cellWidth: 15 }, 
+            1: { cellWidth: 'auto' }, 
+            2: { cellWidth: 12, halign: 'center' },
+            3: { cellWidth: 8, halign: 'center' },  
+            4: { cellWidth: 8, halign: 'center' },  
+            5: { cellWidth: 8, halign: 'center' },  
+            6: { cellWidth: 10, halign: 'right' }, 
+            7: { cellWidth: 12, halign: 'right' }, 
+            8: { cellWidth: 14, halign: 'right', fontStyle: 'bold' }, 
+            9: { cellWidth: 12, halign: 'right' }, 
+            10: { cellWidth: 10, halign: 'right' },
+            11: { cellWidth: 10, halign: 'right' },
+            12: { cellWidth: 8, halign: 'right' }  
+        },
+        margin: { left: 10, right: 10 }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.line(10, finalY + 15, 100, finalY + 15);
+    doc.setFontSize(7);
+    doc.text("DATA DE RECEBIMENTO", 10, finalY + 18);
+    
+    doc.line(110, finalY + 15, 200, finalY + 15);
+    doc.text("IDENTIFICAÇÃO E ASSINATURA DO RECEBEDOR", 110, finalY + 18);
+
+    doc.save(`DANFE_${nota.numero || 'SN'}.pdf`);
+}
+
+
+// Auxiliar simples de moeda
+function fmtMoeda(val) {
+    return parseFloat(val || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function formatarDataPtBr(dateStr) {
+    try {
+        if(!dateStr) return "";
+        const d = new Date(dateStr);
+        if(isNaN(d)) return dateStr;
+        return d.toLocaleDateString('pt-BR', {timeZone:'UTC'});
+    } catch(e) { return ""; }
+}
+
+// ============================================================
+// LÓGICA DA SIDEBAR ACCORDION
+// ============================================================
+
+window.toggleNavGroup = function(header) {
+    const group = header.parentElement;
+    
+    // Fecha outros grupos (opcional: se quiser que só um fique aberto por vez)
+    // document.querySelectorAll('.nav-group').forEach(g => {
+    //    if(g !== group) g.classList.remove('open');
+    // });
+
+    // Alterna o atual
+    group.classList.toggle('open');
+}
+
+// Atualizar a função setupNavigation existente para abrir o grupo do item ativo
+// Procure a função setupNavigation no seu código e adicione este trecho no final dela:
+
+/*
+   Cole este trecho DENTRO de setupNavigation(), logo antes de fechar a função,
+   ou chame esta lógica no DOMContentLoaded
+*/
+function autoOpenActiveGroup() {
+    // Encontra o item ativo
+    const activeItem = document.querySelector('.nav-item.active');
+    if (activeItem) {
+        // Verifica se ele está dentro de um grupo
+        const parentGroup = activeItem.closest('.nav-group');
+        if (parentGroup) {
+            parentGroup.classList.add('open');
+        }
+    }
+}
+
+// Chame isso ao carregar a página
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(autoOpenActiveGroup, 500); // Pequeno delay para garantir renderização
+});
+
+// 1. Cria a função normal
+function toggleNavGroup(header) {
+    const group = header.parentElement;
+    group.classList.toggle('open');
+}
+
+// 2. Joga ela para o mundo (Global)
+window.toggleNavGroup = toggleNavGroup;
+
+
+window.toggleNavGroup = function(header) {
+    const group = header.parentElement;
+    group.classList.toggle('open');
+}
 
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
@@ -8868,3 +9519,6 @@ window.abrirModalFornecedor = abrirModalFornecedor;
 window.fecharModalFornecedor = fecharModalFornecedor;
 window.abrirMuralAniversarios = abrirMuralAniversarios;
 window.renderizarMuralAniversarios = renderizarMuralAniversarios;
+window.toggleNavGroup = toggleNavGroup;
+window.setupNavigation = setupNavigation;
+window.autoOpenActiveGroup = autoOpenActiveGroup;
