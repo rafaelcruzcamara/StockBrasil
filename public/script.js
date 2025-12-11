@@ -5387,6 +5387,21 @@ window.handleProductForm = async function(event) {
     }
 }
 
+window.toggleSidebar = function() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    
+    // Alterna a classe no CSS
+    sidebar.classList.toggle('collapsed');
+    
+    // Expande o conteúdo
+    if (mainContent) {
+        mainContent.classList.toggle('expanded');
+    }
+}
+
+
+
 window.openProfileSettings = openProfileSettings;
 window.loadAllData = loadAllData;
 window.handleProductForm = handleProductForm;

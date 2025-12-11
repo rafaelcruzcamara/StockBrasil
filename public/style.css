@@ -5439,4 +5439,437 @@ input:checked + .slider:before {
     display: none;
 }
 
-/* Se fechado, hover mostra tooltip (opcional, avançado) */
+/* =====================================================================
+ * 1. SIDEBAR E HEADER (ESTRUTURA COMPACTA E OTIMIZADA)
+ * ===================================================================== */
+
+:root {
+    /* Novas variáveis para a Sidebar (Melhor manutenibilidade) */
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 65px; /* Levemente menor */
+    --sidebar-transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --hover-bg: rgba(10, 132, 255, 0.08); 
+    --active-bg: rgba(10, 132, 255, 0.15); 
+}
+
+/* Container Principal da Sidebar */
+.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    background-color: var(--color-bg-primary); 
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    transition: var(--sidebar-transition);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Estado Colapsado */
+.sidebar.collapsed {
+    width: var(--sidebar-collapsed-width);
+}
+
+.sidebar.collapsed .nav-item span,
+.sidebar.collapsed .group-label span,
+.sidebar.collapsed .nav-group-header .group-arrow,
+.sidebar.collapsed .user-info {
+    display: none;
+}
+
+.sidebar.collapsed .nav-group-items {
+    padding-left: 0 !important;
+}
+
+/* 1.1. Cabeçalho (Logo e Brand) - Mais Compacto */
+.sidebar-header {
+    height: 60px; /* Reduzido de 70px */
+    padding: 0 15px; /* Padding reduzido */
+    border-bottom: 1px solid var(--color-border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-header .logo {
+    font-size: 1.2rem; /* Levemente menor */
+    font-weight: 800;
+    gap: 6px; /* Espaço reduzido */
+}
+
+/* 1.2. Corpo da Navegação (Links) - OTIMIZAÇÃO CRÍTICA */
+.sidebar-body {
+    flex: 1;
+    overflow-y: auto; /* Mantém o scroll caso seja absolutamente necessário (tela pequena) */
+    padding: 15px 8px; /* Padding interno reduzido */
+}
+
+/* Scrollbar Fina (Webkit) - Mantido limpo */
+.sidebar-body::-webkit-scrollbar { width: 4px; }
+.sidebar-body::-webkit-scrollbar-track { background: transparent; }
+.sidebar-body::-webkit-scrollbar-thumb { 
+    background: #444; 
+    border-radius: 4px; 
+    border: 1px solid var(--color-bg-primary); 
+}
+
+/* Labels de Seção (Mais compactas) */
+.nav-section-label {
+    font-size: 0.7rem; /* Reduzido */
+    margin: 20px 10px 8px; /* Espaçamento reduzido */
+    letter-spacing: 1px;
+}
+
+/* Itens de Navegação (Alturas reduzidas) */
+.nav-item, .nav-group-header {
+    /* Padding Vertical reduzido para compactação máxima */
+    padding: 10px 15px; 
+    margin: 3px 3px; /* Margem vertical e horizontal reduzida */
+    font-size: 0.9rem; /* Levemente menor */
+}
+
+.nav-item:hover, .nav-group-header:hover {
+    transform: translateX(2px); /* Animação mais sutil */
+}
+
+.nav-item.active {
+    border-left: 3px solid var(--color-accent-blue);
+    padding-left: 12px;
+}
+
+.nav-item i, .nav-group-header i {
+    width: 20px; /* Ícone menor */
+    margin-right: 10px; /* Espaço reduzido */
+    font-size: 1.05rem; /* Levemente menor */
+}
+
+/* Sub-Itens (Mais compactos) */
+.nav-subitem {
+    padding: 8px 15px 8px 45px; /* Padding vertical reduzido */
+    font-size: 0.85rem; /* Reduzido */
+}
+
+/* 1.3. Rodapé (Perfil) - Mais Compacto */
+.sidebar-footer {
+    padding: 10px 8px; /* Padding reduzido */
+}
+
+.user-profile {
+    gap: 10px; /* Espaço reduzido */
+    padding: 8px 12px; /* Padding interno reduzido */
+}
+
+.avatar-circle {
+    width: 32px; /* Avatar menor */
+    height: 32px;
+}
+
+.user-name { font-size: 0.85rem; } /* Levemente menor */
+.user-role { font-size: 0.7rem; } /* Levemente menor */
+
+/* ============================================================
+   CORREÇÃO DEFINITIVA DA SIDEBAR RECOLHIDA (MINI)
+   ============================================================ */
+
+
+
+/* 2. Ajusta o conteúdo principal */
+.main-content.expanded {
+    margin-left: 80px !important;
+    width: calc(100% - 80px) !important;
+}
+
+/* 3. CENTRALIZAÇÃO DOS ÍCONES (O PULO DO GATO) */
+.sidebar.collapsed .nav-item, 
+.sidebar.collapsed .nav-group-header {
+    justify-content: center !important; /* Centraliza o conteúdo flex */
+    padding-left: 0 !important;         /* Remove espaço na esquerda */
+    padding-right: 0 !important;        /* Remove espaço na direita */
+    text-align: center;
+}
+
+/* 4. Ajuste do ícone para ficar no meio */
+.sidebar.collapsed .nav-item i, 
+.sidebar.collapsed .nav-group-header i,
+.sidebar.collapsed .group-icon {
+    margin-right: 0 !important; /* Remove margem que separava do texto */
+    font-size: 1.4rem !important; /* Aumenta um pouco para destaque */
+    width: auto !important;
+    display: inline-block;
+}
+
+/* 5. Esconde textos, setas e labels */
+.sidebar.collapsed span,                
+.sidebar.collapsed .nav-section-label,  
+.sidebar.collapsed .group-arrow,        
+.sidebar.collapsed .logo span, 
+.sidebar.collapsed .logo small,         
+.sidebar.collapsed .sidebar-profile-info,
+.sidebar.collapsed .arrow-icon {
+    display: none !important;
+}
+
+/* 6. Ajuste do Logo no Topo */
+.sidebar.collapsed .sidebar-header {
+    padding: 15px 0 !important;
+    justify-content: center !important;
+    display: flex;
+}
+.sidebar.collapsed .logo {
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+}
+
+/* 7. Ajuste do Perfil (Foto) */
+.sidebar.collapsed .sidebar-profile-card {
+    padding: 0 !important;
+    margin: 10px auto !important;
+    justify-content: center !important;
+    background: transparent !important;
+    border: none !important;
+    width: 100%;
+}
+.sidebar.collapsed .sidebar-profile-card img {
+    margin: 0 !important;
+    width: 40px;
+    height: 40px;
+}
+
+/* 8. Esconde submenus (Accordion) para não quebrar */
+.sidebar.collapsed .nav-group-content {
+    display: none !important;
+}
+
+/* 9. Botão de Toggle (Seta) centralizado */
+.sidebar.collapsed .toggle-btn {
+    margin: 0 auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) rotate(180deg) !important;
+    position: absolute;
+    bottom: 20px;
+}
+
+/* ============================================================
+   CORREÇÃO FINAL: SIDEBAR MINI (ÍCONES FIXOS + PERFIL)
+   ============================================================ */
+
+/* 1. Largura Fixa da Barra */
+.sidebar.collapsed {
+    width: 88px !important;
+}
+
+/* 2. Ajuste do Conteúdo Principal */
+.main-content.expanded {
+    margin-left: 80px !important;
+    width: calc(100% - 80px) !important;
+}
+
+/* 3. Ícones: Centralizados e do MESMO TAMANHO */
+.sidebar.collapsed .nav-item, 
+.sidebar.collapsed .nav-group-header {
+    justify-content: center !important;
+    padding: 12px 0 !important; /* Mantém padding vertical padrão */
+}
+
+.sidebar.collapsed .nav-item i, 
+.sidebar.collapsed .nav-group-header i,
+.sidebar.collapsed .group-icon {
+    margin-right: 0 !important;
+    font-size: 1.1rem !important; /* TRAVA O TAMANHO (Igual ao aberto) */
+    width: auto !important;
+    display: inline-block;
+    text-align: center;
+}
+
+/* 4. Esconde textos e setas (Limpeza) */
+.sidebar.collapsed span,                
+.sidebar.collapsed .nav-section-label,  
+.sidebar.collapsed .group-arrow,        
+.sidebar.collapsed .logo span, 
+.sidebar.collapsed .logo small,         
+.sidebar.collapsed .sidebar-profile-info,
+.sidebar.collapsed .arrow-icon {
+    display: none !important;
+}
+
+/* 5. Logo Centralizado */
+.sidebar.collapsed .sidebar-header {
+    padding: 20px 0 !important;
+    justify-content: center !important;
+    display: flex;
+}
+.sidebar.collapsed .logo {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+.sidebar.collapsed .logo i {
+    margin: 0 !important;
+    font-size: 1.5rem !important; /* Logo pode ser um pouco maior */
+}
+
+/* 6. PERFIL: Força aparecer apenas a foto */
+.sidebar.collapsed .sidebar-profile-card {
+    display: flex !important; /* Garante que o card apareça */
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 15px auto !important;
+    background: transparent !important;
+    border: none !important;
+    width: 100%;
+}
+
+/* Garante que a imagem do perfil apareça e tenha tamanho fixo */
+.sidebar.collapsed .sidebar-profile-card img {
+    display: block !important;
+    width: 40px !important;
+    height: 40px !important;
+    margin: 0 !important;
+    border: 2px solid #333;
+}
+
+/* 7. Esconde submenus (Accordion) */
+.sidebar.collapsed .nav-group-content {
+    display: none !important;
+}
+
+/* 8. Botão de Fechar Centralizado */
+.sidebar.collapsed .toggle-btn {
+    position: absolute;
+    bottom: 80px; /* Fica acima do perfil */
+    left: 50%;
+    transform: translateX(-50%) rotate(180deg);
+    margin: 0 !important;
+}
+
+.sidebar.collapsed .nav-item, 
+.sidebar.collapsed .nav-group-header {
+    justify-content: center !important;
+    padding: 12px 0 !important;      /* Altura do "botão" */
+    margin-bottom: 15px !important;  /* <--- ESPAÇAMENTO ENTRE ELES (Aumentei) */
+    
+    
+
+}
+
+.sidebar.collapsed .sidebar-profile-card {
+    width: 45px !important;        /* Tamanho fixo */
+    height: 45px !important;
+    padding: 0 !important;         /* Remove enchimento */
+    margin: 0 !important;
+    background-color: transparent !important; /* Remove fundo cinza */
+    border: none !important;       /* Remove borda retangular */
+    justify-content: center !important;
+    box-shadow: none !important;   /* Remove sombra */
+}
+
+/* 3. Estilo da Foto (A "Bolinha") */
+.sidebar.collapsed .sidebar-profile-card img {
+    display: block !important;
+    width: 40px !important;        /* Tamanho da foto */
+    height: 40px !important;
+    margin: 0 !important;
+    border-radius: 50% !important; /* Garante que é redonda */
+    border: 2px solid #444;        /* Borda sutil na foto */
+    transition: border-color 0.3s;
+}
+
+/* Efeito ao passar o mouse na bolinha */
+.sidebar.collapsed .sidebar-profile-card:hover img {
+    border-color: #0A84FF; /* Fica azul ao passar o mouse */
+    cursor: pointer;
+}
+
+/* 4. Esconde ABSOLUTAMENTE todo o resto (Texto e Seta) */
+.sidebar.collapsed .sidebar-profile-info,
+.sidebar.collapsed .arrow-icon {
+    display: none !important;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.sidebar.collapsed .profile-menu-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 20px !important; /* Espaço do fundo */
+}
+
+
+
+
+
+/* ============================================================
+   ANIMAÇÃO PREMIUM (SILDER SUAVE)
+   ============================================================ */
+
+/* 1. Aplica a animação na Barra, no Conteúdo e nos Ícones */
+.sidebar, 
+.main-content, 
+.nav-item i, 
+.logo i,
+.sidebar-profile-card img,
+.toggle-btn {
+    /* Essa curva (0.4, 0, 0.2, 1) é o padrão "Material Design".
+       Começa rápido e freia suavemente. 
+       0.5s é o tempo ideal para ser notável mas não lento.
+    */
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. Suavizar o desaparecimento do texto (opcional, mas recomendado) */
+.nav-item span, 
+.logo span, 
+.nav-section-label {
+    transition: opacity 0.2s ease-in-out;
+    opacity: 1;
+    white-space: nowrap; /* Evita que o texto quebre linha enquanto fecha */
+}
+
+/* Quando fecha, o texto fica transparente rapidinho antes de sumir */
+.sidebar.collapsed .nav-item span, 
+.sidebar.collapsed .logo span {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* 3. Efeito "Elástico" nos Ícones ao fechar */
+/* Isso faz o ícone deslizar para o centro suavemente */
+.sidebar.collapsed .nav-item i {
+    transform: scale(1.1); /* Um leve zoom quando está fechado fica elegante */
+}
+
+/* 4. Animação do Botão de Fechar (Giro) */
+.toggle-btn i {
+    transition: transform 0.6s cubic-bezier(0.68, -0.6, 0.32, 1.6); /* Efeito de mola */
+}
+
+/* Quando a sidebar fecha, o ícone gira */
+.sidebar.collapsed .toggle-btn i {
+    transform: rotate(180deg);
+}
+
+/* 5. Efeito Hover nos Itens (Quando passa o mouse) */
+.nav-item {
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+}
+
+.nav-item:hover {
+    transform: translateX(5px); /* Move levemente para a direita */
+}
+
+/* No modo fechado, não move para a direita (fica estranho), então resetamos */
+.sidebar.collapsed .nav-item:hover {
+    transform: none;
+    transform: scale(1.05); /* Em vez disso, cresce um pouquinho (Zoom) */
+}
+

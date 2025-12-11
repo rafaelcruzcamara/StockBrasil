@@ -37,7 +37,11 @@
     
 <div class="sidebar" id="sidebar">
     
-   <div class="profile-menu-container">
+
+
+    <div class="sidebar-body">
+        
+      <div class="profile-menu-container">
     
    <div class="sidebar-profile-card" onclick="toggleSidebarProfileMenu(event)">
         <img src="images/default-avatar.png" id="sidebar-user-photo" alt="Perfil">
@@ -53,50 +57,33 @@
         <a href="#" onclick="logout()" style="color: #ff453a;"><i class="fas fa-sign-out-alt"></i> Sair</a>
     </div>
 </div>
+        <hr class="sidebar-divider">
 
-    <hr class="sidebar-divider">
+        <div class="nav-section-label">PRINCIPAL</div>
+        <a href="#dashboard" class="nav-item active"><i class="fas fa-home"></i> <span>Dashboard</span></a>
+        <a href="#vendas" class="nav-item"><i class="fas fa-cash-register"></i> <span>Ponto de Vendas</span></a>
 
-    <nav class="sidebar-nav" id="sidebar-nav-container">
+        <a href="#produtos" class="nav-item"><i class="fas fa-box-open"></i> <span>Produtos & Estoque</span></a>
+        <a href="#parceiros" class="nav-item"><i class="fas fa-users"></i> <span>Parceiros (CRM)</span></a>
+        <a href="#carrinhos-salvos" class="nav-item"><i class="fas fa-shopping-basket"></i> <span>Carrinhos Salvos</span></a>
+
+        
+        <div class="nav-section-label">GESTÃO</div>
+        <a href="#financeiro" class="nav-item"><i class="fas fa-wallet"></i> <span>Financeiro</span></a>
+        <a href="#relatorios" class="nav-item"><i class="fas fa-chart-line"></i> <span>Relatórios & Notas</span></a>
+
+        <div class="nav-section-label">SISTEMA</div>
+        <a href="#comunidade" class="nav-item"><i class="fas fa-comments"></i> <span>Comunidade</span></a>
+        <a href="#config" class="nav-item"><i class="fas fa-cogs"></i> <span>Configurações</span></a>
+
+    </div>
+
+    <button class="toggle-btn" onclick="toggleSidebar()">
+        <i class="fas fa-chevron-left" id="toggle-icon"></i>
+    </button>
     
-    <div class="nav-section-label">PRINCIPAL</div>
-    <a href="#dashboard" class="nav-item active"><i class="fas fa-home"></i> <span>Dashboard</span></a>
-    <a href="#vendas" class="nav-item"><i class="fas fa-cash-register"></i> <span>PDV (Vender)</span></a>
 
-    <div class="nav-group">
-        <div class="nav-group-header" onclick="toggleNavGroup(this)">
-            <div class="group-label"><i class="fas fa-boxes"></i> <span>Operacional</span></div>
-            <i class="fas fa-chevron-down group-arrow"></i>
-        </div>
-        <div class="nav-group-items">
-            <a href="#produtos" class="nav-item"><i class="fas fa-box-open"></i> <span>Produtos & Estoque</span></a>
-            <a href="#parceiros" class="nav-item"><i class="fas fa-users"></i> <span>Parceiros (CRM)</span></a>
-            <a href="#carrinhos-salvos" class="nav-item"><i class="fas fa-shopping-basket"></i> <span>Carrinhos Salvos</span></a>
-        </div>
-    </div>
-
-    <div class="nav-group">
-        <div class="nav-group-header" onclick="toggleNavGroup(this)">
-            <div class="group-label"><i class="fas fa-chart-pie"></i> <span>Gestão</span></div>
-            <i class="fas fa-chevron-down group-arrow"></i>
-        </div>
-        <div class="nav-group-items">
-            <a href="#financeiro" class="nav-item"><i class="fas fa-wallet"></i> <span>Financeiro</span></a>
-            <a href="#relatorios" class="nav-item"><i class="fas fa-chart-line"></i> <span>Relatórios & Notas</span></a>
-        </div>
-    </div>
-
-    <div class="nav-section-label">SISTEMA</div>
-    <a href="#comunidade" class="nav-item"><i class="fas fa-comments"></i> <span>Comunidade</span></a>
-    <a href="#config" class="nav-item"><i class="fas fa-cogs"></i> <span>Configurações</span></a>
-
-</nav>
-
-    <div class="sidebar-footer">
-        <button class="toggle-btn" onclick="toggleSidebar()">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-    </div>
-
+    
 </div>
 
 
