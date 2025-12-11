@@ -763,7 +763,10 @@ function setupNavigation() {
             // Abre a lista de produtos por padrão
             showTab("product-list-tab");
             break;
-
+          case "comunidade":
+            // Carrega os posts quando a pessoa clica na aba
+            if(typeof loadCommunityPosts === 'function') loadCommunityPosts();
+            break;      
           case "parceiros":
             // Carrega as tabelas
             if(typeof loadPartnersData === 'function') loadPartnersData();
@@ -785,6 +788,7 @@ function setupNavigation() {
             if(firstConfigBtn) firstConfigBtn.classList.add('active');
             break;
         }
+        
 
         // Fecha sidebar no mobile ao clicar
         if (window.innerWidth <= 768) {
@@ -996,151 +1000,7 @@ function validateProductForm(data) {
   return errors;
 }
 
-async function handleProductForm(event) {
-    event.preventDefault();
 
-    const btn = document.getElementById('submit-btn');
-    const idInput = document.getElementById('product-id').value;
-    const isEditing = idInput && idInput !== '';
-    
-    const user = auth.currentUser;
-    if (!user) { showToast("Erro: Sessão não encontrada.", "error"); return; }
-
-    // --- LÓGICA INTELIGENTE DE GRUPOS (ANTI-DUPLICIDADE) ---
-    const inputGrupo = document.getElementById('prodGrupo').value.trim();
-    let grupoFinal = inputGrupo; // Por padrão, usa o que foi digitado
-
-    if (inputGrupo.length > 0) {
-        if (!config.productGroups) config.productGroups = [];
-
-        // 1. Procura se já existe algo igual (ignorando maiúsculas/minúsculas)
-        // Ex: Se existe "Bíblias", e digitaram "bíblias", encontra o original.
-        const grupoExistente = config.productGroups.find(g => g.toLowerCase() === inputGrupo.toLowerCase());
-
-        if (grupoExistente) {
-            // CENA 1: JÁ EXISTE
-            // Usa a grafia original do banco para manter consistência
-            grupoFinal = grupoExistente; 
-            console.log(`Grupo detectado: Trocando "${inputGrupo}" por "${grupoExistente}"`);
-        } else {
-            // CENA 2: É REALMENTE NOVO
-            config.productGroups.push(inputGrupo);
-            
-            // Salva a nova lista
-            persistData(); 
-            saveConfigToFirebase(); 
-            if(typeof updateGroupDatalist === 'function') updateGroupDatalist();
-        }
-    }
-    // -------------------------------------------------------
-
-    const productData = {
-        nome: document.getElementById('nome').value,
-        categoria: document.getElementById('categoria').value,
-        codigoBarras: document.getElementById('codigoBarras').value || "",
-        
-        // USA A VARIÁVEL CORRIGIDA AQUI:
-        grupo: grupoFinal, 
-
-        // Campos Financeiros
-        preco: parseFloat(document.getElementById('preco').value || 0),
-        custo: parseFloat(document.getElementById('custo').value || 0),
-        frete: parseFloat(document.getElementById('prodFrete').value || 0),
-        markup: parseFloat(document.getElementById('prodMarkup').value || 0),
-        
-        // Estoque
-        quantidade: parseInt(document.getElementById('quantidade').value || 0),
-        minimo: parseInt(document.getElementById('minimo').value || 0),
-        
-        // Outros
-        fornecedor: document.getElementById('prodFornecedor').value || "",
-        imagem: document.getElementById('prodImagem').value || ""
-    };
-
-    if (!productData.nome || isNaN(productData.preco) || productData.preco <= 0) {
-        showToast("Preencha nome e preço corretamente.", "error");
-        return;
-    }
-
-    const novoGrupo = document.getElementById('prodGrupo').value.trim();
-    
-    if (novoGrupo.length > 0) {
-        // Se a lista ainda não existir, cria
-        if (!config.productGroups) config.productGroups = [];
-        
-        // Verifica se já existe (ignorando maiúsculas/minúsculas para evitar duplicatas)
-        const existe = config.productGroups.some(g => g.toLowerCase() === novoGrupo.toLowerCase());
-        
-        if (!existe) {
-            config.productGroups.push(novoGrupo); // Adiciona na lista
-            
-            // Salva a nova lista no LocalStorage e Firebase sem travar o usuário
-            persistData(); 
-            saveConfigToFirebase(); 
-            updateGroupDatalist(); // Atualiza a lista visualmente
-            console.log(`Novo grupo "${novoGrupo}" salvo com sucesso!`);
-        }
-    }
-
-    try {
-        setBtnLoading(btn, true); // <--- ATIVA ANIMAÇÃO
-
-        if (isEditing) {
-            const productRef = getUserDocumentRef("products", idInput);
-            await updateDoc(productRef, productData);
-            showToast("Produto atualizado com sucesso!", "success");
-        } else {
-            await addDoc(getUserCollectionRef("products"), productData);
-            showToast("Produto cadastrado com sucesso!", "success");
-        }
-
-        document.querySelector(".product-form").reset();
-        resetProductForm();
-        await loadAllData(); 
-        showTab('product-list-tab');
-
-    } catch (error) {
-        console.error("Erro:", error);
-        showToast("Erro ao salvar no banco de dados.", "error");
-    } finally {
-        setBtnLoading(btn, false); // <--- DESATIVA ANIMAÇÃO
-    }
-}
-
-function editProduct(id) {
-    const product = products.find(p => (p._id === id) || (p.id == id));
-    if (!product) return;
-
-    updateCategorySelect(); 
-
-    // Campos Básicos
-    document.getElementById('product-id').value = product._id || product.id;
-    document.getElementById('codigoBarras').value = product.codigoBarras || "";
-    document.getElementById('nome').value = product.nome; 
-    document.getElementById('categoria').value = product.categoria; 
-    document.getElementById('quantidade').value = product.quantidade;
-    document.getElementById('minimo').value = product.minimo;
-
-    // Campos Novos (Usa || '' ou || 0 para evitar undefined em produtos antigos)
-    document.getElementById('prodGrupo').value = product.grupo || '';
-    document.getElementById('prodFornecedor').value = product.fornecedor || '';
-    document.getElementById('prodImagem').value = product.imagem || '';
-    
-    // Financeiro
-    document.getElementById('preco').value = product.preco;
-    document.getElementById('custo').value = product.custo || 0;
-    document.getElementById('prodFrete').value = product.frete || 0;
-    document.getElementById('prodMarkup').value = product.markup || 2.0;
-
-    // Recalcula os totais visuais
-    calcularPrecoVenda();
-    
-    // ... (resto da função que muda o botão para Salvar e abre a aba) ...
-    document.getElementById('form-title').textContent = 'Editar Produto';
-    document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Salvar Edição';
-    document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
-    showTab('product-form-tab');
-}
 
 async function deleteProduct(id) {
     const user = auth.currentUser;
@@ -4090,6 +3950,7 @@ document.addEventListener("DOMContentLoaded", function () {
 function inicializarGraficoCategoria() {
   try {
     const ctx = document.getElementById("categoryChart");
+    if (!ctx) return;
     if (!ctx) {
       console.warn("Canvas #categoryChart não encontrado.");
       return;
@@ -5228,8 +5089,255 @@ function imprimirRelatorioLucro(startDate, endDate) {
     doc.save("Lucros.pdf");
 }
 
+window.editProduct = function(id) {
+    const p = products.find(x => (x._id === id) || (x.id == id));
+    if (!p) return;
 
+    updateCategorySelect(); 
 
+    // Preenche Dados Básicos
+    document.getElementById('product-id').value = p.id;
+    document.getElementById('nome').value = p.nome;
+    document.getElementById('categoria').value = p.categoria;
+    document.getElementById('prodGrupo').value = p.grupo || "";
+    document.getElementById('codigoBarras').value = p.codigoBarras || "";
+    document.getElementById('quantidade').value = p.quantidade;
+    document.getElementById('minimo').value = p.minimo;
+    document.getElementById('prodFornecedor').value = p.fornecedor || "";
+    document.getElementById('prodImagem').value = p.imagem || "";
+
+    // Preenche Financeiro
+    document.getElementById('custo').value = p.custo || 0;
+    document.getElementById('prodFrete').value = p.frete || 0;
+    document.getElementById('prodMarkup').value = p.markup || 2.0;
+    
+    // --- O SEGREDO 1: Joga o preço salvo no input IMEDIATAMENTE ---
+    document.getElementById('preco').value = parseFloat(p.preco).toFixed(2);
+
+    // --- O SEGREDO 2: Recupera o estado do botão ---
+    const switchAuto = document.getElementById('autoMarkupSwitch');
+    
+    // Se existe a propriedade salva explicitamente (true ou false)
+    if (p.autoMarkup !== undefined && p.autoMarkup !== null) {
+        switchAuto.checked = p.autoMarkup;
+    } else {
+        // Se é produto antigo (sem essa info), assume MANUAL para não estragar seu preço
+        switchAuto.checked = false; 
+    }
+
+    // Chama o cálculo com a flag 'edit'. 
+    // Isso atualiza as cores e bloqueios, mas NÃO muda os números.
+    calcularPrecificacao('edit'); 
+
+    // Abre a aba
+    document.getElementById('form-title').textContent = 'Editar Produto';
+    document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Salvar Edição';
+    document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
+    showTab('product-form-tab');
+}
+
+window.calcularPrecificacao = function(origem) {
+    // Elementos
+    const elCusto = document.getElementById('custo');
+    const elFrete = document.getElementById('prodFrete');
+    const elMarkup = document.getElementById('prodMarkup');
+    const elSugerido = document.getElementById('precoSugeridoDisplay'); // O campo cinza
+    const elPrecoFinal = document.getElementById('preco'); // O campo verde
+    const elSwitch = document.getElementById('autoMarkupSwitch');
+    const elLabel = document.getElementById('label-mode');
+
+    // Valores
+    const custo = parseFloat(elCusto.value) || 0;
+    const frete = parseFloat(elFrete.value) || 0;
+    const markup = parseFloat(elMarkup.value) || 0;
+    const custoTotal = custo + frete;
+    const isAuto = elSwitch.checked;
+
+    // 1. Sempre atualiza o Preço Sugerido (Matemático) apenas para visualização
+    const valorSugerido = custoTotal * markup;
+    if (elSugerido) elSugerido.value = `R$ ${valorSugerido.toFixed(2)}`;
+
+    // 2. Controla o Preço Real
+    if (isAuto) {
+        // --- MODO AUTOMÁTICO ---
+        if(elLabel) { elLabel.innerText = "Automático"; elLabel.style.color = "#0A84FF"; }
+        
+        // Bloqueia digitação
+        elPrecoFinal.setAttribute('readonly', true);
+        elPrecoFinal.style.opacity = "0.7";
+        elPrecoFinal.style.borderColor = "#444";
+
+        // Se NÃO for apenas carregando a tela ('edit'), atualiza o valor
+        if (origem !== 'edit') {
+            elPrecoFinal.value = valorSugerido.toFixed(2);
+        }
+
+    } else {
+        // --- MODO MANUAL (Livre) ---
+        if(elLabel) { elLabel.innerText = "Manual"; elLabel.style.color = "#FF9F0A"; }
+        
+        // Libera digitação
+        elPrecoFinal.removeAttribute('readonly');
+        elPrecoFinal.style.opacity = "1";
+        elPrecoFinal.style.borderColor = "#FF9F0A"; // Borda laranja
+
+        // SEGREDO: Se estiver no modo manual, NÃO altera o valor do input!
+        // Deixa o valor que veio do banco ou que você digitou.
+        // A única exceção é se o campo estiver vazio/zero, aí sugerimos algo.
+        if ((!elPrecoFinal.value || parseFloat(elPrecoFinal.value) === 0) && origem !== 'edit') {
+            elPrecoFinal.value = custoTotal.toFixed(2);
+        }
+    }
+
+    // 3. Calcula Lucro Real (Baseado no que está no campo Preço Final agora)
+    const precoVenda = parseFloat(elPrecoFinal.value) || 0;
+    const lucro = precoVenda - custoTotal;
+    let margem = 0;
+    if (precoVenda > 0) margem = (lucro / precoVenda) * 100;
+
+    const spanLucro = document.getElementById('spanLucro');
+    const spanMargem = document.getElementById('spanMargem');
+
+    if(spanLucro) {
+        spanLucro.innerText = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        spanLucro.style.color = lucro < 0 ? '#FF453A' : 'var(--color-accent-green)'; // Vermelho se prejuízo
+    }
+    if(spanMargem) {
+        spanMargem.innerText = `${margem.toFixed(1)}%`;
+        spanMargem.style.color = margem < 0 ? '#FF453A' : (margem < 20 ? '#FF9F0A' : 'var(--color-accent-green)');
+    }
+}
+
+window.calcularLucroReal = function() {
+    const custo = parseFloat(document.getElementById('custo').value) || 0;
+    const frete = parseFloat(document.getElementById('prodFrete').value) || 0;
+    const precoVenda = parseFloat(document.getElementById('preco').value) || 0;
+    
+    const custoTotal = custo + frete;
+    const lucro = precoVenda - custoTotal;
+    
+    let margem = 0;
+    if (precoVenda > 0) margem = (lucro / precoVenda) * 100;
+
+    const elLucro = document.getElementById('spanLucro');
+    const elMargem = document.getElementById('spanMargem');
+
+    if (elLucro) {
+        elLucro.innerText = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        elLucro.style.color = lucro >= 0 ? 'var(--color-accent-green)' : '#FF453A';
+    }
+    if (elMargem) {
+        elMargem.innerText = `${margem.toFixed(1)}%`;
+        elMargem.style.color = margem > 0 ? 'white' : '#FF453A';
+    }
+}
+
+// 3. AO CRIAR NOVO (RESET)
+window.resetProductForm = function() {
+    const form = document.querySelector(".product-form");
+    if (form) {
+        form.reset();
+        document.getElementById("product-id").value = "";
+        document.getElementById("form-title").textContent = "Novo Produto";
+        document.getElementById("submit-btn").innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar';
+        document.getElementById("cancel-edit-btn").style.display = "none";
+
+        // Padrão para novo: Automático Ligado
+        document.getElementById('autoMarkupSwitch').checked = true;
+        document.getElementById('prodMarkup').value = 2.0;
+        
+        // Limpa visuais
+        calcularPrecificacao();
+    }
+}
+
+window.handleProductForm = async function(event) {
+    event.preventDefault(); 
+    const btn = document.getElementById('submit-btn');
+    
+    // 1. PEGAR VALORES (Garante números)
+    const custo = parseFloat(document.getElementById('custo').value) || 0;
+    const frete = parseFloat(document.getElementById('prodFrete').value) || 0;
+    const markup = parseFloat(document.getElementById('prodMarkup').value) || 0;
+    const preco = parseFloat(document.getElementById('preco').value) || 0;
+    
+    const custoTotal = custo + frete;
+
+    // --- A CORREÇÃO DO BLOQUEIO ESTÁ AQUI ---
+    // Se o preço for menor que o custo total (prejuízo)
+    if (preco < custoTotal) {
+        // Toca o alerta
+        if(typeof customAlert === 'function') {
+            customAlert(`AÇÃO BLOQUEADA - O preço de venda (R$ ${preco.toFixed(2)}) é menor que o custo (R$ ${custoTotal.toFixed(2)}).`, "error");
+        } else {
+            alert("ERRO: Preço menor que o custo. Operação cancelada.");
+        }
+        return; // <--- ESSE RETURN É O QUE IMPEDE DE SALVAR. NÃO REMOVA!
+    }
+
+    // 2. PREPARAR DADOS
+    // Pega se o botão está ligado ou desligado AGORA
+    const isAuto = document.getElementById('autoMarkupSwitch').checked;
+    const idInput = document.getElementById('product-id').value;
+    const isEditing = idInput && idInput !== '';
+
+    // Lógica de Grupos (Mantida)
+    const inputGrupo = document.getElementById('prodGrupo').value.trim();
+    let grupoFinal = inputGrupo;
+    if (config.productGroups && inputGrupo) {
+        const existente = config.productGroups.find(g => g.toLowerCase() === inputGrupo.toLowerCase());
+        if(existente) grupoFinal = existente;
+        else {
+            config.productGroups.push(inputGrupo);
+            persistData(); saveConfigToFirebase();
+        }
+    }
+
+    const productData = {
+        nome: document.getElementById('nome').value,
+        categoria: document.getElementById('categoria').value,
+        codigoBarras: document.getElementById('codigoBarras').value || "",
+        grupo: grupoFinal,
+        
+        // FINANCEIRO
+        preco: preco,
+        custo: custo,
+        frete: frete,
+        markup: markup,
+        
+        // --- SALVAMOS SUA ESCOLHA "DESLIGADO" AQUI ---
+        autoMarkup: isAuto, 
+
+        quantidade: parseInt(document.getElementById('quantidade').value || 0),
+        minimo: parseInt(document.getElementById('minimo').value || 0),
+        fornecedor: document.getElementById('prodFornecedor').value || "",
+        imagem: document.getElementById('prodImagem').value || ""
+    };
+
+    // 3. ENVIAR PRO BANCO
+    try {
+        setBtnLoading(btn, true);
+
+        if (isEditing) {
+            await updateDoc(getUserDocumentRef("products", idInput), productData);
+            showToast("Produto atualizado!", "success");
+        } else {
+            await addDoc(getUserCollectionRef("products"), productData);
+            showToast("Produto cadastrado!", "success");
+        }
+
+        document.querySelector(".product-form").reset();
+        resetProductForm(); 
+        await loadAllData(); 
+        showTab('product-list-tab');
+
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao salvar: " + error.message, "error");
+    } finally {
+        setBtnLoading(btn, false);
+    }
+}
 
 window.openProfileSettings = openProfileSettings;
 window.loadAllData = loadAllData;
@@ -5550,58 +5658,89 @@ document.addEventListener("DOMContentLoaded", () => {
 // Expor para usar no console ou HTML
 window.showToast = showToast;
 
-window.calcularPrecoVenda = function() {
-    // Pega os valores (convertendo para float, ou 0 se vazio)
-    const custo = parseFloat(document.getElementById('custo').value) || 0;
-    const frete = parseFloat(document.getElementById('prodFrete').value) || 0;
-    const markup = parseFloat(document.getElementById('prodMarkup').value) || 0;
+window.calcularPrecoVenda = function(origem) {
+    // 1. Elementos
+    const elSwitch = document.getElementById('autoMarkupSwitch');
+    const elLabelMode = document.getElementById('label-mode');
     
-    // Custo Total = Custo Produto + Frete
+    const elCusto = document.getElementById('custo');
+    const elFrete = document.getElementById('prodFrete');
+    const elMarkup = document.getElementById('prodMarkup');
+    
+    const elSugerido = document.getElementById('displayPrecoSugerido');
+    const elPrecoFinal = document.getElementById('preco');
+
+    // 2. Valores (Numéricos)
+    const custo = parseFloat(elCusto.value) || 0;
+    const frete = parseFloat(elFrete.value) || 0;
     const custoTotal = custo + frete;
-    
-    // Preço Sugerido = Custo Total * Markup
-    const precoSugerido = custoTotal * markup;
-    
-    // Atualiza o input visual
-    const displaySugerido = document.getElementById('displayPrecoSugerido');
-    if(displaySugerido) {
-        displaySugerido.value = precoSugerido.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+    const markup = parseFloat(elMarkup.value) || 0;
+    const isAuto = elSwitch.checked;
+
+    // --- VISUAL DO SUGERIDO (Sempre mostra a conta matemática) ---
+    const valorSugerido = custoTotal * markup;
+    if(elSugerido) elSugerido.value = `R$ ${valorSugerido.toFixed(2)}`;
+
+    // --- LÓGICA DO SWITCH E CÁLCULOS ---
+    if (isAuto) {
+        // === MODO AUTOMÁTICO ===
+        if (elLabelMode) { elLabelMode.innerText = "Automático"; elLabelMode.style.color = "#0A84FF"; }
+        
+        // Trava preço, libera markup
+        elPrecoFinal.setAttribute('readonly', true);
+        elPrecoFinal.style.opacity = "0.7";
+        elMarkup.removeAttribute('readonly');
+
+        // REGRA: Se é automático, o preço SEMPRE segue o Markup
+        // (Exceto se estamos apenas abrindo a janela 'edit')
+        if (origem !== 'edit') {
+            elPrecoFinal.value = valorSugerido.toFixed(2);
+        }
+
+    } else {
+        // === MODO MANUAL ===
+        if (elLabelMode) { elLabelMode.innerText = "Manual"; elLabelMode.style.color = "#aaa"; }
+
+        // Libera preço, trava markup (o markup vira consequência)
+        elPrecoFinal.removeAttribute('readonly');
+        elPrecoFinal.style.opacity = "1";
+        elMarkup.setAttribute('readonly', true);
+
+        // REGRA: Markup Reverso
+        // Se eu digitei o PREÇO, o sistema calcula qual é o novo Markup
+        if (origem === 'preco') {
+            const precoDigitado = parseFloat(elPrecoFinal.value) || 0;
+            if (custoTotal > 0 && precoDigitado > 0) {
+                const novoMarkup = precoDigitado / custoTotal;
+                elMarkup.value = novoMarkup.toFixed(2);
+            }
+        }
+        
+        // REGRA DE OURO: Se eu mudei o CUSTO e estou em MANUAL, 
+        // NÃO MUDA O PREÇO! (Mantém o preço antigo e deixa a margem cair)
     }
 
-    // Se o usuário ainda não digitou um preço manual (ou se quiser forçar), 
-    // podemos sugerir no campo principal. 
-    // Lógica: Se o campo preço estiver vazio OU se estivermos apenas simulando, atualize.
-    // Mas para evitar irritar o usuário apagando o que ele digitou, 
-    // só atualizamos se ele estiver editando os campos de custo/markup ativamente.
-    
-    // Opcional: Atualizar automaticamente o Preço Final com o Sugerido
-    const inputPrecoFinal = document.getElementById('preco');
-    // Só atualiza se o valor atual for 0 ou se o usuário estiver focando nos custos
-    if(document.activeElement.id !== 'preco') {
-        inputPrecoFinal.value = precoSugerido.toFixed(2);
-    }
-    
-    // Calcula Lucro Baseado no Preço FINAL (que pode ter sido alterado manualmente)
-    const precoFinal = parseFloat(inputPrecoFinal.value) || 0;
-    const lucro = precoFinal - custoTotal;
-    
-    // Margem = (Lucro / Preço Venda) * 100
+    // --- CÁLCULO DE RESULTADO (Lucro e Margem) ---
+    const precoVendaReal = parseFloat(elPrecoFinal.value) || 0;
+    const lucro = precoVendaReal - custoTotal;
     let margem = 0;
-    if(precoFinal > 0) margem = (lucro / precoFinal) * 100;
-    
-    // Atualiza spans
+    if (precoVendaReal > 0) margem = (lucro / precoVendaReal) * 100;
+
+    // Atualiza Visual da Barra de Lucro
     const spanLucro = document.getElementById('spanLucro');
     const spanMargem = document.getElementById('spanMargem');
-    
-    if(spanLucro) spanLucro.textContent = lucro.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-    if(spanMargem) {
-        spanMargem.textContent = margem.toFixed(1) + '%';
-        
-        // Corzinha dinâmica
-        if(margem < 20) spanMargem.style.color = '#FF453A'; // Vermelho se margem baixa
-        else spanMargem.style.color = '#30D158'; // Verde se boa
+
+    if(spanLucro) {
+        spanLucro.innerText = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        // Fica vermelho se der prejuízo
+        spanLucro.style.color = lucro < 0 ? '#FF453A' : 'var(--color-accent-green)';
     }
-};
+    
+    if(spanMargem) {
+        spanMargem.innerText = `${margem.toFixed(1)}%`;
+        spanMargem.style.color = margem < 0 ? '#FF453A' : (margem < 20 ? '#FF9F0A' : 'var(--color-accent-green)');
+    }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
     const inputPreco = document.getElementById('preco');
@@ -8558,6 +8697,148 @@ window.processarBaixaEstoque = async function(motivo) {
     }
 }
 
+// ============================================================
+// MÓDULO COMUNIDADE E ROADMAP
+// ============================================================
+
+// 1. Carregar Postagens (Falso Real-time para economizar leitura)
+async function loadCommunityPosts(filtro = 'todos') {
+    const container = document.getElementById('community-posts-list');
+    if(!container) return;
+
+    container.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Atualizando feed...</div>';
+
+    try {
+        // Usa uma coleção global (fora do usuário) para que todos vejam
+        // Nota: Requer regras do Firestore permitindo leitura em 'community_posts'
+        const q = query(collection(db, "community_posts"), orderBy("timestamp", "desc"), limit(20));
+        const snap = await getDocs(q);
+        
+        container.innerHTML = '';
+
+        if (snap.empty) {
+            container.innerHTML = '<div style="text-align:center; padding:40px; color:#666;">Seja o primeiro a postar!</div>';
+            return;
+        }
+
+        snap.forEach(doc => {
+            const p = doc.data();
+            
+            // Aplica filtro local
+            if (filtro !== 'todos' && p.type !== filtro) return;
+
+            const time = p.timestamp ? new Date(p.timestamp).toLocaleDateString('pt-BR') : 'Hoje';
+            const iniciais = p.authorName ? p.authorName.substring(0,2).toUpperCase() : 'AN';
+            
+            // Badge do Tipo
+            let tagClass = 'tag-duvida';
+            let tagText = 'Dúvida';
+            if(p.type === 'sugestao') { tagClass = 'tag-sugestao'; tagText = 'Sugestão'; }
+            if(p.type === 'aviso') { tagClass = 'tag-aviso'; tagText = 'Aviso Admin'; }
+
+            const div = document.createElement('div');
+            div.className = 'post-item';
+            div.innerHTML = `
+                <div class="post-header">
+                    <div class="user-badge">
+                        <div class="user-avatar-small">${iniciais}</div>
+                        <div>
+                            <div style="font-weight:bold; font-size:0.9rem;">${p.authorName}</div>
+                            <div style="font-size:0.75rem; color:#666;">${time}</div>
+                        </div>
+                    </div>
+                    <span class="post-tag ${tagClass}">${tagText}</span>
+                </div>
+                <div class="post-title">${p.title}</div>
+                <div class="post-body">${p.content}</div>
+                <div class="post-footer">
+                    <div class="post-actions">
+                  
+                    </div>
+                    ${(auth.currentUser && auth.currentUser.uid === p.authorId) ? `<button style="color:#FF453A; background:none; border:none; cursor:pointer;" onclick="deleteCommunityPost('${doc.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+    } catch (error) {
+        console.error("Erro comunidade:", error);
+        container.innerHTML = '<div style="text-align:center; color:#FF453A;">Erro ao carregar posts. Verifique sua conexão.</div>';
+    }
+}
+
+// 2. Nova Postagem
+window.handleNewCommunityPost = async function(e) {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if(!user) return showToast("Faça login para postar.", "error");
+
+    const tipo = document.getElementById('post-type').value;
+    const titulo = document.getElementById('post-title').value;
+    const conteudo = document.getElementById('post-content').value;
+    
+    // Pega o nome do usuário logado do elemento da sidebar
+    const nomeAutor = document.getElementById('sidebar-user-name').innerText || "Usuário";
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    setBtnLoading(btn, true);
+
+    try {
+        await addDoc(collection(db, "community_posts"), {
+            authorId: user.uid,
+            authorName: nomeAutor,
+            type: tipo,
+            title: titulo,
+            content: conteudo,
+            likes: 0,
+            timestamp: new Date().toISOString()
+        });
+
+        showToast("Postado com sucesso!", "success");
+        fecharModalPostagem();
+        loadCommunityPosts(); // Recarrega
+
+    } catch (error) {
+        console.error(error);
+        showToast("Erro ao publicar.", "error");
+    } finally {
+        setBtnLoading(btn, false);
+    }
+}
+
+// 3. Deletar Post (Só o dono)
+window.deleteCommunityPost = async function(id) {
+    if(!confirm("Apagar esta postagem?")) return;
+    try {
+        await deleteDoc(doc(db, "community_posts", id));
+        showToast("Postagem removida.", "success");
+        loadCommunityPosts();
+    } catch(e) {
+        showToast("Erro ao apagar.", "error");
+    }
+}
+
+// 4. Filtros e Modais
+window.filtrarComunidade = function(tipo) {
+    // Atualiza visual dos botões
+    document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    loadCommunityPosts(tipo);
+}
+
+window.abrirModalPostagem = function() {
+    document.querySelector('#modal-community-post form').reset();
+    document.getElementById('modal-community-post').style.display = 'flex';
+}
+
+window.fecharModalPostagem = function() {
+    document.getElementById('modal-community-post').style.display = 'none';
+}
+
+// 5. Inicializar ao carregar a aba
+// Adicione isso no seu switch case de navegação (setupNavigation)
+// case "comunidade": loadCommunityPosts(); break;
 
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
