@@ -1,526 +1,2911 @@
-/* ======================================================================
-   VARIÁVEIS GLOBAIS (Enterprise Dark Mode - Fino e Desejável)
-   ====================================================================== */
+/* =========================================
+   1. CONFIGURAÇÕES PREMIUM (Variáveis & Reset)
+   ========================================= */
 :root {
-    /* Base Colors - Manutenção da Identidade */
-    --color-bg-primary: #0A0D12;       /* Fundo Principal (Mais escuro) */
-    --color-bg-secondary: #12161D;     /* Fundo de Cards e Elementos (Mais profundidade) */
-    --color-bg-tertiary: #1B2129;      /* Fundo de Seção Secundária */
-    --color-text-primary: #F0F4F8;     /* Texto de Alto Contraste */
-    --color-text-secondary: #8B95A1;   /* Texto Descritivo/Corpo */
-    --color-text-tertiary: #5C6672;    /* Detalhes e Rodapé */
-    --color-border: #2C3540;           /* Linhas de Divisão Finas e Sérias */
+    /* Fundo: Um preto "frio" e profundo, não #000000 */
+    --bg-core: #030407;
     
-    /* Accent Colors - Foco na Credibilidade */
-    --color-accent-blue: #0A84FF;      /* Ação Primária/Governança */
-    --color-accent-green: #30D158;     /* CTA Principal/Sucesso */
-    --color-accent-purple: #BF5AF2;    /* Módulo/Ação Secundária */
+    /* Texto */
+    --text-main: #FFFFFF;
+    --text-muted: #94A3B8; /* Slate 400 - Confortável para ler */
+    --text-dark: #64748B;
     
-    /* Layout & Styling */
-    --border-radius-lg: 12px;
-    --shadow-deep: 0 10px 40px rgba(0, 0, 0, 0.4);
-    --shadow-blue-glow: 0 0 20px rgba(10, 132, 255, 0.3);
-    --lp-container-width: 1300px;
-    --nav-height: 70px;
+    /* Acentos (Luzes) - Mais sutis e modernos */
+    --glow-primary: #3B82F6; /* Blue 500 */
+    --glow-secondary: #8B5CF6; /* Violet 500 */
+    --glow-accent: #10B981; /* Emerald 500 */
+    
+    /* Vidro (Glassmorphism Realista) */
+    --glass-surface: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-highlight: rgba(255, 255, 255, 0.1);
+    
+    /* Tipografia */
+    --font-stack: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* ======================================================================
-   RESET E BASE (Organização Estrutural)
-   ====================================================================== */
-* {
-    margin: 0; padding: 0; box-sizing: border-box;
-    font-family: 'Inter', sans-serif;
-}
-html { scroll-behavior: smooth; }
+* { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
 body {
-    background-color: var(--color-bg-primary);
-    color: var(--color-text-primary);
-    line-height: 1.7; /* Aumenta a distância entre linhas (Fino) */
+    background-color: var(--bg-core);
+    color: var(--text-main);
+    font-family: var(--font-stack);
+    -webkit-font-smoothing: antialiased; /* Essencial para fontes finas em fundo escuro */
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    line-height: 1.6;
 }
-a { text-decoration: none; color: inherit; transition: all 0.3s ease; }
-ul { list-style: none; }
-.lp-container { width: 90%; max-width: var(--lp-container-width); margin: 0 auto; }
-.bg-secondary { background-color: var(--color-bg-secondary); }
-.bg-tertiary { background-color: var(--color-bg-tertiary); }
-.section-padding { padding: 140px 0; /* AUMENTADO: Mais espaçamento vertical */ }
 
-/* Tipografia */
-h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; }
-h1 { font-size: 3.8rem; }
-h2 { font-size: 2.5rem; }
-.text-highlight { color: var(--color-accent-blue); }
-.text-highlight-small { 
-    font-size: 0.8rem; color: var(--color-accent-blue); font-weight: 700; 
-    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; display: block;
+/* Melhoria na Fonte Inter (Deixa ela mais geométrica/tech) */
+body, button, input {
+    font-feature-settings: "ss01", "ss02", "cv05"; 
 }
-.logo-highlight { color: var(--color-accent-blue); font-weight: 800; }
 
-/* ======================================================================
-   BOTÕES (Fino, com padding reduzido)
-   ====================================================================== */
-.submit-btn {
-    padding: 10px 24px; /* REDUZIDO: Mais fino */
-    border: none; border-radius: 8px; cursor: pointer;
-    font-weight: 600; font-size: 0.95rem; /* REDUZIDO: Fonte mais fina */
+a { text-decoration: none; color: inherit; transition: 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* =========================================
+   2. AMBIENTE (Luzes de Fundo Suaves)
+   ========================================= */
+.ambient-light {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(140px); /* Desfoque muito maior para suavidade */
+    z-index: -1;
+    opacity: 0.4;
+    animation: pulseLight 10s infinite alternate;
+}
+
+.light-1 {
+    top: -150px; left: 10%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%);
+}
+
+.light-2 {
+    bottom: -100px; right: 0;
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(0,0,0,0) 70%);
+}
+
+@keyframes pulseLight {
+    0% { opacity: 0.3; transform: scale(1); }
+    100% { opacity: 0.5; transform: scale(1.1); }
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* =========================================
+   NAVBAR INTELIGENTE (Correção Definitiva)
+   ========================================= */
+
+.glass-header {
+    /* Posicionamento */
+    position: fixed;
+    top: 20px; 
+    width: 100%; 
+    z-index: 1000; /* Garante que fique acima de tudo */
+    display: flex; 
+    justify-content: center;
+
+    /* AQUI ESTÁ A CORREÇÃO: */
+    /* Removemos a linha 'animation: slideDown...' que estava travando */
+    /* Adicionamos 'transition' para suavizar qualquer movimento */
+    transition: transform 0.6s cubic-bezier(0.33, 1, 0.68, 1);
+    
+    /* Performance */
+    will-change: transform;
+}
+
+/* O Estado "Escondido" (Gaveta Fechada) */
+.header-hidden {
+    /* Move para cima suavemente */
+    transform: translateY(-200px);
+}
+.navbar-content {
+    background: rgba(10, 10, 12, 0.7); /* Mais escuro para contraste */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-highlight); /* Brilho no topo */
+    border-radius: 100px; /* Pill Shape */
+    padding: 12px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    width: 90%; max-width: 1000px;
+    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+}
+
+/* Logo Refinado */
+.logo-area { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 12px;
+}
+.logo-text { font-weight: 600; font-size: 15px; letter-spacing: -0.02em; }
+.highlight { color: #60A5FA; }
+
+/* Links de Navegação */
+.nav-menu { display: flex; gap: 32px; }
+.nav-link {
+    font-size: 14px; color: var(--text-muted); font-weight: 500;
+}
+.nav-link:hover { color: var(--text-main); }
+.nav-link.active { color: var(--text-main); }
+
+/* Botões da Nav */
+.nav-actions { display: flex; align-items: center; gap: 20px; }
+.btn-text { font-size: 14px; font-weight: 500; color: var(--text-main); }
+
+/* Botão "Glow" Refinado */
+.btn-glow {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 100px;
+    font-size: 13px; font-weight: 600;
     transition: all 0.3s ease;
-    display: inline-flex; align-items: center; justify-content: center;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
 }
-.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); }
-
-.blue-btn { background-color: var(--color-accent-blue); color: white; }
-.blue-btn:hover { background-color: #0066cc; }
-
-.green-btn { background-color: var(--color-accent-green); color: var(--color-bg-primary); }
-.green-btn:hover { background-color: #28a745; }
-
-.purple-btn { background-color: var(--color-accent-purple); color: white; }
-
-.delete-btn { background-color: transparent; border: 1px solid var(--color-border); color: var(--color-text-primary); }
-.delete-btn:hover { border-color: var(--color-accent-blue); background-color: var(--color-bg-secondary); }
-
-.btn-lg { padding: 14px 32px; /* AJUSTADO: Tamanho maior elegante */ font-size: 1rem; }
-.full-width { width: 100%; }
-
-.secondary-btn {
-    display: inline-flex; align-items: center; gap: 10px; font-weight: 500;
-    color: var(--color-text-secondary); padding: 10px 24px;
-}
-.secondary-btn:hover { color: var(--color-accent-blue); }
-
-/* ======================================================================
-   NAVBAR (Estrutura Fina)
-   ====================================================================== */
-.navbar-container {
-    position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
-    background: rgba(10, 13, 18, 0.95); backdrop-filter: blur(15px);
-    border-bottom: 1px solid var(--color-border);
+.btn-glow:hover {
+    background: white; color: black;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
 }
 
-/* ======================================================================
-   HERO SECTION (Degradê e Profundidade)
-   ====================================================================== */
-.hero {
-    padding-top: calc(var(--nav-height) + 80px); padding-bottom: 100px;
-    background: radial-gradient(circle at 50% 0%, rgba(10, 132, 255, 0.08) 0%, var(--color-bg-primary) 70%);
-    text-align: center;
-}
-.hero-text h1 { margin-bottom: 20px; max-width: 900px; margin-left: auto; margin-right: auto; }
-.hero-text p { font-size: 1.2rem; color: var(--color-text-secondary); max-width: 700px; margin: 0 auto 40px; }
-.hero-btns { display: flex; gap: 25px; justify-content: center; }
-
-.hero-image { margin-top: 50px; position: relative; }
-.mockup-img {
-    width: 100%; max-width: 1100px; border-radius: var(--border-radius-lg);
-    border: 1px solid var(--color-border);
-    box-shadow: var(--shadow-deep); 
+/* =========================================
+   4. HERO SECTION (Tipografia e Layout)
+   ========================================= */
+.hero-wrapper {
+    padding-top: 180px;
+    padding-bottom: 120px;
+    min-height: 100vh;
+    display: flex; align-items: center;
 }
 
-/* ======================================================================
-   TRUST BAR
-   ====================================================================== */
-.trust-bar { border-bottom: 1px solid var(--color-border); padding: 40px 0; }
-.trust-grid { 
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; 
-    justify-content: space-between;
-}
-.trust-item { text-align: center; }
-.trust-item h3 { font-size: 2rem; color: var(--color-accent-blue); margin-bottom: 5px; font-weight: 800; }
-.trust-item p { color: var(--color-text-secondary); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
-
-/* ======================================================================
-   MÓDULOS (Design Sóbrio com Hover Desejável)
-   ====================================================================== */
-.section-header { text-align: center; margin-bottom: 90px; /* AUMENTADO: Mais espaçamento */ max-width: 800px; margin-left: auto; margin-right: auto; }
-.section-header h2 { margin-bottom: 25px; }
-.section-header p { font-size: 1.1rem; color: var(--color-text-secondary); }
-
-.modules-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 40px;
-}
-.module-card {
-    background: var(--color-bg-secondary); border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-lg); padding: 40px;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    transform: perspective(1000px) rotateX(0deg); 
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-.module-card:hover { 
-    border-color: var(--color-accent-blue); 
-    transform: perspective(1000px) rotateX(2deg) translateY(-10px); 
-    box-shadow: var(--shadow-blue-glow);
-}
-
-.module-icon {
-    font-size: 1rem; font-weight: 800; padding: 10px 18px; border-radius: 6px;
-    display: inline-block; margin-bottom: 25px;
-    background-color: var(--color-bg-primary); 
-    border: 1px solid;
-}
-.module-card h3 { font-size: 1.4rem; margin-bottom: 15px; }
-.module-card p { color: var(--color-text-secondary); margin-bottom: 25px; }
-
-.features-list { padding-top: 15px; border-top: 1px solid var(--color-border); }
-.features-list li { margin-bottom: 12px; color: var(--color-text-primary); font-size: 0.9rem; font-weight: 500;}
-.features-list li i { color: var(--color-accent-blue); font-size: 0.9rem; margin-right: 8px;}
-
-.color-blue { color: var(--color-accent-blue); border-color: var(--color-accent-blue); }
-.color-green { color: var(--color-accent-green); border-color: var(--color-accent-green); }
-.color-purple { color: var(--color-accent-purple); border-color: var(--color-accent-purple); }
-
-/* ======================================================================
-   INTEGRAÇÃO & INFRAESTRUTURA (Layouts limpos)
-   ====================================================================== */
-.integration-layout {
-    display: grid; grid-template-columns: 1.2fr 1fr; gap: 80px; align-items: center;
-}
-.integration-text .intro-p { font-size: 1.15rem; color: var(--color-text-secondary); margin-bottom: 40px; }
-.integration-points { margin-bottom: 40px; }
-.point { margin-bottom: 30px; display: flex; align-items: flex-start; gap: 20px; }
-.point i { font-size: 1.8rem; color: var(--color-accent-blue); margin-top: 5px; }
-.point h4 { margin-bottom: 5px; }
-.point p { color: var(--color-text-secondary); font-size: 0.95rem; }
-.api-img { width: 100%; height: auto; border-radius: var(--border-radius-lg); border: 1px solid var(--color-border); }
-
-/* Infraestrutura Grid */
-.infra-header { text-align: center; margin-bottom: 60px; }
-.infra-cards-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px;
-}
-.infra-card {
-    background: var(--color-bg-secondary); padding: 30px; border-radius: var(--border-radius-lg);
-    border-left: 3px solid var(--color-border);
-    transition: border-left-color 0.3s ease;
-}
-.infra-card:hover { border-left-color: var(--color-accent-blue); }
-.infra-card p { color: var(--color-text-secondary); font-size: 0.95rem; margin-top: 10px; }
-
-/* ======================================================================
-   FAQ (Estrutura Organizada)
-   ====================================================================== */
-.faq-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 40px;
-    max-width: 1100px; margin: 0 auto;
-}
-.faq-item {
-    padding: 30px;
-    background: var(--color-bg-secondary);
-    border-radius: var(--border-radius-lg);
-    border-left: 4px solid var(--color-border);
-    transition: border-left-color 0.3s ease;
-}
-.faq-item:hover { border-left-color: var(--color-accent-green); }
-.faq-item h4 { font-size: 1.2rem; margin-bottom: 10px; }
-.faq-item p { color: var(--color-text-secondary); font-size: 0.95rem; }
-
-
-/* ======================================================================
-   LICENÇAS / PRICING (A Estratégia de Marketing Fina)
-   ====================================================================== */
-.pricing-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 30px; align-items: stretch;
-}
-.plan-card {
-    background: var(--color-bg-secondary); border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-lg); padding: 40px;
-    transition: all 0.4s ease; display: flex; flex-direction: column;
-}
-.plan-card:hover { border-color: var(--color-accent-blue); transform: translateY(-5px); }
-
-.plan-price { margin-bottom: 30px; color: var(--color-text-primary); text-align: center; }
-.currency { font-size: 1.5rem; vertical-align: top; font-weight: 600; }
-.amount { font-size: 4.5rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
-.period { color: var(--color-text-secondary); font-weight: 500; font-size: 1.1rem; }
-
-.plan-features { margin-bottom: 35px; flex-grow: 1; }
-.plan-features li { margin-bottom: 14px; font-weight: 500; }
-
-/* DESTAQUE ESTRATÉGICO (O Plano Mais Rentável) */
-.plan-card.recommended {
-    background: linear-gradient(160deg, var(--color-bg-tertiary) 0%, var(--color-bg-secondary) 100%);
-    border: 2px solid var(--color-accent-blue);
-    box-shadow: var(--shadow-blue-glow);
-    transform: translateY(-10px) scale(1.03); 
-    position: relative;
-    z-index: 2;
-    overflow: hidden;
-    animation: subtleBorderGlow 4s infinite ease-in-out; 
-}
-.plan-card.recommended:hover { transform: translateY(-15px) scale(1.05); }
-
-.recommended-badge {
-    position: absolute; top: 0; right: 0;
-    background: var(--color-accent-blue); color: white;
-    padding: 8px 15px; font-weight: 700; font-size: 0.75rem;
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%); 
-    border-bottom-left-radius: var(--border-radius-lg);
-}
-
-@keyframes subtleBorderGlow {
-    0% { box-shadow: 0 0 10px rgba(10, 132, 255, 0.3); }
-    50% { box-shadow: 0 0 25px rgba(10, 132, 255, 0.5); }
-    100% { box-shadow: 0 0 10px rgba(10, 132, 255, 0.3); }
-}
-
-.big-btn { padding: 14px; /* AJUSTADO */ font-size: 1rem; }
-.plan-card.recommended .big-btn { 
-    background-color: var(--color-accent-blue);
-    box-shadow: 0 4px 20px rgba(10, 132, 255, 0.4);
-}
-.plan-card.recommended .plan-features li i { color: var(--color-accent-blue); }
-
-
-/* ======================================================================
-   CTA FINAL & FOOTER
-   ====================================================================== */
-.cta-final { text-align: center; }
-.cta-content h2 { margin-bottom: 20px; }
-.cta-content p { font-size: 1.15rem; color: var(--color-text-secondary); margin-bottom: 40px; }
-
-.footer { padding: 80px 0 40px; background: var(--color-bg-primary); border-top: 1px solid var(--color-border); }
-.footer-content { display: grid; grid-template-columns: 2fr 1fr 1fr 2fr; gap: 40px; margin-bottom: 50px; }
-.footer-logo { font-size: 1.6rem; font-weight: 700; }
-.footer-logo p { font-size: 0.9rem; color: var(--color-text-secondary); margin-top: 10px; font-weight: 400; }
-
-.footer-links h4, .footer-contact h4 { margin-bottom: 20px; color: var(--color-text-primary); }
-.footer-links a { display: block; margin-bottom: 10px; color: var(--color-text-secondary); font-size: 0.95rem; }
-.footer-links a:hover { color: var(--color-accent-blue); }
-
-.footer-contact p { color: var(--color-text-secondary); margin-bottom: 8px; font-size: 0.95rem; }
-
-.footer-bottom { text-align: center; padding-top: 30px; border-top: 1px solid var(--color-border); color: var(--color-text-tertiary); font-size: 0.9rem; }
-
-
-/* ======================================================================
-   ANIMAÇÕES E RESPONSIVIDADE
-   ====================================================================== */
-.scroll-reveal {
-    opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-.scroll-reveal.active { opacity: 1; transform: translateY(0); }
-.delay-100 { transition-delay: 0.1s; }
-.delay-200 { transition-delay: 0.2s; }
-
-/* ... (O restante da responsividade permanece o mesmo para garantir a organização) ... */
-
-@media (max-width: 1200px) {
-    .integration-layout { grid-template-columns: 1fr; }
-    .integration-image { order: -1; margin-bottom: 40px; }
-    .infra-cards-grid { grid-template-columns: repeat(2, 1fr); }
-    .faq-grid { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 900px) {
-    .navbar .nav-links, .navbar .nav-actions .nav-login { display: none; }
-    h1 { font-size: 2.8rem; }
-    h2 { font-size: 2rem; }
-    .trust-grid { grid-template-columns: repeat(2, 1fr); }
-    .hero-btns { flex-direction: column; }
-    .submit-btn, .secondary-btn { width: 100%; }
-    .modules-grid, .pricing-grid { grid-template-columns: 1fr; }
-    .footer-content { grid-template-columns: 1fr; text-align: center; }
-}
-
-@media (max-width: 600px) {
-    h1 { font-size: 2.2rem; }
-    h2 { font-size: 1.8rem; }
-    .plan-price .amount { font-size: 3.5rem; }
-    .trust-item h3 { font-size: 1.8rem; }
-}
-
-/* ======================================================================
-   REFINAMENTO FINAL (Alinhamento "Retinho", Animações Lindíssimas e Fino)
-   - Este bloco deve ser colado no final do index.css (funciona como override)
-   ====================================================================== */
-
-/* 1. VARIÁVEIS DE ESPAÇAMENTO REFORÇADAS (Maior Respiração - Fino) */
-:root {
-    --section-vertical-space: 160px; /* Aumentado: Mais espaço entre seções */
-    --card-padding: 50px; /* Mais padding interno nos cards */
-    --gap-spacing: 45px; /* Mais espaço entre colunas de grid */
-}
-
-/* Aplicação das Novas Variáveis para o Layout */
-.section-padding { padding: var(--section-vertical-space) 0 !important; }
-.plan-card, .module-card { padding: var(--card-padding) !important; }
-
-/* 2. FORÇANDO ALINHAMENTO PERFEITO (Grid "Retinho" em todas as seções) */
-
-/* Essencial: Garante que todos os cards em grids tenham a mesma altura */
-.modules-grid, .pricing-grid, .infra-cards-grid {
+.hero-grid {
     display: grid;
-    gap: var(--gap-spacing);
-    align-items: stretch; /* FORÇA o alinhamento vertical, corrigindo o "torto" */
-}
-
-/* Trust Bar: Garante que o conteúdo de confiança esteja alinhado verticalmente */
-.trust-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
     align-items: center;
 }
 
-/* Card Content: Garante que o conteúdo interno esteja organizado */
-.plan-card, .module-card {
+/* BADGE (O Gancho) */
+.hook-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(59, 130, 246, 0.08); /* Azul muito sutil */
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: #93C5FD;
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-size: 13px; font-weight: 500; margin-bottom: 32px;
+}
+.badge-dot {
+    width: 6px; height: 6px; background: #60A5FA; border-radius: 50%;
+    box-shadow: 0 0 8px #60A5FA;
+}
+
+/* TÍTULO (Typography) */
+h1 {
+    font-size: 3.5rem; /* 56px */
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.04em; /* Tracking negativo (segredo do design moderno) */
+    margin-bottom: 24px;
+    color: white;
+}
+
+.gradient-text {
+    /* Gradiente metálico suave */
+    background: linear-gradient(to right, #FFFFFF 20%, #94A3B8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+    font-size: 1.125rem; /* 18px */
+    color: var(--text-muted);
+    font-weight: 400;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    max-width: 480px;
+}
+
+/* BOTÕES DE AÇÃO */
+.cta-group { display: flex; gap: 16px; margin-bottom: 48px; }
+
+.btn-primary-large {
+    background: var(--text-main);
+    color: black;
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-weight: 600; font-size: 15px;
+    display: flex; align-items: center; gap: 8px;
+}
+.btn-primary-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -10px rgba(255,255,255,0.3);
+}
+
+.btn-secondary-large {
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-weight: 500; font-size: 15px;
+    color: var(--text-main);
+    background: var(--glass-surface);
+    border: 1px solid var(--glass-border);
+    display: flex; align-items: center; gap: 8px;
+}
+.btn-secondary-large:hover {
+    background: var(--glass-highlight);
+    border-color: rgba(255,255,255,0.2);
+}
+
+/* INDICADORES (Trust) - Ícones Minimalistas */
+.trust-indicators {
+    display: flex; align-items: center; gap: 24px;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 24px;
+}
+.trust-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+}
+/* Estilizando o ícone "feio" para ficar bonito */
+.trust-item i {
+    color: var(--text-main);
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* =========================================
+   5. VISUAL 3D & CARDS (O "Tchan")
+   ========================================= */
+.visual-container {
+    position: relative;
+    perspective: 2000px;
+}
+
+/* A Imagem Principal */
+.main-mockup-wrapper {
+    position: relative;
+    border-radius: 12px;
+    padding: 10px;
+    
+    /* Efeito Vidro Escuro ao redor da imagem */
+    background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid var(--glass-border);
+    box-shadow: 
+        0 50px 100px -20px rgba(0,0,0,0.6), /* Sombra profunda */
+        0 0 0 1px rgba(0,0,0,0.2); /* Borda preta fina */
+
+    /* Transformação 3D */
+    transform: rotateY(-10deg) rotateX(4deg);
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.main-mockup-wrapper:hover {
+    transform: rotateY(-4deg) rotateX(2deg) scale(1.02);
+}
+
+.dashboard-img {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+    /* Filtro leve para a imagem se fundir melhor com o dark mode */
+    filter: contrast(1.05) saturate(1.1); 
+}
+
+/* --- CARDS FLUTUANTES (WIDGETS) --- 
+   Aqui está a mágica para remover o aspecto "feio" dos ícones.
+   Criamos caixas de vidro fosco elegantes. 
+*/
+.floating-card {
+    position: absolute;
+    background: rgba(15, 15, 20, 0.75); /* Fundo escuro semi-transparente */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px 16px;
+    border-radius: 12px;
+    
+    display: flex; align-items: center; gap: 12px;
+    
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    z-index: 20;
+    min-width: 180px;
+}
+
+/* Animação suave de flutuação */
+.floating-card { animation: float ease-in-out infinite; }
+.card-top-right { top: 40px; right: -40px; animation-duration: 6s; }
+.card-bottom-left { bottom: 60px; left: -40px; animation-duration: 7s; animation-delay: 1s; }
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+/* ESTILIZANDO OS ÍCONES DOS CARDS (Correção do "Feio") */
+.icon-box {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    
+    /* Gradiente sutil no fundo do ícone */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ícone de Sucesso (Verde) */
+.icon-box.success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.icon-box.success i { color: #34D399; }
+
+/* Ícone de Alerta (Laranja) */
+.icon-box.warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.05));
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.icon-box.warning i { color: #FBBF24; }
+
+/* Texto dos Cards */
+.card-info .label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dark);
+    margin-bottom: 2px;
+    font-weight: 600;
+}
+.card-info .value {
+    font-size: 15px; font-weight: 600; color: white;
+}
+
+/* =========================================
+   6. RESPONSIVIDADE
+   ========================================= */
+@media (max-width: 1024px) {
+    .navbar-content { width: 95%; padding: 12px 20px; }
+    .nav-menu { display: none; } /* Mobile Menu seria necessário aqui */
+    
+    .hero-grid { grid-template-columns: 1fr; text-align: center; }
+    .hero-wrapper { padding-top: 140px; }
+    
+    .hook-badge, .cta-group, .trust-indicators { justify-content: center; }
+    .subtitle { margin: 0 auto 40px; }
+    
+    .main-mockup-wrapper {
+        margin-top: 40px;
+        transform: none; /* Remove 3D no mobile para não quebrar layout */
+    }
+    .main-mockup-wrapper:hover { transform: none; }
+    
+    .floating-card { display: none; } /* Remove widgets no mobile para limpar a tela */
+    
+    h1 { font-size: 2.5rem; }
+}
+
+/* =========================================
+   1. CORE E VARIÁVEIS (Dark Mode Sóbrio)
+   ========================================= */
+:root {
+    --bg-core: #050507;      /* Preto profundo */
+    --text-main: #FFFFFF;
+    --text-muted: #94A3B8;   /* Cinza azulado para leitura */
+    
+    /* Acentos */
+    --accent-blue: #3B82F6;
+    --accent-purple: #8B5CF6;
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(20, 20, 25, 0.6);
+    
+    --font-stack: 'Inter', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-core);
+    color: var(--text-main);
+    font-family: var(--font-stack);
+    overflow-x: hidden;
+    line-height: 1.6;
+}
+
+a { text-decoration: none; color: inherit; transition: 0.3s; }
+.container { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+/* Luz de fundo fixa (Sem piscar) */
+.ambient-light {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    z-index: -1;
+    opacity: 0.25; /* Mais sutil */
+}
+.light-1 { top: -100px; left: -10%; width: 500px; height: 500px; background: var(--accent-blue); }
+.light-2 { bottom: 0; right: -10%; width: 600px; height: 600px; background: var(--accent-purple); }
+
+/* =========================================
+   2. NAVBAR (Vidro Limpo)
+   ========================================= */
+.glass-header {
+    position: fixed;
+    top: 20px; width: 100%; z-index: 100;
+    display: flex; justify-content: center;
+    /* Animação de entrada: desce do topo */
+    animation: slideDown 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.navbar-content {
+    background: rgba(10, 12, 16, 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 50px;
+    padding: 10px 30px;
+    width: 90%; max-width: 1100px;
+    display: flex; align-items: center; justify-content: space-between;
+}
+
+.logo-area { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+.logo-icon { color: var(--accent-blue); }
+.highlight { color: var(--accent-blue); }
+
+.nav-menu { display: flex; gap: 25px; }
+.nav-link { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; }
+.nav-link:hover { color: white; }
+
+.nav-actions { display: flex; align-items: center; gap: 20px; }
+.btn-text { font-size: 0.9rem; font-weight: 600; }
+.btn-glow {
+    background: white; color: black;
+    padding: 8px 20px; border-radius: 30px;
+    font-size: 0.85rem; font-weight: 700;
+}
+
+/* =========================================
+   3. HERO SECTION
+   ========================================= */
+.hero-wrapper {
+    padding-top: 180px; padding-bottom: 100px;
+    min-height: 100vh; display: flex; align-items: center;
+}
+
+.hero-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
+}
+
+/* --- Texto --- */
+.hook-badge {
+    display: inline-block;
+    background: rgba(59, 130, 246, 0.1);
+    color: #60A5FA;
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 600; margin-bottom: 25px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+h1 {
+    font-size: 3.5rem; line-height: 1.1; font-weight: 800;
+    margin-bottom: 25px; letter-spacing: -1.5px;
+}
+
+/* EFEITO DE DIGITAÇÃO (Typewriter) 
+   Aplicado apenas no span .gradient-text para não quebrar linhas */
+.gradient-text {
+    background: linear-gradient(90deg, #fff, #94A3B8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* Configuração da digitação */
+    display: inline-block;
+    overflow: hidden; /* Esconde o texto até ser "digitado" */
+    white-space: nowrap; /* Impede quebra de linha durante a digitação */
+    border-right: 3px solid var(--accent-blue); /* O cursor piscando */
+    width: 0; /* Começa com largura zero */
+    
+    /* Animação: digita em 2s, pisca cursor infinitamente */
+    animation: 
+        typing 2.5s steps(30, end) forwards, 
+        blinkCursor 0.8s step-end infinite;
+    animation-delay: 0.5s; /* Espera um pouco antes de começar */
+}
+
+/* Garante que o span tenha altura para o cursor não sumir */
+.gradient-text { vertical-align: bottom; padding-right: 5px; }
+
+.subtitle {
+    font-size: 1.1rem; color: var(--text-muted);
+    margin-bottom: 40px; max-width: 500px;
+}
+
+.cta-group { display: flex; gap: 15px; }
+.btn-primary-large {
+    background: var(--accent-blue); color: white;
+    padding: 14px 32px; border-radius: 8px; font-weight: 600;
+    box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+}
+.btn-secondary-large {
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 14px 32px; border-radius: 8px; font-weight: 600;
+}
+
+.trust-indicators {
+    margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 20px; display: flex; gap: 20px; color: var(--text-muted); font-size: 0.9rem;
+}
+
+/* =========================================
+   4. VISUAL (IMAGEM + ELEMENTOS ESTÁTICOS)
+   ========================================= */
+.visual-container {
+    position: relative;
+    /* Removemos a perspectiva exagerada para ficar mais "clean" */
+    perspective: 1000px; 
+}
+
+/* Imagem Principal */
+.main-mockup-wrapper {
+    position: relative;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.02);
+    padding: 8px;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5); /* Sombra forte para destacar */
+    
+    /* Entrada 3D Elegante (Apenas uma vez) */
+    opacity: 0;
+    animation: revealCard 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation-delay: 0.2s;
+    
+    /* Ajuste de ângulo fixo (Estático, sem mexer no mouse) */
+    transform: rotateY(-10deg) rotateX(5deg); 
+}
+
+.dashboard-img { width: 100%; border-radius: 8px; display: block; }
+
+/* CARDS WIDGETS (Estáticos e Fixos) */
+.floating-card {
+    position: absolute;
+    background: #131316; /* Fundo sólido escuro para leitura */
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+    z-index: 10;
+    
+    /* Entrada "Pop" (Aparece e fica parado) */
+    opacity: 0;
+    animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Posições Fixas */
+.card-top-right {
+    top: 40px; right: -30px;
+    animation-delay: 1.4s; /* Aparece por último */
+}
+
+.card-bottom-left {
+    bottom: 50px; left: -40px;
+    animation-delay: 1.6s;
+}
+
+/* Estilo interno dos cards */
+.icon-box {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+}
+.success { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.warning { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+.card-info .label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-muted); }
+.card-info .value { font-size: 0.95rem; font-weight: 700; color: white; }
+
+
+/* =========================================
+   5. KEYFRAMES (Animações de Entrada)
+   ========================================= */
+
+/* Digitação */
+@keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+/* Cursor Piscando */
+@keyframes blinkCursor {
+    from, to { border-color: transparent; }
+    50% { border-color: var(--accent-blue); }
+}
+
+/* Navbar descendo */
+@keyframes slideDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
+/* Revelação da Imagem (Sobe e gira levemente) */
+@keyframes revealCard {
+    from {
+        opacity: 0;
+        transform: rotateY(-15deg) rotateX(10deg) translateY(50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: rotateY(-10deg) rotateX(5deg) translateY(0) scale(1);
+    }
+}
+
+/* Pop dos Widgets (Efeito Elástico de entrada) */
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* =========================================
+   6. RESPONSIVIDADE
+   ========================================= */
+@media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; text-align: center; }
+    
+    /* No mobile, removemos o efeito de digitação e 3D complexo para não quebrar */
+    .gradient-text { 
+        white-space: normal; 
+        border: none; 
+        width: auto; 
+        animation: none; 
+        display: inline;
+    }
+    
+    .floating-card { display: none; } /* Remove widgets no mobile */
+    .main-mockup-wrapper { transform: none; margin-top: 40px; }
+    
+    h1 { font-size: 2.5rem; }
+    .nav-menu, .nav-actions { display: none; } /* Menu simples */
+}
+
+/* =========================================
+   2. HERO SECTION (Modo Cinematic: Imponente e Estático)
+   ========================================= */
+.hero-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding-top: 120px;
+    padding-bottom: 80px;
+    position: relative;
+    overflow-x: hidden; /* Essencial para a imagem gigante não quebrar o site */
+}
+
+.hero-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr; /* Texto menor | Imagem GIGANTE */
+    gap: 30px;
+    align-items: center;
+    width: 100%;
+}
+
+/* --- LADO ESQUERDO: TEXTO (Mantido, apenas ajustes de z-index) --- */
+.hero-text-area {
+    position: relative;
+    z-index: 10; /* Texto sempre na frente */
+}
+
+/* Badge, H1, Subtitle, Buttons... (Mantenha o estilo anterior ou copie abaixo) */
+.hook-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60A5FA; padding: 8px 16px; border-radius: 50px;
+    font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 30px;
+}
+.badge-dot { width: 8px; height: 8px; background: #60A5FA; border-radius: 50%; box-shadow: 0 0 10px #60A5FA; }
+
+h1 { font-size: 3.5rem; line-height: 1.1; font-weight: 700; margin-bottom: 30px; letter-spacing: -1.5px; }
+
+/* Animação de Digitação (Start & Stop) */
+.typing-effect {
+    display: inline-block; overflow: hidden; white-space: nowrap;
+    border-right: 4px solid var(--accent-blue); width: 0;
+    background: linear-gradient(90deg, #60A5FA, #A78BFA); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    padding-right: 5px;
+    animation: typeWriter 2.5s steps(30) 0.5s forwards, blinkCursor 0.8s step-end infinite;
+}
+
+.subtitle { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 40px; max-width: 450px; line-height: 1.7; }
+.cta-group { display: flex; gap: 15px; margin-bottom: 50px; }
+.btn-primary-large { background: #fff; color: #000; padding: 16px 36px; border-radius: 12px; font-weight: 700; transition: 0.2s; }
+.btn-primary-large:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(255,255,255,0.2); }
+.btn-secondary-large { border: 1px solid rgba(255,255,255,0.2); color: white; padding: 16px 36px; border-radius: 12px; font-weight: 600; }
+.trust-indicators { border-top: 1px solid var(--glass-border); padding-top: 25px; display: flex; gap: 30px; color: var(--text-muted); font-size: 0.9rem; }
+.trust-item i { color: var(--accent-blue); margin-right: 8px; }
+
+
+/* --- LADO DIREITO: O "MONOLITO" VISUAL --- */
+.hero-visual-area {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Perspectiva ajustada para o novo ângulo */
+    perspective: 2500px; 
+}
+
+.visual-container {
+    position: relative;
+    width: 100%;
+    display: flex; justify-content: center; align-items: center;
+}
+
+/* A IMAGEM PRINCIPAL */
+.main-mockup-wrapper {
+    position: relative;
+    
+    /* TAMANHO: Aumentado para dominar a tela */
+    width: 140%; 
+    margin-right: -20%; /* Puxa para a direita */
+    
+    border-radius: 20px;
+    padding: 12px; /* Borda de vidro mais grossa */
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    
+    /* NOVO ÂNGULO: Inclinado para trás (Tilt Back) e levemente virado */
+    transform: rotateX(15deg) rotateY(-12deg) rotateZ(2deg);
+    
+    /* SOMBRA MACIÇA: Faz a imagem parecer pesada e real */
+    box-shadow: 
+        0 60px 100px -20px rgba(0,0,0,0.9), /* Sombra preta forte embaixo */
+        inset 0 0 0 1px rgba(255,255,255,0.1); /* Brilho interno */
+        
+    transition: transform 0.4s ease-out; /* Movimento suave apenas no mouse */
+    z-index: 1;
+}
+
+/* Micro-interação: Levanta um pouco ao passar o mouse */
+.main-mockup-wrapper:hover {
+    transform: rotateX(10deg) rotateY(-8deg) scale(1.02);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.dashboard-img {
+    width: 100%;
+    border-radius: 12px;
+    display: block;
+    /* Aumenta o contraste para parecer uma tela OLED */
+    filter: contrast(1.1) saturate(1.1);
+}
+
+/* --- WIDGETS ESTÁTICOS (Travados no lugar) --- */
+.floating-widget {
+    position: absolute;
+    background: #0F1014; /* Fundo sólido bem escuro */
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 14px 20px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.8); /* Sombra forte para destacar da imagem */
+    z-index: 5; /* Sempre na frente da imagem */
+    
+    /* SEM ANIMAÇÃO DE FLUTUAÇÃO */
+    animation: none !important;
+    
+    /* Transformação para acompanhar o ângulo da imagem */
+    transform: rotateX(15deg) rotateY(-12deg); 
+}
+
+/* Posicionamento Fixo e Organizado */
+
+/* 1. Receita: No topo direito, saindo da borda */
+.widget-graph {
+    top: -30px;
+    right: -10%; 
+    border-bottom: 2px solid #10B981; /* Detalhe verde */
+}
+
+/* 2. Sync: Na base esquerda, sobrepondo a borda */
+.widget-sync {
+    bottom: 40px;
+    left: -10%;
+    display: flex; align-items: center; gap: 15px;
+    border-left: 2px solid #3B82F6; /* Detalhe azul */
+}
+
+/* 3. Status: Topo esquerdo, pequeno */
+.widget-alert {
+    top: 20px;
+    left: -5%;
+    background: #3B82F6; color: white; border: none;
+    font-size: 0.8rem; font-weight: 700;
+}
+
+
+/* --- ESTILO INTERNO DOS WIDGETS --- */
+.widget-header { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.widget-value { font-size: 1.3rem; font-weight: 800; color: white; letter-spacing: -0.5px; }
+.mini-chart { display: flex; align-items: flex-end; gap: 4px; height: 25px; margin-top: 5px; }
+.bar { flex: 1; background: #10B981; border-radius: 2px; }
+.icon-circle { width: 42px; height: 42px; background: rgba(59,130,246,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #3B82F6; font-size: 1.2rem; }
+.widget-text strong { display: block; font-size: 0.95rem; color: white; margin-bottom: 2px; }
+.widget-text span { font-size: 0.75rem; color: #94A3B8; }
+
+/* =========================================
+   ANIMAÇÕES DE ENTRADA (Apenas uma vez)
+   ========================================= */
+
+@keyframes typeWriter { from { width: 0; } to { width: 100%; } }
+@keyframes blinkCursor { from, to { border-color: transparent; } 50% { border-color: var(--accent-blue); } }
+
+/* =========================================
+   MOBILE
+   ========================================= */
+@media (max-width: 1024px) {
+    .hero-wrapper { padding-top: 100px; overflow: visible; }
+    .hero-grid { grid-template-columns: 1fr; gap: 50px; }
+    
+    /* Imagem no mobile: Reset total */
+    .main-mockup-wrapper { 
+        width: 100%; margin-right: 0; margin-top: 30px;
+        transform: none; /* Remove ângulo 3D */
+    }
+    .main-mockup-wrapper:hover { transform: none; }
+    .floating-widget { display: none; } /* Limpa a tela */
+    
+    .typing-effect { white-space: normal; border: none; width: auto; animation: none; background: none; -webkit-text-fill-color: var(--accent-blue); }
+}
+
+/* =========================================
+   SEÇÃO 2: TRUST BAR (Barra de Confiança)
+   ========================================= */
+.trust-bar {
+    background: #08090C; /* Um tom levemente diferente do fundo */
+    border-top: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 40px 0;
+}
+
+.trust-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.trust-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: var(--text-muted);
+    transition: 0.3s;
+}
+
+.trust-item:hover {
+    color: var(--text-main); /* Acende ao passar o mouse */
+}
+
+.trust-item i {
+    font-size: 1.5rem;
+    color: #333640; /* Ícone escuro por padrão */
+    transition: 0.3s;
+}
+.trust-item:hover i { color: var(--accent-blue); text-shadow: 0 0 10px rgba(59,130,246,0.5); }
+
+.trust-info h3 { font-size: 0.95rem; font-weight: 700; color: white; margin-bottom: 2px; }
+.trust-info p { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+
+.trust-divider {
+    width: 1px; height: 40px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+/* =========================================
+   SEÇÃO 3: FEATURES (Plataforma)
+   ========================================= */
+.features-section {
+    padding: 120px 0;
+    position: relative;
+}
+
+/* Cabeçalho da Seção */
+.section-header { text-align: center; max-width: 700px; margin: 0 auto 80px; }
+
+.section-tag {
+    display: inline-block;
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent-blue); font-weight: 700; margin-bottom: 15px;
+}
+
+.section-header h2 {
+    font-size: 2.5rem; font-weight: 700; color: var(--text-muted);
+    margin-bottom: 20px; letter-spacing: -1px;
+}
+
+.white-highlight { color: white; } /* Destaca parte do título */
+
+.section-header p { font-size: 1.1rem; color: var(--text-muted); line-height: 1.6; }
+
+
+/* GRID DE CARDS */
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+}
+
+/* O CARD MODULAR (Estilo Vidro Dark) */
+.feature-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 40px;
+    position: relative;
+    overflow: hidden; /* Para o brilho não vazar */
+    transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Glow de Fundo (Luz ambiente dentro do card) */
+.card-glow {
+    position: absolute;
+    top: 0; right: 0; width: 300px; height: 300px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0; /* Invisível por padrão */
+    transition: opacity 0.5s ease;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Conteúdo acima do Glow */
+.feature-card > * { position: relative; z-index: 1; }
+
+.feature-icon {
+    width: 50px; height: 50px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    transition: 0.3s;
+}
+
+.feature-card h3 { font-size: 1.5rem; margin-bottom: 15px; font-weight: 700; color: white; }
+.feature-card p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 30px; }
+
+/* Lista de Features */
+.feature-list { list-style: none; padding: 0; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; }
+.feature-list li {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--text-muted); font-size: 0.9rem; margin-bottom: 12px;
+}
+.feature-list li i { font-size: 0.8rem; }
+
+
+/* --- TEMAS DE CORES (Hover Effects) --- */
+
+/* 1. AZUL (Fiscal) */
+.card-blue:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.card-blue:hover .card-glow {
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent);
+    opacity: 1;
+}
+.card-blue:hover .feature-icon { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+.card-blue .feature-list li i { color: var(--accent-blue); }
+
+
+/* 2. VERDE (Financeiro) */
+.card-green:hover {
+    border-color: rgba(16, 185, 129, 0.5);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.card-green:hover .card-glow {
+    background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.15), transparent);
+    opacity: 1;
+}
+.card-green:hover .feature-icon { background: #10B981; color: white; border-color: #10B981; }
+.card-green .feature-list li i { color: #10B981; }
+
+
+/* 3. ROXO (Logística) */
+.card-purple:hover {
+    border-color: rgba(139, 92, 246, 0.5);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.card-purple:hover .card-glow {
+    background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.15), transparent);
+    opacity: 1;
+}
+.card-purple:hover .feature-icon { background: var(--accent-purple); color: white; border-color: var(--accent-purple); }
+.card-purple .feature-list li i { color: var(--accent-purple); }
+
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+    .trust-grid { justify-content: center; gap: 40px; }
+    .trust-divider { display: none; } /* Remove divisórias no mobile */
+    .modules-grid { grid-template-columns: 1fr; }
+    .section-header h2 { font-size: 2rem; }
+}
+
+/* =========================================
+   NOVA TRUST BAR (Ícones Phosphor)
+   ========================================= */
+.trust-bar {
+    background: #08090C;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 30px 0;
+}
+
+.trust-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.trust-item {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--text-muted);
+    transition: 0.3s;
+}
+
+.trust-item i {
+    font-size: 1.8rem; /* Ícones maiores e mais finos */
+    color: #333;
+    transition: 0.3s;
+}
+
+.trust-item:hover i { color: var(--accent-blue); transform: scale(1.1); }
+.trust-item:hover { color: white; }
+
+.trust-info h3 { font-size: 0.9rem; font-weight: 700; color: white; margin: 0; }
+.trust-info p { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+.trust-divider { width: 1px; height: 30px; background: rgba(255,255,255,0.1); }
+
+
+/* =========================================
+   SEÇÃO 3: BENTO GRID (Layout Moderno)
+   ========================================= */
+.features-section { padding: 100px 0; }
+
+.section-header { text-align: center; max-width: 600px; margin: 0 auto 60px; }
+
+.section-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent-blue); font-weight: 700; margin-bottom: 20px;
+    background: rgba(59, 130, 246, 0.1); padding: 6px 12px; border-radius: 20px;
+}
+
+.section-header h2 {
+    font-size: 2.8rem; font-weight: 700; color: var(--text-muted);
+    margin-bottom: 20px; line-height: 1.1; letter-spacing: -1px;
+}
+.white-highlight { color: white; }
+.section-header p { font-size: 1.1rem; color: var(--text-muted); }
+
+
+/* O GRID BENTO (Assimétrico) */
+.bento-grid {
+    display: grid;
+    /* Define 3 colunas no desktop */
+    grid-template-columns: 1.4fr 1fr 1fr; 
+    gap: 24px;
+    min-height: 400px;
+}
+
+/* CARD BASE */
+.bento-card {
+    background: #0E0E11;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex; flex-direction: column; justify-content: space-between;
+}
+
+.bento-card:hover {
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* ÍCONES NOS CARDS */
+.icon-box {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 24px;
+}
+
+.blue { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+.green { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.purple { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+
+.bento-card h3 { font-size: 1.5rem; color: white; margin-bottom: 12px; }
+.bento-card p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+
+/* Tags Tech (Card Fiscal) */
+.tags-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.tech-tag {
+    font-size: 0.75rem; font-weight: 600; color: #fff;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px; border-radius: 6px;
+}
+
+/* Listas (Cards Menores) */
+.mini-list { list-style: none; }
+.mini-list li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;
+}
+.mini-list li i { color: var(--text-main); } /* Checkmark branco */
+
+
+/* VISUAIS DECORATIVOS (O "Charme") */
+.card-visual {
+    position: absolute;
+    bottom: 0; right: 0; width: 100%; height: 100%;
+    pointer-events: none; opacity: 0.3;
+    background: radial-gradient(circle at bottom right, rgba(59,130,246,0.15), transparent 60%);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+    .trust-grid { justify-content: center; gap: 40px; }
+    .trust-divider { display: none; }
+    
+    /* No mobile, o grid vira uma coluna só */
+    .bento-grid { grid-template-columns: 1fr; }
+    
+    .section-header h2 { font-size: 2.2rem; }
+}
+
+/* =========================================
+   NOVA TRUST BAR (Ícones Phosphor)
+   ========================================= */
+.trust-bar {
+    background: #08090C;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 30px 0;
+}
+
+.trust-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.trust-item {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--text-muted);
+    transition: 0.3s;
+}
+
+.trust-item i {
+    font-size: 1.8rem; /* Ícones maiores e mais finos */
+    color: #333;
+    transition: 0.3s;
+}
+
+.trust-item:hover i { color: var(--accent-blue); transform: scale(1.1); }
+.trust-item:hover { color: white; }
+
+.trust-info h3 { font-size: 0.9rem; font-weight: 700; color: white; margin: 0; }
+.trust-info p { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+.trust-divider { width: 1px; height: 30px; background: rgba(255,255,255,0.1); }
+
+
+/* =========================================
+   SEÇÃO 3: BENTO GRID (Layout Moderno)
+   ========================================= */
+.features-section { padding: 100px 0; }
+
+.section-header { text-align: center; max-width: 600px; margin: 0 auto 60px; }
+
+.section-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent-blue); font-weight: 700; margin-bottom: 20px;
+    background: rgba(59, 130, 246, 0.1); padding: 6px 12px; border-radius: 20px;
+}
+
+.section-header h2 {
+    font-size: 2.8rem; font-weight: 700; color: var(--text-muted);
+    margin-bottom: 20px; line-height: 1.1; letter-spacing: -1px;
+}
+.white-highlight { color: white; }
+.section-header p { font-size: 1.1rem; color: var(--text-muted); }
+
+
+/* O GRID BENTO (Assimétrico) */
+.bento-grid {
+    display: grid;
+    /* Define 3 colunas no desktop */
+    grid-template-columns: 1.4fr 1fr 1fr; 
+    gap: 24px;
+    min-height: 400px;
+}
+
+/* CARD BASE */
+.bento-card {
+    background: #0E0E11;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    display: flex; flex-direction: column; justify-content: space-between;
+}
+
+.bento-card:hover {
+    border-color: rgba(255,255,255,0.2);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* ÍCONES NOS CARDS */
+.icon-box {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 24px;
+}
+
+.blue { background: rgba(59, 130, 246, 0.1); color: #3B82F6; }
+.green { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.purple { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+
+.bento-card h3 { font-size: 1.5rem; color: white; margin-bottom: 12px; }
+.bento-card p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+
+/* Tags Tech (Card Fiscal) */
+.tags-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.tech-tag {
+    font-size: 0.75rem; font-weight: 600; color: #fff;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px; border-radius: 6px;
+}
+
+/* Listas (Cards Menores) */
+.mini-list { list-style: none; }
+.mini-list li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;
+}
+.mini-list li i { color: var(--text-main); } /* Checkmark branco */
+
+
+/* VISUAIS DECORATIVOS (O "Charme") */
+.card-visual {
+    position: absolute;
+    bottom: 0; right: 0; width: 100%; height: 100%;
+    pointer-events: none; opacity: 0.3;
+    background: radial-gradient(circle at bottom right, rgba(59,130,246,0.15), transparent 60%);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+    .trust-grid { justify-content: center; gap: 40px; }
+    .trust-divider { display: none; }
+    
+    /* No mobile, o grid vira uma coluna só */
+    .bento-grid { grid-template-columns: 1fr; }
+    
+    .section-header h2 { font-size: 2.2rem; }
+}
+
+/* =========================================
+   SEÇÃO 3: BENTO GRID (Corrigido e Alto Contraste)
+   ========================================= */
+.features-section { padding: 100px 0; }
+
+.bento-grid {
+    display: grid;
+    /* Coluna 1 (Fiscal) ocupa 50% | Colunas 2 e 3 dividem o resto */
+    grid-template-columns: 2fr 1fr 1fr; 
+    gap: 24px;
+    /* Garante que todos os cards tenham a mesma altura */
+    align-items: stretch; 
+    min-height: 480px;
+}
+
+/* --- CARD BASE --- */
+.bento-card {
+    background: #0E0E12; /* Fundo Preto levemente azulado */
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 32px;
+    
+    /* Layout Flex para empurrar o visual para baixo */
+    display: flex; 
+    flex-direction: column; 
+    justify-content: space-between;
+    
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* Hover no Card: Borda mais clara e leve subida */
+.bento-card:hover {
+    border-color: rgba(255,255,255,0.3);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    background: #121216; /* Clareia um pouco o fundo */
+}
+
+/* Texto do Card */
+.card-text { 
+    position: relative; 
+    z-index: 10; 
+    margin-bottom: 20px; 
+}
+
+.bento-card h3 { 
+    font-size: 1.6rem; 
+    color: white; 
+    margin-bottom: 10px; 
+    font-weight: 700; 
+}
+
+.bento-card p { 
+    font-size: 0.95rem; 
+    color: #A1A1AA; /* Cinza claro para leitura */
+    line-height: 1.6; 
+}
+
+/* --- ÁREA VISUAL (Container das Ilustrações) --- */
+.card-visual {
+    position: relative;
+    width: 100%;
+    height: 180px; /* Altura fixa para alinhar tudo */
+    display: flex;
+    align-items: flex-end; /* Alinha desenhos na base */
+    justify-content: center;
+    border-top: 1px solid rgba(255,255,255,0.03); /* Linha sutil separando texto */
+    padding-top: 20px;
+}
+
+
+/* =========================================
+   1. ILUSTRAÇÃO FISCAL (Documento)
+   ========================================= */
+.doc-interface {
+    width: 80%;
+    background: #1C1C1F; /* Cinza Médio (Mais visível) */
+    border: 1px solid rgba(255,255,255,0.15);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    padding: 20px;
+    position: relative;
+    transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: translateY(10px);
+}
+
+.card-fiscal:hover .doc-interface {
+    transform: translateY(0);
+    background: #222226;
+    border-color: #60A5FA; /* Borda Azul no Hover */
+}
+
+/* Linhas do "Papel" */
+.doc-line { height: 6px; background: rgba(255,255,255,0.1); margin-bottom: 12px; border-radius: 10px; }
+.doc-line.short { width: 50%; }
+
+/* Badge de Status no Doc */
+.doc-badge {
+    position: absolute; top: 20px; right: 20px;
+    font-size: 0.7rem; font-weight: 700;
+    background: #333; color: #888;
+    padding: 4px 8px; border-radius: 4px;
+    transition: 0.3s;
+}
+.card-fiscal:hover .doc-badge {
+    background: #10B981; color: black; /* Fica verde "OK" */
+}
+/* Gambiarra CSS para mudar texto sem JS */
+.card-fiscal:hover .doc-badge::after { content: " OK"; } 
+
+
+/* NOTIFICAÇÃO FLUTUANTE (Pop-up) */
+.hover-notification {
+    position: absolute;
+    bottom: 40px; 
+    background: #3B82F6; /* Azul Vibrante */
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    
+    /* Animação de entrada */
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-fiscal:hover .hover-notification {
+    opacity: 1;
+    transform: translateY(-10px) scale(1); /* Sobe um pouco */
+}
+
+.icon-circle {
+    width: 24px; height: 24px; background: rgba(255,255,255,0.2);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+}
+.notif-text strong { display: block; font-size: 0.8rem; line-height: 1.2; }
+.notif-text span { font-size: 0.7rem; opacity: 0.8; }
+
+
+/* =========================================
+   2. ILUSTRAÇÃO FINANCEIRA (Gráfico)
+   ========================================= */
+.chart-interface {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+    padding-bottom: 0;
+}
+
+.chart-container {
+    display: flex; align-items: flex-end; gap: 12px;
+    height: 120px;
+    padding-bottom: 0;
+}
+
+.css-bar {
+    width: 28px;
+    background: #27272A; /* Cinza escuro visível */
+    border-radius: 6px 6px 0 0;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    height: 20%; /* Altura inicial */
+}
+
+/* Hover: Barras crescem e ficam verdes */
+.card-finance:hover .css-bar { background: #10B981; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+.card-finance:hover .bar-1 { height: 40%; }
+.card-finance:hover .bar-2 { height: 70%; transition-delay: 0.05s; }
+.card-finance:hover .bar-3 { height: 50%; transition-delay: 0.1s; }
+.card-finance:hover .bar-4 { height: 90%; transition-delay: 0.15s; }
+
+/* Tooltip de Lucro */
+.chart-tooltip {
+    position: absolute; top: 10%;
+    background: #18181B; border: 1px solid #10B981;
+    padding: 8px 14px; border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    
+    opacity: 0; transform: translateY(10px);
+    transition: 0.4s ease 0.2s;
+}
+.card-finance:hover .chart-tooltip { opacity: 1; transform: translateY(0); }
+.chart-tooltip span { display: block; font-size: 0.65rem; color: #A1A1AA; text-transform: uppercase; }
+.chart-tooltip strong { color: #10B981; font-size: 1.1rem; }
+
+
+/* =========================================
+   3. ILUSTRAÇÃO ESTOQUE (Cartões 3D)
+   ========================================= */
+.stock-interface {
+    position: relative; width: 100%; height: 100%;
+    display: flex; justify-content: center; align-items: flex-end;
+    perspective: 1000px;
+    padding-bottom: 20px;
+}
+
+.stock-card {
+    width: 160px; height: 90px;
+    border-radius: 12px;
+    display: flex; flex-direction: column; justify-content: center; padding: 15px;
+    position: absolute;
+    transition: 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+/* Card Traseiro (Escuro) */
+.back-card {
+    background: #18181B; border: 1px solid rgba(255,255,255,0.1);
+    bottom: 20px; z-index: 1; transform: scale(0.9);
+}
+
+/* Card Frontal (Mais claro) */
+.front-card {
+    background: #27272A; border: 1px solid rgba(255,255,255,0.2);
+    bottom: 40px; z-index: 2;
+}
+
+/* Hover: Efeito de Pilha se abrindo */
+.card-stock:hover .back-card {
+    bottom: 10px; transform: scale(0.95) rotate(-3deg);
+    border-color: #F59E0B; background: #2D2418; /* Tom laranja escuro */
+}
+.card-stock:hover .front-card {
+    bottom: 60px; transform: rotate(3deg);
+    border-color: #8B5CF6; background: #2E1065; /* Roxo escuro */
+}
+
+/* Elementos Internos do Stock Card */
+.stock-row { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #CCC; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.orange { background: #F59E0B; }
+
+.stock-header { display: flex; align-items: center; gap: 8px; color: white; font-weight: 700; font-size: 0.85rem; margin-bottom: 5px; }
+.stock-status { 
+    font-size: 0.7rem; color: #A78BFA; 
+    opacity: 0; transition: 0.3s; margin-top: 5px; 
+    display: flex; align-items: center; gap: 4px;
+}
+.card-stock:hover .stock-status { opacity: 1; }
+
+
+/* =========================================
+   RESPONSIVIDADE (Mobile)
+   ========================================= */
+@media (max-width: 900px) {
+    .bento-grid { 
+        grid-template-columns: 1fr; /* Uma coluna no mobile */
+        min-height: auto;
+    }
+    .card-visual { height: 160px; }
+    
+    /* Ajuste para o card fiscal caber no mobile */
+    .hover-notification { bottom: 10px; padding: 8px 12px; }
+}
+
+/* =========================================
+   TRUST BAR: LIVE MONITOR STYLE
+   ========================================= */
+.trust-monitor-section {
+    padding: 60px 0; /* Espaçamento menor para ficar perto da Hero */
+    position: relative;
+    z-index: 20; /* Garante que fique acima de elementos decorativos */
+    margin-top: -60px; /* Puxa um pouco pra cima da Hero Section para integrar */
+}
+
+/* O Container Flutuante (Pílula Gigante) */
+.live-status-bar {
+    background: rgba(14, 14, 18, 0.85); /* Escuro e Transparente */
+    backdrop-filter: blur(20px);         /* Desfoque de vidro */
+    -webkit-backdrop-filter: blur(20px);
+    
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 100px; /* Borda totalmente redonda */
+    padding: 16px 40px;
+    
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    box-shadow: 
+        0 20px 50px rgba(0,0,0,0.5), /* Sombra de profundidade */
+        inset 0 1px 0 rgba(255,255,255,0.1); /* Brilho no topo */
+        
+    position: relative;
+    overflow: hidden; /* Para o efeito de scan não vazar */
+    max-width: 1100px;
+    margin: 0 auto; /* Centraliza */
+}
+
+/* Divisórias Verticais Sutis */
+.vertical-separator {
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.15), transparent);
+}
+
+/* --- MÉTRICAS INDIVIDUAIS --- */
+.status-metric {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.3s ease;
+    cursor: default;
+}
+
+.status-metric:hover {
+    transform: translateY(-2px); /* Flutua levemente ao passar o mouse */
+}
+
+/* Ícones com Fundo Brilhante (Glow) */
+.metric-icon-wrapper {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Cores específicas para cada ícone */
+.shield-glow { color: #10B981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.1); }
+.cloud-glow  { color: #3B82F6; box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); }
+.time-glow   { color: #F59E0B; box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+.map-glow    { color: #8B5CF6; box-shadow: 0 0 15px rgba(139, 92, 246, 0.1); }
+
+/* Hover: Intensifica o brilho do ícone */
+.status-metric:hover .shield-glow { background: rgba(16, 185, 129, 0.1); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+.status-metric:hover .cloud-glow  { background: rgba(59, 130, 246, 0.1); box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+.status-metric:hover .time-glow   { background: rgba(245, 158, 11, 0.1); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+.status-metric:hover .map-glow    { background: rgba(139, 92, 246, 0.1); box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+
+
+/* Textos */
+.metric-info { display: flex; flex-direction: column; }
+.metric-info .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748B; /* Cinza escuro */
+    font-weight: 600;
+}
+.metric-info .value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: white;
+    display: flex; align-items: center; gap: 6px;
+}
+
+/* Ponto Verde Pulsante (Live Dot) */
+.live-dot {
+    width: 6px; height: 6px;
+    background-color: #10B981;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #10B981;
+    animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px #10B981; }
+    100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+/* EFEITO "SCAN LINE" (Luz passando na borda inferior) */
+.scan-line {
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, #3B82F6, transparent);
+    transform: translateX(-100%);
+    animation: scanAnim 4s ease-in-out infinite;
+    opacity: 0.6;
+}
+
+@keyframes scanAnim {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* RESPONSIVIDADE (Mobile) */
+@media (max-width: 900px) {
+    .trust-monitor-section { margin-top: 0; padding: 40px 0; }
+    .live-status-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+        border-radius: 20px;
+        padding: 30px;
+    }
+    
+    .vertical-separator { display: none; } /* Remove divisórias no mobile */
+    
+    .status-metric { width: 100%; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+    .status-metric:last-child { border-bottom: none; padding-bottom: 0; }
+    
+    .scan-line { display: none; }
+}
+
+/* =========================================
+   NAVBAR INTELIGENTE (Efeito "Implosão")
+   ========================================= */
+
+.glass-header {
+    /* --- Posicionamento Fixo --- */
+    position: fixed;
+    top: 24px;
+    width: 100%;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+
+    /* --- ESTADO VISÍVEL (Padrão) --- */
+    opacity: 1;
+    transform: translateY(0) scale(1); /* Tamanho original */
+    filter: blur(0);
+
+    /* --- CONFIGURAÇÃO DA ANIMAÇÃO --- */
+    /* Anima transformações, opacidade e blur ao mesmo tempo */
+    transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    
+    will-change: transform, opacity, filter;
+}
+
+/* --- ESTADO ESCONDIDO (Quando rola para baixo) --- */
+.header-hidden {
+    /* 1. Desaparece */
+    opacity: 0;
+    
+    /* 2. Recolhe das extremidades ao centro (Encolhe para 80% e sobe) */
+    transform: translateY(-40px) scale(0.8);
+    
+    /* 3. Desfoque para suavizar a saída */
+    filter: blur(10px);
+    
+    /* 4. Impede cliques quando invisível */
+    pointer-events: none;
+}
+
+/* =========================================
+   SEÇÃO 3: BENTO GRID (Micro-Interfaces CSS)
+   ========================================= */
+.features-section { padding: 120px 0; position: relative; }
+
+.section-header { text-align: center; max-width: 700px; margin: 0 auto 80px; }
+.section-tag {
+    color: var(--accent-blue); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    background: rgba(59,130,246,0.1); padding: 6px 14px; border-radius: 20px; margin-bottom: 20px; display: inline-block;
+}
+.section-header h2 { font-size: 2.8rem; line-height: 1.1; margin-bottom: 20px; font-weight: 700; }
+.highlight-text { color: var(--text-muted); }
+
+/* GRID LAYOUT */
+.bento-grid {
+    display: grid;
+    /* 1.5 frações para o primeiro, 1 para os outros dois */
+    grid-template-columns: 1.5fr 1fr 1fr;
+    gap: 24px;
+    min-height: 460px;
+}
+
+/* CARD PADRÃO */
+.bento-card {
+    background: #0E0E12;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 36px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Hover no Card (Sobe e Brilha a Borda) */
+.bento-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255,255,255,0.2);
+    box-shadow: 0 30px 60px -10px rgba(0,0,0,0.7);
+    background: #121216;
+}
+
+/* Tipografia do Card */
+.card-content { position: relative; z-index: 10; margin-bottom: 40px; }
+.bento-card h3 { font-size: 1.6rem; margin-bottom: 12px; color: white; font-weight: 600; }
+.bento-card p { font-size: 1rem; color: #94A3B8; line-height: 1.6; }
+
+/* ÁREA VISUAL (Onde ficam os desenhos CSS) */
+.visual-area {
+    position: relative; width: 100%; height: 200px;
+    display: flex; align-items: flex-end; justify-content: center;
+    border-top: 1px solid rgba(255,255,255,0.03);
+    padding-top: 20px;
+}
+
+
+/* --- 1. VISUAL FISCAL (O Documento) --- */
+.css-doc {
+    width: 80%; background: #1C1C1F;
+    border: 1px solid rgba(255,255,255,0.1); border-bottom: none;
+    border-radius: 12px 12px 0 0; padding: 20px;
+    position: relative; transform: translateY(10px);
+    transition: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.card-fiscal:hover .css-doc { transform: translateY(0); border-color: #3B82F6; background: #20242E; }
+
+.doc-line { height: 6px; background: rgba(255,255,255,0.1); margin-bottom: 12px; border-radius: 4px; }
+.doc-line.short { width: 40%; }
+.doc-status {
+    position: absolute; top: 20px; right: 20px;
+    font-size: 0.7rem; font-weight: 700; color: #666; background: #333; padding: 4px 8px; border-radius: 4px;
+}
+/* Gambiarra chique pra trocar texto no CSS */
+.card-fiscal:hover .doc-status { background: #10B981; color: black; content: ""; }
+.card-fiscal:hover .doc-status::after { content: "OK"; }
+
+/* Popup Flutuante */
+.hover-popup {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #3B82F6; color: white; padding: 10px 16px; border-radius: 12px;
+    display: flex; align-items: center; gap: 12px; opacity: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.4s;
+    width: max-content;
+}
+.card-fiscal:hover .hover-popup { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+.icon-check { width: 20px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 50%; }
+.popup-text strong { display: block; font-size: 0.8rem; }
+.popup-text span { font-size: 0.7rem; opacity: 0.8; }
+
+
+/* --- 2. VISUAL FINANCEIRO (Gráfico de Barras) --- */
+.css-chart { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+
+.bars-container { display: flex; align-items: flex-end; gap: 12px; height: 120px; }
+.bar {
+    width: 30px; background: #27272A; border-radius: 6px 6px 0 0;
+    height: 20%; transition: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* Hover: Barras crescem e ficam verdes */
+.card-finance:hover .bar { background: #10B981; box-shadow: 0 0 20px rgba(16,185,129,0.2); }
+.card-finance:hover .bar-1 { height: 40%; }
+.card-finance:hover .bar-2 { height: 80%; transition-delay: 0.05s; }
+.card-finance:hover .bar-3 { height: 50%; transition-delay: 0.1s; }
+.card-finance:hover .bar-4 { height: 100%; transition-delay: 0.15s; }
+
+.chart-tooltip {
+    background: #18181B; border: 1px solid #10B981; color: #10B981;
+    padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; margin-bottom: 15px;
+    opacity: 0; transform: translateY(10px); transition: 0.4s 0.2s;
+}
+.card-finance:hover .chart-tooltip { opacity: 1; transform: translateY(0); }
+
+
+/* --- 3. VISUAL ESTOQUE (Camadas) --- */
+.css-layers { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: flex-end; perspective: 1000px; padding-bottom: 20px; }
+
+.layer {
+    width: 160px; height: 90px; border-radius: 12px; position: absolute;
+    display: flex; flex-direction: column; justify-content: center; padding: 15px;
+    transition: 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.layer-back {
+    background: #18181B; border: 1px solid rgba(255,255,255,0.1);
+    bottom: 20px; z-index: 1; transform: scale(0.9);
+}
+.layer-front {
+    background: #27272A; border: 1px solid rgba(255,255,255,0.2);
+    bottom: 40px; z-index: 2;
+}
+
+/* Hover: Separação 3D */
+.card-stock:hover .layer-back { bottom: 10px; transform: scale(0.95) rotate(-3deg); border-color: #F59E0B; background: #2E2415; }
+.card-stock:hover .layer-front { bottom: 60px; transform: rotate(3deg); border-color: #8B5CF6; background: #2E1065; }
+
+/* Detalhes internos */
+.layer-dot { width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; margin-right: 8px; display: inline-block; }
+.layer span { color: #CCC; font-size: 0.8rem; }
+.layer-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; color: white; font-weight: 700; font-size: 0.9rem; }
+.layer-icon { width: 20px; height: 20px; background: rgba(255,255,255,0.2); border-radius: 4px; }
+.layer-status { font-size: 0.75rem; color: #A78BFA; opacity: 0; transition: 0.3s; }
+.card-stock:hover .layer-status { opacity: 1; }
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+    .bento-grid { grid-template-columns: 1fr; }
+    .section-header h2 { font-size: 2.2rem; }
+}
+
+/* =========================================
+   SEÇÃO CINEMATIC (Layout Z-Pattern)
+   ========================================= */
+.cinematic-features { padding: 140px 0; overflow: hidden; }
+
+.feature-rows { display: flex; flex-direction: column; gap: 120px; }
+
+/* LINHA BASE */
+.feature-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+}
+
+/* LINHA INVERTIDA (Visual na esquerda) */
+.feature-row.reversed { direction: rtl; } /* Truque para inverter a ordem visualmente */
+.feature-row.reversed .feature-text { direction: ltr; } /* Texto volta ao normal */
+
+/* TEXTO */
+.feature-text { max-width: 450px; }
+.feature-text h3 { font-size: 2.5rem; color: white; margin-bottom: 20px; font-weight: 700; line-height: 1.1; }
+.feature-text p { font-size: 1.1rem; color: #94A3B8; line-height: 1.7; margin-bottom: 30px; }
+
+.icon-indicator {
+    width: 50px; height: 50px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 25px;
+}
+.blue { background: rgba(59,130,246,0.1); color: #3B82F6; }
+.green { background: rgba(16,185,129,0.1); color: #10B981; }
+.purple { background: rgba(139,92,246,0.1); color: #8B5CF6; }
+
+.stat-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.05);
+    border-left: 3px solid #fff;
+    padding: 12px 20px;
+    color: #CCC; font-size: 0.9rem;
+}
+.stat-badge strong { color: white; font-size: 1.1rem; margin-right: 5px; }
+
+
+/* ÁREA VISUAL GERAL */
+.feature-visual {
+    width: 100%; height: 400px;
+    background: #0E0E12;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 30px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    perspective: 1000px;
+    transition: transform 0.5s;
+}
+
+.feature-visual:hover { transform: scale(1.02); border-color: rgba(255,255,255,0.2); }
+
+/* --- 1. SCANNER FISCAL (CSS Laser) --- */
+.visual-blue:hover { border-color: #3B82F6; }
+
+.css-scanner { position: relative; width: 200px; height: 260px; display: flex; justify-content: center; }
+
+.scan-doc {
+    width: 100%; height: 100%;
+    background: #1C1C1F; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 20px;
+    display: flex; align-items: center;
+}
+
+.doc-lines span {
+    display: block; width: 100%; height: 8px;
+    background: rgba(255,255,255,0.1); margin-bottom: 15px; border-radius: 4px;
+}
+.doc-lines span:nth-child(2) { width: 60%; }
+.doc-lines span:nth-child(4) { width: 80%; }
+
+/* O Laser */
+.laser-beam {
+    position: absolute; top: 0; left: -10%; width: 120%; height: 4px;
+    background: #3B82F6;
+    box-shadow: 0 0 20px #3B82F6, 0 0 40px #3B82F6;
+    animation: scanMove 3s ease-in-out infinite;
+    z-index: 10; opacity: 0.8;
+}
+
+@keyframes scanMove {
+    0% { top: 10%; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 90%; opacity: 0; }
+}
+
+/* Status */
+.scan-status {
+    position: absolute; bottom: 30px;
+    background: #10B981; color: black;
+    padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 0.8rem;
+    opacity: 0; transform: scale(0.8);
+    animation: statusPop 3s ease-in-out infinite;
+}
+
+@keyframes statusPop {
+    0%, 80% { opacity: 0; transform: scale(0.8); }
+    90% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0; transform: scale(1); }
+}
+
+
+/* --- 2. PULSO FINANCEIRO (SVG Animado) --- */
+.visual-green:hover { border-color: #10B981; }
+
+.css-pulse-chart { width: 100%; height: 100%; position: relative; display: flex; align-items: center; }
+
+.grid-lines {
+    position: absolute; width: 100%; height: 100%;
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.pulse-line { width: 100%; height: 150px; position: relative; z-index: 2; }
+.pulse-line svg {
+    width: 100%; height: 100%;
+    fill: none; stroke: #10B981; stroke-width: 3;
+    stroke-dasharray: 1000; stroke-dashoffset: 1000;
+    filter: drop-shadow(0 0 10px rgba(16,185,129,0.5));
+    animation: dashDraw 4s linear infinite;
+}
+
+@keyframes dashDraw {
+    0% { stroke-dashoffset: 1000; }
+    100% { stroke-dashoffset: 0; }
+}
+
+.live-tag {
+    position: absolute; top: 20px; right: 20px;
+    color: #10B981; font-weight: 800; font-size: 0.8rem; letter-spacing: 1px;
+    display: flex; align-items: center; gap: 6px;
+}
+.live-tag::before { content:''; width: 8px; height: 8px; background: #10B981; border-radius: 50%; animation: pulseDot 1s infinite; }
+
+
+/* --- 3. CUBO 3D ESTOQUE --- */
+.visual-purple:hover { border-color: #8B5CF6; }
+
+.scene-3d { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; perspective: 800px; }
+
+.cube {
+    width: 120px; height: 120px; position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(-30deg) rotateY(-45deg);
+    animation: rotateCube 10s linear infinite;
+}
+
+.feature-visual:hover .cube { animation-play-state: paused; } /* Para de girar no hover */
+
+.face {
+    position: absolute; width: 120px; height: 120px;
+    background: rgba(139, 92, 246, 0.15);
+    border: 2px solid #8B5CF6;
+    display: flex; align-items: center; justify-content: center;
+    color: #A78BFA; font-weight: 700; font-size: 1rem;
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+}
+
+.front  { transform: translateZ(60px); }
+.back   { transform: translateZ(-60px) rotateY(180deg); }
+.right  { transform: rotateY(90deg) translateZ(60px); }
+.left   { transform: rotateY(-90deg) translateZ(60px); }
+.top    { transform: rotateX(90deg) translateZ(60px); background: rgba(139, 92, 246, 0.3); }
+.bottom { transform: rotateX(-90deg) translateZ(60px); }
+
+@keyframes rotateCube {
+    0% { transform: rotateX(-30deg) rotateY(0deg); }
+    100% { transform: rotateX(-30deg) rotateY(360deg); }
+}
+
+.shadow-3d {
+    position: absolute; width: 120px; height: 20px; background: black;
+    bottom: 80px; border-radius: 50%; filter: blur(20px); opacity: 0.5;
+    transform: rotateX(90deg);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 1024px) {
+    .feature-row, .feature-row.reversed { grid-template-columns: 1fr; text-align: center; gap: 40px; }
+    .feature-row.reversed { direction: ltr; } /* Reseta direção no mobile */
+    .feature-text { margin: 0 auto; }
+    .icon-indicator { margin: 0 auto 20px; }
+    .feature-visual { height: 300px; }
+}
+
+/* =========================================
+   ATUALIZAÇÃO: SCANNER COM QR CODE REALISTA
+   ========================================= */
+
+/* Ajuste do Documento para centralizar o QR */
+.scan-doc {
+    width: 220px; height: 300px;
+    background: #18181B; 
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+/* --- O QR CODE CSS (Sem Imagem) --- */
+.css-qr-code {
+    width: 140px; height: 140px;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+/* Os 3 Marcadores dos Cantos (Quadrados Grandes) */
+.qr-marker {
+    width: 35px; height: 35px;
+    border: 3px solid rgba(255,255,255,0.8);
+    position: absolute;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+}
+.qr-marker::after {
+    content: ''; width: 14px; height: 14px; background: rgba(255,255,255,0.8); border-radius: 2px;
+}
+
+.top-left { top: 0; left: 0; }
+.top-right { top: 0; right: 0; }
+.bottom-left { bottom: 0; left: 0; }
+
+/* O Padrão de Pontos (Data Matrix) */
+.qr-dots {
+    width: 100%; height: 100%;
+    /* Isso cria um padrão de "ruído" pixelado simulando dados */
+    background-image: 
+        radial-gradient(rgba(255,255,255,0.25) 30%, transparent 31%),
+        radial-gradient(rgba(255,255,255,0.25) 30%, transparent 31%);
+    background-position: 0 0, 4px 4px;
+    background-size: 8px 8px;
+    opacity: 0.8;
+}
+
+/* Linhas de texto simuladas abaixo do QR */
+.doc-meta { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.doc-meta .line { height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; }
+.doc-meta .line.full { width: 100%; }
+.doc-meta .line.short { width: 60%; }
+
+/* --- A ANIMAÇÃO DO LASER (Refinada) --- */
+.laser-beam {
+    position: absolute; top: -10px; left: -10%; width: 120%; height: 2px;
+    background: #3B82F6; /* Azul Laser */
+    box-shadow: 
+        0 0 10px #3B82F6, 
+        0 0 20px #3B82F6,
+        0 0 40px rgba(59, 130, 246, 0.5);
+    z-index: 10;
+    opacity: 0;
+    animation: scanQRCode 2.5s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes scanQRCode {
+    0% { top: 20px; opacity: 0; width: 0; left: 50%; } /* Começa no meio */
+    10% { top: 20px; opacity: 1; width: 120%; left: -10%; } /* Abre o laser */
+    50% { top: 200px; opacity: 1; } /* Desce escaneando */
+    90% { top: 200px; opacity: 0; } /* Some */
+    100% { top: 20px; opacity: 0; } /* Reseta */
+}
+
+/* Efeito de "Brilho" no QR quando o laser passa */
+.css-qr-code {
+    animation: qrGlow 2.5s infinite;
+}
+
+@keyframes qrGlow {
+    0%, 20% { opacity: 0.5; filter: blur(0px); }
+    30%, 50% { opacity: 1; filter: drop-shadow(0 0 5px rgba(59,130,246,0.5)); }
+    70%, 100% { opacity: 0.5; filter: blur(0px); }
+}
+
+/* Status Flutuante */
+.scan-status {
+    position: absolute; bottom: 40px;
+    background: #10B981; color: #000;
+    padding: 8px 20px; border-radius: 30px;
+    font-weight: 700; font-size: 0.9rem;
+    display: flex; align-items: center; gap: 8px;
+    
+    /* Animação Pop-up */
+    opacity: 0; transform: scale(0.8) translateY(20px);
+    animation: successPop 2.5s infinite;
+}
+
+@keyframes successPop {
+    0%, 60% { opacity: 0; transform: scale(0.8) translateY(20px); }
+    70% { opacity: 1; transform: scale(1.1) translateY(0); } /* Aparece quando o laser termina */
+    80% { transform: scale(1); }
+    90%, 100% { opacity: 0; transform: scale(1) translateY(-10px); }
+}
+
+/* =========================================
+   SEÇÃO 4: PRECISION GRID (Minimalismo Técnico)
+   ========================================= */
+.precision-section {
+    padding: 120px 0;
+    background: #050505;
+    position: relative;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Cabeçalho Alinhado à Esquerda (Estilo Editorial) */
+.section-header-left {
+    margin-bottom: 80px;
+    border-left: 2px solid #3B82F6;
+    padding-left: 20px;
+}
+.section-header-left h2 {
+    font-size: 3rem; color: white; line-height: 1.1; margin: 0;
+    letter-spacing: -1.5px;
+}
+.mono-tag {
+    font-family: 'Courier New', monospace; /* Fonte técnica */
+    font-size: 0.8rem; color: #64748B; display: block; margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+/* O GRID PERFEITO */
+.precision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 colunas matematicamente iguais */
+    gap: 40px; /* Espaço generoso e consistente */
+    position: relative; z-index: 10;
+}
+
+/* CARD DE PRECISÃO */
+.precision-card {
+    background: #0A0A0A;
+    border: 1px solid rgba(255,255,255,0.08);
+    height: 400px; /* Altura fixa para alinhamento perfeito */
+    padding: 30px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.precision-card:hover {
+    border-color: rgba(255,255,255,0.2);
+    background: #0F0F0F;
+}
+
+/* Topo do Card */
+.card-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 20px; margin-bottom: 30px;
+}
+.step-number {
+    font-family: 'Courier New', monospace; font-size: 0.9rem; color: #3B82F6;
+}
+.card-top h3 {
+    font-size: 1.2rem; color: white; font-weight: 600; margin: 0;
+}
+
+/* Conteúdo de Texto (Bottom) */
+.card-bottom p {
+    font-size: 0.95rem; color: #94A3B8; line-height: 1.6; margin: 0;
+}
+
+
+/* --- ÁREA VISUAL ABSTRATA (GEOMETRIA PURA) --- */
+.visual-abstract {
+    flex-grow: 1; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+}
+
+
+/* 1. DATA MATRIX (Grid de pontos) */
+.data-matrix { display: flex; flex-direction: column; gap: 6px; }
+.matrix-row { display: flex; gap: 6px; }
+.matrix-row span {
+    width: 8px; height: 8px; background: #222; border-radius: 1px;
+    animation: blinkData 2s infinite;
+}
+/* Padrão de piscar aleatório */
+.matrix-row span:nth-child(2n) { background: #333; animation-delay: 0.2s; }
+.matrix-row span:nth-child(3n) { background: #3B82F6; animation: blinkBlue 3s infinite; }
+
+@keyframes blinkBlue { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; box-shadow: 0 0 10px #3B82F6; } }
+
+
+/* 2. PROCESSING RING (Círculo Perfeito) */
+.processing-ring { position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+.spinner {
+    position: absolute; width: 100%; height: 100%; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.05);
+    border-top-color: #10B981; /* Verde */
+    animation: spinPerfect 2s linear infinite;
+}
+.core-dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; box-shadow: 0 0 10px #10B981; }
+
+@keyframes spinPerfect { 100% { transform: rotate(360deg); } }
+
+
+/* 3. STATUS BARS (Linhas Sólidas) */
+.status-bars { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.bar-track { width: 100%; height: 4px; background: #222; border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; background: #60A5FA; animation: fillBar 4s ease-in-out infinite; width: 0; }
+
+.full { animation-delay: 0s; }
+.mid { animation-delay: 0.5s; width: 60% !important; opacity: 0.7; }
+.high { animation-delay: 1s; width: 80% !important; opacity: 0.5; }
+
+@keyframes fillBar {
+    0% { width: 0; }
+    50% { width: 100%; }
+    100% { width: 0; }
+}
+
+
+/* LINHA CONECTORA (Atrás dos cards) */
+.grid-connector {
+    position: absolute; top: 50%; left: 0; width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    z-index: 0; transform: translateY(-20px);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+    .precision-grid { grid-template-columns: 1fr; gap: 20px; }
+    .precision-card { height: auto; min-height: 250px; }
+    .grid-connector { display: none; }
+    .section-header-left h2 { font-size: 2.2rem; }
+}
+
+/* =========================================
+   SEÇÃO 4: PRECISION GRID (Identidade Visual Corrigida)
+   ========================================= */
+.precision-section {
+    padding: 120px 0;
+    /* Fundo contínuo com a seção anterior */
+    background: radial-gradient(circle at center bottom, #131318 0%, #030407 100%);
+    position: relative;
+    overflow: hidden; /* Para a linha não vazar */
+}
+
+/* Cabeçalho Alinhado à Esquerda */
+.section-header-left {
+    margin-bottom: 70px;
+    padding-left: 20px;
+    border-left: 3px solid #3B82F6; /* Detalhe azul da marca */
+}
+.section-header-left h2 {
+    font-size: 2.8rem; color: white; line-height: 1.1; margin: 0; font-weight: 700;
+}
+.mono-tag {
+    font-size: 0.75rem; color: #60A5FA; display: block; margin-bottom: 12px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+}
+
+/* O GRID */
+.precision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 colunas iguais */
+    gap: 30px;
+    position: relative; z-index: 10;
+}
+
+/* CARD DE PRECISÃO (Visual Unificado) */
+.precision-card {
+    /* Mesmo fundo e borda dos cards anteriores (Bento) */
+    background: #0E0E12;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px; /* AQUI ESTÁ A CURVA PERFEITA */
+    
+    padding: 36px;
+    height: 420px; /* Altura fixa para alinhamento perfeito */
+    
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+/* Hover: Levanta e brilha */
+.precision-card:hover {
+    transform: translateY(-8px);
+    border-color: rgba(255,255,255,0.2);
+    box-shadow: 0 30px 60px -10px rgba(0,0,0,0.6);
+    background: #121216;
+}
+
+/* Topo do Card */
+.card-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 20px;
+}
+.step-number {
+    font-size: 0.8rem; font-weight: 800; color: rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 8px;
+}
+.precision-card:hover .step-number { color: #3B82F6; background: rgba(59,130,246,0.1); }
+
+.card-top h3 {
+    font-size: 1.4rem; color: white; font-weight: 600; margin: 0;
+}
+
+/* Texto do Fundo */
+.card-bottom p {
+    font-size: 0.95rem; color: #94A3B8; line-height: 1.6; margin: 0;
+}
+
+
+/* --- ÁREA VISUAL (Geometria Abstrata) --- */
+.visual-abstract {
+    flex-grow: 1; display: flex; align-items: center; justify-content: center;
+    border-top: 1px solid rgba(255,255,255,0.03); /* Linha sutil interna */
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    margin: 20px 0;
+}
+
+
+/* 1. DATA MATRIX (Pontos redondos agora) */
+.data-matrix { display: flex; flex-direction: column; gap: 8px; }
+.matrix-row { display: flex; gap: 8px; }
+.matrix-row span {
+    width: 8px; height: 8px; background: #27272A; 
+    border-radius: 50%; /* Bolinhas arredondadas = Identidade Visual */
+    animation: blinkData 2s infinite;
+}
+.matrix-row span:nth-child(2n) { background: #3F3F46; animation-delay: 0.2s; }
+/* O ponto azul que corre */
+.matrix-row span:nth-child(3n) { background: #3B82F6; animation: blinkBlue 3s infinite; }
+
+@keyframes blinkBlue { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 1; box-shadow: 0 0 15px #3B82F6; transform: scale(1.2); } }
+
+
+/* 2. PROCESSING RING (Suave e Moderno) */
+.processing-ring { position: relative; width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; }
+.spinner {
+    position: absolute; width: 100%; height: 100%; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.05);
+    border-top-color: #10B981; /* Verde */
+    animation: spinPerfect 3s linear infinite;
+}
+.core-dot { 
+    width: 12px; height: 12px; background: #10B981; border-radius: 50%; 
+    box-shadow: 0 0 20px #10B981;
+    animation: pulseCore 2s ease-in-out infinite;
+}
+@keyframes spinPerfect { 100% { transform: rotate(360deg); } }
+@keyframes pulseCore { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.3); opacity: 1; } }
+
+
+/* 3. STATUS BARS (Arredondadas) */
+.status-bars { width: 80%; display: flex; flex-direction: column; gap: 14px; }
+.bar-track { width: 100%; height: 6px; background: #27272A; border-radius: 10px; overflow: hidden; }
+.bar-fill { height: 100%; background: #60A5FA; border-radius: 10px; width: 0; animation: fillBar 4s ease-in-out infinite; }
+
+.full { animation-delay: 0s; background: #60A5FA; }
+.mid { animation-delay: 0.5s; width: 60% !important; opacity: 0.8; background: #8B5CF6; }
+.high { animation-delay: 1s; width: 80% !important; opacity: 0.6; background: #3B82F6; }
+
+@keyframes fillBar { 0% { width: 0; } 50% { width: 100%; } 100% { width: 0; } }
+
+
+/* LINHA CONECTORA (Sutil e atrás dos cards) */
+.grid-connector {
+    position: absolute; top: 50%; left: 0; width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, #3B82F6, transparent);
+    opacity: 0.3;
+    z-index: 0; transform: translateY(-30px);
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+    .precision-grid { grid-template-columns: 1fr; gap: 20px; }
+    .precision-card { height: auto; min-height: 280px; }
+    .grid-connector { display: none; }
+    .section-header-left { border: none; padding: 0; text-align: center; }
+}
+
+/* =========================================
+   7. SEÇÃO DE PREÇOS (Cards de Assinatura)
+   ========================================= */
+.pricing-section {
+    padding: 120px 0;
+    /* Usa o mesmo fundo preto do CORE para manter a consistência */
+    background-color: var(--bg-core); 
+}
+
+/* Grid de 3 Colunas para os Cards (Desktop) */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+    margin-top: 50px;
+}
+
+/* Estilo Padrão do Card (Reaproveita Glassmorphism) */
+.pricing-card {
+    background: #0E0E12; /* Fundo escuro coeso */
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 40px 30px;
     display: flex;
     flex-direction: column;
+    transition: all 0.3s ease;
+    height: 100%; /* Garante que os cards tenham a mesma altura */
 }
 
-/* 3. ANIMAÇÕES LINDÍSSIMAS (Efeito Desejável e Profissional) */
-
-/* Efeito 3D Aprimorado e mais suave nos Cards de Módulos/Funcionalidades */
-.module-card {
-    transition: all 0.5s cubic-bezier(0.2, 0.5, 0.2, 1); /* Curva mais suave */
-}
-.module-card:hover {
-    /* Novo Efeito: Sutilmente levanta e amplia (Scale), com sombra de profundidade */
-    transform: translateY(-12px) scale(1.02); 
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), var(--shadow-blue-glow);
-    border-color: var(--color-accent-blue);
+/* Efeito de destaque (Hover) */
+.pricing-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 30px -10px rgba(0,0,0,0.5);
 }
 
-/* Animação do Plano Estratégico (Marketing Fino) */
-.plan-card.recommended {
-    animation: subtleBorderGlow 3s infinite alternate ease-in-out; /* Brilho pulsante */
-    transform: translateY(-18px) scale(1.04); /* Mais elevado que os outros */
-}
-.plan-card.recommended:hover {
-    transform: translateY(-22px) scale(1.055);
-}
-
-@keyframes subtleBorderGlow {
-    0% { box-shadow: 0 0 15px rgba(10, 132, 255, 0.4); }
-    100% { box-shadow: 0 0 35px rgba(10, 132, 255, 0.7); }
+/* Card PRO (Destaque Principal - Usa o AZUL) */
+.pricing-card.card-pro {
+    /* Gradiente sutil do canto superior direito */
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), #0E0E12 60%);
+    border-color: var(--accent-blue); /* Borda azul mais forte */
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.1);
 }
 
-/* Animação de Entrada (Scroll Reveal) mais lenta e elegante */
-.scroll-reveal {
-    opacity: 0; 
-    transform: translateY(40px); /* Começa mais abaixo */
-    transition: all 1s cubic-bezier(0.1, 0.8, 0.2, 1); /* Mais lento e suave para um efeito premium */
-}
-.scroll-reveal.active { 
-    opacity: 1; 
-    transform: translateY(0); 
+.pricing-card.card-pro:hover {
+    box-shadow: 0 0 50px rgba(59, 130, 246, 0.3);
 }
 
-/* 4. REFINAMENTO DE TIPOGRAFIA E PREÇO (Para Alinhamento Visual) */
+.card-top { margin-bottom: 30px; }
 
-/* Ajuste fino na área de preços para alinhamento vertical */
-.plan-price {
+.card-top h3 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 10px 0 8px;
+    color: var(--text-main);
+}
+
+.plan-description {
+    min-height: 40px; /* Garante altura mínima para alinhamento em todos os cards */
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+/* Badge de Plano (Minimalista - Cor Padrão) */
+.plan-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #60A5FA;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 4px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+}
+
+/* Badge Destaque (Plano PRO - Cor Primária) */
+.plan-badge.featured {
+    background: var(--glow-primary);
+    color: black;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+/* Preço */
+.card-price {
     display: flex;
-    align-items: flex-start; /* Ajusta o alinhamento base para o topo */
+    align-items: baseline;
+    margin-bottom: 30px;
+    margin-top: auto; /* Empurra o conteúdo para baixo */
+}
+
+.price-value {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.price-period {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+/* Botão no Card - Reutilizando estilos existentes */
+.btn-card {
+    width: 100%;
+    text-align: center;
     justify-content: center;
-    margin-bottom: 40px;
+    padding: 12px 0;
+    margin-bottom: 30px;
 }
-.currency {
-    margin-right: 5px; 
-    font-size: 1.8rem; 
-    align-self: flex-start; /* Moeda alinhada ao topo do número */
-    padding-top: 10px;
-}
-.amount {
-    font-size: 5rem; /* Levemente maior para destaque */
-}
-.period {
-    align-self: flex-end; /* Alinha o '/mês' na parte inferior do preço */
-    padding-bottom: 12px; 
-    font-size: 1.05rem;
+/* Estilo customizado para botões secundários nos cards */
+.pricing-card.card-basic .btn-card,
+.pricing-card.card-enterprise .btn-card {
+    background: rgba(255, 255, 255, 0.05); 
+    border-color: rgba(255, 255, 255, 0.08); 
 }
 
-/* Linha de altura geral do texto melhorada */
-body {
-    line-height: 1.8; 
-}
-.module-card p, .faq-item p {
-    line-height: 1.7; 
-}
-
-/* ======================================================================
-   FIX FINAL E REFINAMENTO AGRESSIVO (SOLUCIONA 'TORTO' E NAVBAR)
-   - Cole este bloco no final do seu index.css (ele irá sobrescrever os erros)
-   ====================================================================== */
-
-/* 1. FIX: NAVBAR (CORREÇÃO CRÍTICA DE ALINHAMENTO PERFEITO) */
-.navbar-container {
-    /* Garante a estabilidade da barra */
-    display: block !important; 
+/* Lista de Recursos (Features) */
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 20px;
 }
 
-.navbar {
-    display: flex !important;
-    /* CORREÇÃO CRÍTICA: Força o alinhamento vertical exato ao centro */
-    align-items: center !important; 
-    justify-content: space-between !important;
-    height: 75px !important; /* Altura fixa para consistência */
-    padding: 0 40px !important; /* Padding lateral */
-    margin: 0 auto !important; /* Centraliza a nav */
+.feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+    font-weight: 500;
 }
 
-/* Garante que os links e botões internos da nav estejam alinhados */
-.nav-links, .nav-actions {
-    display: flex !important;
-    align-items: center !important;
-    gap: 25px !important;
+.feature-list li i.fa-check {
+    color: var(--glow-accent); /* Verde: #10B981 */
+    font-size: 1rem;
+    margin-top: 3px;
 }
 
-/* 2. REFORÇO DE ALINHAMENTO EM GRIDS (GRID 'RETINHO' / SEM DESNÍVEL) */
-
-/* Aplicação universal para todos os layouts baseados em colunas */
-.modules-grid, 
-.pricing-grid, 
-.infra-cards-grid, 
-.trust-grid {
-    display: grid !important;
-    gap: 40px !important; /* Espaçamento mais clean e consistente */
-    /* ESSENCIAL: Força todos os items em uma linha a terem a mesma altura */
-    align-items: stretch !important; 
+.feature-list li i.plan-limit {
+    color: var(--text-dark);
+    opacity: 0.5;
+    font-size: 1rem;
+    margin-top: 3px;
 }
 
-/* Cards (Módulos e Planos): Força a igualdade de altura e alinhamento do conteúdo */
-.plan-card, .module-card {
-    height: 100% !important; /* Usa a altura esticada do align-items: stretch */
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important; /* Conteúdo sempre começa do topo */
-    padding: 45px !important; /* Padding interno consistente */
-    box-sizing: border-box !important;
+/* Responsividade (Para telas menores que 900px) */
+@media (max-width: 900px) {
+    .pricing-grid {
+        grid-template-columns: 1fr;
+    }
+    .pricing-card {
+        margin-bottom: 20px;
+    }
 }
 
-/* 3. ANIMAÇÕES LINDÍSSIMAS (Efeito Desejável e Profissional) */
-
-/* Animação de Entrada (Scroll Reveal) mais lenta e elegante */
-.scroll-reveal {
-    opacity: 0 !important; 
-    transform: translateY(40px) !important; 
-    /* Transição mais lenta e suave para um efeito premium */
-    transition: all 1s cubic-bezier(0.1, 0.8, 0.2, 1) !important; 
-}
-.scroll-reveal.active { 
-    opacity: 1 !important; 
-    transform: translateY(0) !important; 
+/* =========================================================================
+   7. SEÇÃO DE PREÇOS (V4): MATRIZ DE COMPLIANCE DINÂMICA
+   ========================================================================= */
+.pricing-section {
+    padding: 140px 0;
+    background-color: var(--bg-core); 
+    overflow: hidden; 
 }
 
-/* Efeito de Card Hover - Reforçado e Fino */
-.module-card:hover {
-    /* Sutilmente levanta e escala */
-    transform: translateY(-12px) scale(1.02) !important; 
-    /* Sombra de profundidade com brilho sutil */
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(10, 132, 255, 0.5) !important;
-    border-color: var(--color-accent-blue) !important;
+/* 3D Container (Perspectiva para o efeito de profundidade) */
+.matrix-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-top: 60px;
+    perspective: 1800px; /* Profundidade extrema */
 }
 
-/* Plano Recomendado (Estratégica) com brilho elegante */
-.plan-card.recommended {
-    transform: translateY(-18px) scale(1.04) !important; 
-    animation: subtleBorderGlow 3s infinite alternate ease-in-out !important;
+/* O ARTEFATO: Card Base 3D */
+.matrix-card {
+    position: relative;
+    background: #0C0D11; 
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 35px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    /* Transições complexas para suavizar 3D */
+    transition: all 0.6s cubic-bezier(0.2, 0.8, 0.4, 1.2); 
+    transform-style: preserve-3d;
+    will-change: transform, box-shadow; /* Otimização de performance */
 }
 
-/* Animação de Brilho (Mundialmente Fina) */
-@keyframes subtleBorderGlow {
-    0% { box-shadow: 0 0 15px rgba(10, 132, 255, 0.4); }
-    100% { box-shadow: 0 0 35px rgba(10, 132, 255, 0.7); }
+/* Efeito Hover Genial: Saída do Plano e Brilho Interno */
+.matrix-card:hover {
+    transform: translateZ(100px) translateY(-15px) rotateX(1deg); /* Levita e inclina suavemente para o usuário */
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), 0 0 50px rgba(59, 130, 246, 0.3);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Seções: Força mais espaçamento para evitar o "grudado" */
-.section-padding { padding: 160px 0 !important; }
+/* ========================================= */
+/* 7.1. EFEITOS HOLOGRÁFICOS (Pseudo-elementos) */
+/* ========================================= */
+
+/* Faixa Superior: Simula a borda de dados (DATA-LEVEL) */
+.matrix-card::before {
+    content: attr(data-level);
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    padding: 5px 15px;
+    background: var(--glass-surface);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 10px 10px 0 0;
+    border: 1px solid var(--glass-border);
+    border-bottom: none;
+    z-index: 5;
+    transition: transform 0.6s ease;
+}
+
+/* Efeito de Holograma/Brilho na Borda no Hover */
+.matrix-card:hover::before {
+    transform: translateX(-50%) translateY(-1px); /* Desce para a borda no hover */
+    color: var(--glow-primary);
+    box-shadow: 0 -5px 20px rgba(59, 130, 246, 0.6);
+}
+
+/* Camada de Brilho Interna (Aura) */
+.matrix-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    /* Gradiente sutil do canto superior */
+    background: radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.1) 0%, transparent 40%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 0;
+}
+
+.matrix-card:hover::after {
+    opacity: 1; /* Revela a aura no hover */
+}
+
+/* ========================================= */
+/* 7.2. CARD PRO (Destaque e Animação Profunda) */
+/* ========================================= */
+
+.matrix-card.pro {
+    border-color: var(--glow-primary);
+    box-shadow: 0 0 80px rgba(59, 130, 246, 0.2);
+    z-index: 10;
+}
+
+/* Efeito de Matriz Energética Animada para o PRO */
+.matrix-card.pro::after {
+    /* Gradiente mais intenso para o PRO */
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(139, 92, 246, 0.1) 40%, transparent 70%);
+    opacity: 0.7;
+    /* Animação de pulso/respiração constante */
+    animation: matrixPulse 4s infinite alternate ease-in-out;
+}
+
+.matrix-card.pro:hover::after {
+    opacity: 1;
+}
+
+@keyframes matrixPulse {
+    0% { transform: scale(1); opacity: 0.7; }
+    100% { transform: scale(1.05); opacity: 1; }
+}
+
+.matrix-card.pro .matrix-title {
+    color: var(--glow-primary);
+}
+
+
+/* ========================================= */
+/* 7.3. CONTEÚDO E DETALHES */
+/* ========================================= */
+.card-content {
+    flex-grow: 1; 
+    position: relative;
+    z-index: 2; /* Garante que o conteúdo fique acima do after */
+}
+
+.matrix-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-bottom: 5px;
+    letter-spacing: -1px;
+    color: var(--text-main);
+}
+
+.matrix-desc {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    min-height: 40px;
+}
+
+.matrix-core {
+    margin: 30px 0;
+    padding: 20px 0;
+    border-top: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+    text-align: center;
+}
+
+.price-value {
+    display: block;
+    font-size: 3.5rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-main);
+}
+
+.price-unit {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 5px;
+    display: block;
+}
+
+/* Lista de Recursos (Minimalista Profissional) */
+.matrix-features {
+    list-style: none;
+    padding: 0;
+    margin-top: 25px;
+}
+
+.matrix-features li {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    position: relative;
+    padding-left: 15px;
+    /* Linha Vertical Subtil como 'check' */
+    border-left: 2px solid var(--glow-accent); 
+    line-height: 1.3;
+}
+
+.matrix-features li.limited {
+    opacity: 0.5;
+    border-left-color: var(--text-dark);
+}
+
+/* ========================================= */
+/* 7.4. BOTÃO DE AÇÃO (Com Animação de Feedback) */
+/* ========================================= */
+
+.btn-matrix-action {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    text-align: center;
+    font-weight: 600;
+    border-radius: 10px;
+    text-decoration: none;
+    margin-top: 30px;
+    transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid transparent;
+    position: relative;
+    z-index: 2;
+}
+
+.btn-matrix-action:hover {
+    transform: scale(0.98); /* Efeito de Pressionar */
+}
+
+/* Botão PRO (Brilho e Contraste) */
+.matrix-card.pro .btn-matrix-action {
+    background: var(--glow-primary);
+    color: var(--bg-core);
+    box-shadow: 0 5px 25px rgba(59, 130, 246, 0.6);
+}
+
+.matrix-card.pro .btn-matrix-action:hover {
+    box-shadow: 0 3px 15px rgba(59, 130, 246, 1);
+}
+
+/* Botão Secundário (Glass/Linha) */
+.matrix-card:not(.pro) .btn-matrix-action {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-main);
+}
+
+.matrix-card:not(.pro) .btn-matrix-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+
+/* =========================================
+   RESPONSIVIDADE 
+   ========================================= */
+
+@media (max-width: 992px) {
+    .matrix-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        perspective: none; /* Desativa 3D em mobile */
+    }
+    
+    .matrix-card:hover {
+        transform: translateY(-10px); /* Apenas levanta, sem rotação 3D */
+    }
+}

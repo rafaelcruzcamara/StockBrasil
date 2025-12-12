@@ -3,310 +3,522 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockBrasil PRO | Soluções Fiscais e de Gestão Empresarial Escalável</title>
-    <link rel="stylesheet" href="index.css"> 
+    <title>StockBrasil PRO | Governança Inteligente</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="index.css">
 </head>
 <body>
 
-    <header class="navbar-container">
-        <nav class="navbar lp-container">
-            <div class="logo">
-                StockBrasil <span class="logo-highlight">PRO</span>
+    <div class="ambient-light light-1"></div>
+    <div class="ambient-light light-2"></div>
+
+    <header class="glass-header">
+        <div class="container navbar-content">
+            <div class="logo-area">
+                <span class="logo-text">StockBrasil <span class="highlight">PRO</span></span>
             </div>
-            <div class="nav-links">
-                <a href="#plataforma">Plataforma</a>
-                <a href="#integracao">Integração</a>
-                <a href="#infraestrutura">Escalabilidade</a>
-                <a href="#licencas">Licenças</a>
-            </div>
+
+            <nav class="nav-menu">
+                <a href="#" class="nav-link active">Produto</a>
+                <a href="#" class="nav-link">Soluções</a>
+                <a href="#" class="nav-link">Preços</a>
+                <a href="#" class="nav-link">Desenvolvedores</a>
+            </nav>
+
             <div class="nav-actions">
-                <a href="auth.html" class="nav-login">Acesso ao Sistema</a>
-                <a href="#licencas" class="submit-btn blue-btn">Solicitar Consultoria</a>
+                <a href="./auth.html" class="btn-text">Login</a>
+                <a href="#" class="btn-glow">Agendar Demo</a>
             </div>
-        </nav>
+        </div>
     </header>
 
-    <section class="hero">
-        <div class="hero-content lp-container">
-            <div class="hero-text fade-in-up">
-                <h1>Governança de <span class="text-highlight">Estoque e Fluxo de Caixa</span> com Compliance Integrado.</h1>
-                <p>Desenvolvemos a espinha dorsal operacional para empresas que exigem máxima precisão fiscal, auditoria contábil transparente e escalabilidade ilimitada no PDV.</p>
-                <div class="hero-btns">
-                    <a href="#infraestrutura" class="submit-btn green-btn btn-lg">
-                        Ver Arquitetura Técnica
-                    </a>
-                    <a href="#plataforma" class="secondary-btn">
-                        Conhecer Módulos
-                    </a>
-                </div>
+    <section class="hero-wrapper">
+    <div class="container hero-grid">
+        
+        <div class="hero-text-area">
+            
+            <div class="hook-badge">
+                <span class="badge-dot"></span>
+                Plataforma de Governança Unificada v3.0
             </div>
-            <div class="hero-image fade-in-up delay-200">
-                <img src="https://via.placeholder.com/1200x650/0A0D12/0A84FF?text=Dashboard+Executivo+KPIs+e+Controle+Fiscal" alt="Dashboard StockBrasil PRO" class="mockup-img">
+
+            <h1>
+    Controle Total de <br>Estoque e Finanças.<br>
+    <span class="typing-effect">Compliance Integrado</span>
+    
+</h1>
+
+            <p class="subtitle">
+                Centralize sua operação em um ecossistema blindado. Do inventário físico à obrigação fiscal, garantimos precisão absoluta para sua tomada de decisão.
+            </p>
+
+            <div class="cta-group">
+                <a href="#" class="btn-primary-large">
+                    Começar Agora <i class="fas fa-arrow-right"></i>
+                </a>
+                <a href="#" class="btn-secondary-large">
+                    <i class="fas fa-play-circle"></i> Ver Demo
+                </a>
+            </div>
+
+            <div class="trust-indicators">
+                <div class="trust-item"><i class="fas fa-check-circle"></i> Setup em 24h</div>
+                <div class="trust-item"><i class="fas fa-shield-alt"></i> Dados Criptografados</div>
             </div>
         </div>
-    </section>
 
-    <section class="trust-bar bg-secondary">
-        <div class="lp-container trust-grid scroll-reveal">
-            <div class="trust-item">
-                <h3>ISO/IEC</h3>
-                <p>Conformidade em Segurança</p>
-            </div>
-            <div class="trust-item">
-                <h3>Milhares</h3>
-                <p>Transações Processadas/Mês</p>
-            </div>
-            <div class="trust-item">
-                <h3>AWS Cloud</h3>
-                <p>Infraestrutura Escalável</p>
-            </div>
-            <div class="trust-item">
-                <h3>99.999%</h3>
-                <p>SLA de Disponibilidade</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="plataforma" class="section-padding">
-        <div class="lp-container">
-            <div class="section-header scroll-reveal">
-                <span class="text-highlight-small">PLATAFORMA MODULAR</span>
-                <h2>Seu Ecossistema Operacional Unificado.</h2>
-                <p>O StockBrasil PRO é estruturado em três pilares que conversam em tempo real, eliminando inconsistências entre as áreas financeiras, fiscais e operacionais.</p>
-            </div>
-
-            <div class="modules-grid">
-                <div class="module-card scroll-reveal">
-                    <span class="module-icon color-blue">FISCAL</span>
-                    <h3>Governança Fiscal & Tributária</h3>
-                    <p>Controle automatizado de impostos (ICMS, IPI, PIS/COFINS) e validação em lote de documentos eletrônicos. Preparação de SPED Fiscal e ECF/ECF de forma nativa e integrada ao ERP.</p>
-                    <ul class="features-list">
-                        <li><i class="fas fa-check"></i> Emissão de NF-e e CT-e em Lote</li>
-                        <li><i class="fas fa-check"></i> Auditoria de Lançamentos Fiscais</li>
-                        <li><i class="fas fa-check"></i> Central de Arquivos XML (5 anos)</li>
-                    </ul>
-                </div>
-                <div class="module-card scroll-reveal delay-100">
-                    <span class="module-icon color-green">FINANÇAS</span>
-                    <h3>Performance Financeira Estratégica</h3>
-                    <p>Visão gerencial instantânea com DRE, Fluxo de Caixa Projetado e Ponto de Equilíbrio. O sistema projeta cenários e alerta sobre desvios orçamentários em tempo real.</p>
-                    <ul class="features-list">
-                        <li><i class="fas fa-check"></i> Relatório de Custo-Oportunidade</li>
-                        <li><i class="fas fa-check"></i> Conciliação Bancária Automatizada</li>
-                        <li><i class="fas fa-check"></i> Gestão de Orçamentos e Despesas</li>
-                    </ul>
-                </div>
-                <div class="module-card scroll-reveal delay-200">
-                    <span class="module-icon color-purple">LOGÍSTICA</span>
-                    <h3>Otimização de Ativos (Estoque e PDV)</h3>
-                    <p>Controle de inventário de alta precisão com suporte a múltiplos armazéns e métodos de custeio (FIFO/LIFO/Custo Médio). O PDV é construído para operar em alta velocidade, mesmo em picos de demanda.</p>
-                    <ul class="features-list">
-                        <li><i class="fas fa-check"></i> Alocação e Rastreabilidade de Lotes</li>
-                        <li><i class="fas fa-check"></i> PDV Offline com Sincronização Automática</li>
-                        <li><i class="fas fa-check"></i> Análise de Sazonalidade (Previsão)</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="integracao" class="section-padding bg-secondary">
-        <div class="lp-container integration-layout">
-            <div class="integration-text scroll-reveal">
-                <span class="text-highlight-small">ECOSSISTEMA ABERTO</span>
-                <h2>Integração Total com seu Legado.</h2>
-                <p class="intro-p">Nossa API RESTful de alto desempenho foi desenhada para conectar o StockBrasil PRO a qualquer ERP, CRM ou sistema de contabilidade existente, garantindo a continuidade dos seus processos.</p>
+        <div class="hero-visual-area">
+            <div class="visual-container">
                 
-                <div class="integration-points">
-                    <div class="point">
-                        <i class="fas fa-cubes"></i>
-                        <h4>Estrutura Modular</h4>
-                        <p>Publique ou consuma dados de estoque, vendas e financeiro com granularidade total.</p>
+                <div class="main-mockup-wrapper">
+                    <img src="images/Captura de tela 2025-12-11 171300.png" alt="Dashboard StockBrasil" class="dashboard-img">
+                    <div class="shimmer-overlay"></div>
+                </div>
+
+                <div class="floating-widget widget-graph">
+                    <div class="widget-header">
+                        <i class="fas fa-chart-line" style="color: #10B981;"></i>
+                        <span>Receita Líquida</span>
                     </div>
-                    <div class="point">
-                        <i class="fas fa-code-branch"></i>
-                        <h4>Ambiente Sandbox</h4>
-                        <p>Teste todas as integrações em um ambiente seguro antes de ir para produção.</p>
+                    <div class="widget-value">R$ 142.050</div>
+                    <div class="mini-chart">
+                        <div class="bar" style="height: 40%"></div>
+                        <div class="bar" style="height: 70%"></div>
+                        <div class="bar" style="height: 50%"></div>
+                        <div class="bar" style="height: 100%"></div>
                     </div>
                 </div>
-                <a href="#" class="submit-btn delete-btn">Documentação da API (V3.1)</a>
-            </div>
-            <div class="integration-image scroll-reveal delay-200">
-                <img src="https://via.placeholder.com/500x400/151920/8B95A1?text=Diagrama+de+Arquitetura+de+APIs" alt="Diagrama de Integração de Sistemas" class="api-img">
+
+                <div class="floating-widget widget-sync">
+                    <div class="icon-circle spin"><i class="fas fa-sync-alt"></i></div>
+                    <div class="widget-text">
+                        <strong>Sincronizando</strong>
+                        <span>ERP Conectado</span>
+                    </div>
+                </div>
+
+                <div class="floating-widget widget-alert">
+                    <i class="fas fa-shield-check" style="color: #3B82F6;"></i>
+                    <span>Auditoria Fiscal: <strong>OK</strong></span>
+                </div>
+
             </div>
         </div>
-    </section>
 
-    <section id="infraestrutura" class="section-padding">
-        <div class="lp-container infrastructure-layout">
-            <div class="infra-header scroll-reveal">
-                <span class="text-highlight-small">CONFIABILIDADE E ESCALABILIDADE</span>
-                <h2>Desenvolvido para Transações de Missão Crítica.</h2>
+    </div>
+</section>
+<section class="trust-monitor-section">
+    <div class="container">
+        <div class="live-status-bar">
+            
+            <div class="status-metric">
+                <div class="metric-icon-wrapper shield-glow">
+                    <i class="ph-fill ph-shield-check"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="label">Segurança</span>
+                    <span class="value">ISO 27001 <span class="live-dot"></span></span>
+                </div>
+            </div>
+
+            <div class="vertical-separator"></div>
+
+            <div class="status-metric">
+                <div class="metric-icon-wrapper cloud-glow">
+                    <i class="ph-fill ph-cloud"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="label">Infraestrutura</span>
+                    <span class="value">AWS Dedicado</span>
+                </div>
+            </div>
+
+            <div class="vertical-separator"></div>
+
+            <div class="status-metric">
+                <div class="metric-icon-wrapper time-glow">
+                    <i class="ph-fill ph-lightning"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="label">Disponibilidade</span>
+                    <span class="value">99.99% Online</span>
+                </div>
+            </div>
+
+            <div class="vertical-separator"></div>
+
+            <div class="status-metric">
+                <div class="metric-icon-wrapper map-glow">
+                    <i class="ph-fill ph-map-pin"></i>
+                </div>
+                <div class="metric-info">
+                    <span class="label">Cobertura</span>
+                    <span class="value">Nacional (27 UFs)</span>
+                </div>
+            </div>
+
+            <div class="scan-line"></div>
+        </div>
+    </div>
+</section>
+
+    <section id="plataforma" class="features-section">
+    <div class="container">
+        
+        <div class="section-header">
+            <span class="section-tag">Ecossistema Pro</span>
+            <h2>Controle Absoluto.<br><span class="white-highlight">Zero Surpresas.</span></h2>
+            <p>Uma suíte completa que transforma dados brutos em decisão estratégica.</p>
+        </div>
+
+        <div class="bento-grid">
+            
+            <div class="bento-card card-fiscal">
+                <div class="card-content">
+                    <h3>Inteligência Fiscal</h3>
+                    <p>Validação tributária automática linha a linha. O sistema bloqueia erros de NCM antes de chegar na SEFAZ.</p>
+                </div>
+                <div class="visual-area">
+                    <div class="css-doc">
+                        <div class="doc-header">
+                            <div class="doc-line short"></div>
+                            <div class="doc-status">Validando...</div>
+                        </div>
+                        <div class="doc-body">
+                            <div class="doc-line"></div>
+                            <div class="doc-line"></div>
+                            <div class="doc-line"></div>
+                        </div>
+                        <div class="hover-popup">
+                            <div class="icon-check"></div>
+                            <div class="popup-text">
+                                <strong>NFe Autorizada</strong>
+                                <span>Protocolo: 194.50.21</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card card-finance">
+                <div class="card-content">
+                    <h3>DRE & Caixa</h3>
+                    <p>Saiba sua margem de lucro real em tempo real, descontando impostos e taxas.</p>
+                </div>
+                <div class="visual-area">
+                    <div class="css-chart">
+                        <div class="chart-tooltip">Lucro <strong>+24%</strong></div>
+                        <div class="bars-container">
+                            <div class="bar bar-1"></div>
+                            <div class="bar bar-2"></div>
+                            <div class="bar bar-3"></div>
+                            <div class="bar bar-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card card-stock">
+                <div class="card-content">
+                    <h3>Estoque 360º</h3>
+                    <p>Rastreio de lote, validade e múltiplos depósitos com curva ABC automática.</p>
+                </div>
+                <div class="visual-area">
+                    <div class="css-layers">
+                        <div class="layer layer-back">
+                            <div class="layer-dot orange"></div>
+                            <span>SKU-90 Pendente</span>
+                        </div>
+                        <div class="layer layer-front">
+                            <div class="layer-header">
+                                <div class="layer-icon"></div>
+                                <span>Lote #4020</span>
+                            </div>
+                            <div class="layer-status">Sincronizado</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+
+
+<section id="features" class="cinematic-features">
+    <div class="container">
+        
+        <div class="section-header">
+            <span class="section-tag">Deep Dive</span>
+            <h2>A Engenharia por trás do <span class="highlight-text">Controle.</span></h2>
+        </div>
+
+        <div class="feature-rows">
+            
+            <div class="feature-row">
+                <div class="feature-text">
+                    <div class="icon-indicator blue"><i class="ph-bold ph-qr-code"></i></div>
+                    <h3>Blindagem Fiscal</h3>
+                    <p>Nosso algoritmo "Tax-Guard" escaneia cada XML emitido. Ele valida a estrutura do QR Code e cruza dados com a SEFAZ em tempo real, bloqueando notas inválidas.</p>
+                    <div class="stat-badge">
+                        <strong>0.00%</strong> de rejeição fiscal
+                    </div>
+                </div>
+                
+                <div class="feature-visual visual-blue">
+                    <div class="css-scanner">
+                        <div class="scan-doc">
+                            <div class="css-qr-code">
+                                <div class="qr-marker top-left"></div>
+                                <div class="qr-marker top-right"></div>
+                                <div class="qr-marker bottom-left"></div>
+                                <div class="qr-dots"></div>
+                            </div>
+                            <div class="doc-meta">
+                                <span class="line full"></span>
+                                <span class="line short"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="laser-beam"></div>
+                        
+                        <div class="scan-status">
+                            <i class="ph-bold ph-check"></i> Autorizado
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row reversed">
+                <div class="feature-text">
+                    <div class="icon-indicator green"><i class="ph-bold ph-chart-line-up"></i></div>
+                    <h3>Raio-X Financeiro</h3>
+                    <p>Abandone o "achismo". O DRE Gerencial é construído automaticamente a cada venda. Saiba exatamente quanto sobra no caixa após impostos, taxas de cartão e custo da mercadoria.</p>
+                    <div class="stat-badge">
+                        <strong>+24%</strong> de margem recuperada
+                    </div>
+                </div>
+
+                <div class="feature-visual visual-green">
+                    <div class="css-pulse-chart">
+                        <div class="grid-lines"></div>
+                        <div class="pulse-line">
+                            <svg viewBox="0 0 500 150" preserveAspectRatio="none">
+                                <path d="M0,100 L100,100 L150,50 L200,100 L300,100 L350,20 L400,100 L500,100" />
+                            </svg>
+                        </div>
+                        <div class="pulse-dot"></div>
+                        <div class="live-tag">LIVE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-text">
+                    <div class="icon-indicator purple"><i class="ph-bold ph-package"></i></div>
+                    <h3>Logística 4.0</h3>
+                    <p>Gerencie múltiplos depósitos como se fossem um só. Rastreabilidade completa de lote e validade, com sugestão de compra baseada na curva de giro real.</p>
+                    <div class="stat-badge">
+                        <strong>Zero</strong> ruptura de estoque
+                    </div>
+                </div>
+
+                <div class="feature-visual visual-purple">
+                    <div class="scene-3d">
+                        <div class="cube">
+                            <div class="face front">Lote A</div>
+                            <div class="face back">Lote B</div>
+                            <div class="face right"></div>
+                            <div class="face left"></div>
+                            <div class="face top"></div>
+                            <div class="face bottom"></div>
+                        </div>
+                        <div class="shadow-3d"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<section id="como-funciona" class="precision-section">
+    <div class="container">
+        
+        <div class="section-header-left">
+            <span class="mono-tag">04 // ARQUITETURA</span>
+            <h2>Processamento <br>Linear.</h2>
+        </div>
+
+        <div class="precision-grid">
+            
+            <div class="precision-card">
+                <div class="card-top">
+                    <span class="step-number">01</span>
+                    <h3>Ingestão</h3>
+                </div>
+                <div class="visual-abstract">
+                    <div class="data-matrix">
+                        <div class="matrix-row"><span></span><span></span><span></span><span></span></div>
+                        <div class="matrix-row"><span></span><span></span><span></span><span></span></div>
+                        <div class="matrix-row"><span></span><span></span><span></span><span></span></div>
+                    </div>
+                </div>
+                <div class="card-bottom">
+                    <p>Conexão direta via API Restful. Absorção de dados brutos sem latência.</p>
+                </div>
+            </div>
+
+            <div class="precision-card active-card">
+                <div class="card-top">
+                    <span class="step-number">02</span>
+                    <h3>Refino</h3>
+                </div>
+                <div class="visual-abstract">
+                    <div class="processing-ring">
+                        <div class="spinner"></div>
+                        <div class="core-dot"></div>
+                    </div>
+                </div>
+                <div class="card-bottom">
+                    <p>Higienização e validação tributária. O núcleo separa o ruído do sinal.</p>
+                </div>
+            </div>
+
+            <div class="precision-card">
+                <div class="card-top">
+                    <span class="step-number">03</span>
+                    <h3>Entrega</h3>
+                </div>
+                <div class="visual-abstract">
+                    <div class="status-bars">
+                        <div class="bar-track"><div class="bar-fill full"></div></div>
+                        <div class="bar-track"><div class="bar-fill mid"></div></div>
+                        <div class="bar-track"><div class="bar-fill high"></div></div>
+                    </div>
+                </div>
+                <div class="card-bottom">
+                    <p>Dados estruturados. Dashboards, SPEDs e relatórios em tempo real.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="grid-connector"></div>
+
+    </div>
+</section>
+
+
+<section class="pricing-section">
+    <div class="container">
+        
+        <div class="section-header">
+            <span class="section-tag">MATRIZ DE CONFORMIDADE</span>
+            <h2>Selecione o Protocolo para <span class="white-highlight">Zero Desvio Fiscal</span>.</h2>
+            <p>Ative a camada de processamento que garante total governança, rastreabilidade e compliance.</p>
+        </div>
+        
+        <div class="matrix-grid">
+            
+            <div class="matrix-card standard" data-level="Nível I">
+                <div class="card-content">
+                    <h3 class="matrix-title">STANDARD</h3>
+                    <p class="matrix-desc">Gestão em tempo real de estoque e emissão fiscal básica.</p>
+                    
+                    <div class="matrix-core">
+                        <span class="price-value">299</span>
+                        <span class="price-unit">R$ / MÊS</span>
+                    </div>
+
+                    <ul class="matrix-features">
+                        <li>Protocolo Fiscal Básico (NFe/NFCe)</li>
+                        <li>Dashboard de Entradas/Saídas</li>
+                        <li>Acesso: 1 Usuário / 1 CNPJ</li>
+                        <li class="limited">Rastreabilidade Parcial de Processo</li>
+                    </ul>
+                </div>
+                <a href="#" class="btn-matrix-action">Ativar Protocolo</a>
+            </div>
+
+            <div class="matrix-card pro featured" data-level="Máximo">
+                <div class="card-content">
+                    <h3 class="matrix-title">STOCKBRASIL PRO</h3>
+                    <p class="matrix-desc">O Motor de Inteligência Fiscal com Governança Preditiva Total.</p>
+                    
+                    <div class="matrix-core">
+                        <span class="price-value">599</span>
+                        <span class="price-unit">R$ / MÊS</span>
+                    </div>
+
+                    <ul class="matrix-features">
+                        <li>Inteligência Fiscal Preditiva (IA)</li>
+                        <li>Rastreabilidade de Ponta a Ponta (Logística)</li>
+                        <li>Acesso: Ilimitado / 5 CNPJs</li>
+                        <li>Suporte Prioritário 24/7</li>
+                    </ul>
+                </div>
+                <a href="#" class="btn-matrix-action">Desbloquear O PRO</a>
             </div>
             
-            <div class="infra-cards-grid">
-                <div class="infra-card scroll-reveal">
-                    <h3>Multi-Region Failover</h3>
-                    <p>Sistema redundante em múltiplas regiões geográficas, garantindo zero downtime em falhas de infraestrutura regionais.</p>
-                </div>
-                <div class="infra-card scroll-reveal delay-100">
-                    <h3>Segurança de Borda</h3>
-                    <p>Proteção DDoS e Firewall de Aplicação Web (WAF) monitorado 24/7 contra vulnerabilidades OWASP Top 10.</p>
-                </div>
-                <div class="infra-card scroll-reveal delay-200">
-                    <h3>Latência Otimizada</h3>
-                    <p>Rede de entrega de conteúdo (CDN) e otimização de banco de dados para garantir que a transação no PDV seja sub-segundo.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="faq" class="section-padding bg-tertiary">
-        <div class="lp-container">
-            <div class="section-header scroll-reveal">
-                <span class="text-highlight-small">GOVERNANÇA E OPERAÇÃO</span>
-                <h2>Dúvidas Críticas sobre Implantação.</h2>
-            </div>
-
-            <div class="faq-grid scroll-reveal">
-                <div class="faq-item">
-                    <h4>Qual o processo e tempo estimado para a migração de dados do meu sistema legado?</h4>
-                    <p>O processo começa com a análise dos seus dados via API ou exportação XML. Nossa equipe de Consultoria aloca um Gerente de Migração dedicado, e o tempo médio para Go-Live de uma base de médio porte é de 4 a 6 semanas.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>Como é tratada a segurança de acesso e a política de usuários em um ambiente com alta rotatividade?</h4>
-                    <p>Utilizamos autenticação SSO (Single Sign-On) e políticas de acesso baseadas em funções (Role-Based Access Control - RBAC). O administrador do sistema pode revogar acessos instantaneamente e auditar todas as ações de qualquer usuário.</p>
-                </div>
-                <div class="faq-item">
-                    <h4>Quais são os níveis de Suporte e SLA oferecidos na Licença Corporativa?</h4>
-                    <p>A Licença Corporativa inclui Suporte Nível 3 (dedicado) com SLA de resposta para incidentes críticos de 1 hora, 24 horas por dia, 7 dias por semana (24/7). Incluímos um Gerente de Sucesso do Cliente (CSM) dedicado.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <section id="licencas" class="section-padding">
-        <div class="lp-container">
-            <div class="section-header scroll-reveal">
-                <span class="text-highlight-small">PLANOS DE LICENÇA</span>
-                <h2>Valor que Escala com a sua Estrutura.</h2>
-                <p>Nossas licenças são dimensionadas pela complexidade e pelo nível de suporte exigido, não pelo volume transacionado.</p>
-            </div>
-
-            <div class="pricing-grid">
-                <div class="plan-card scroll-reveal">
-                    <h3>Base</h3>
-                    <p class="plan-subtitle">Ideal para prova de conceito e operações pontuais.</p>
-                    <div class="plan-price">
-                        <span class="currency">R$</span>
-                        <span class="amount">69</span>
-                        <span class="period">/mês</span>
+            <div class="matrix-card enterprise" data-level="Custom">
+                <div class="card-content">
+                    <h3 class="matrix-title">ENTERPRISE</h3>
+                    <p class="matrix-desc">Ambiente dedicado, escalabilidade infinita e integração via API.</p>
+                    
+                    <div class="matrix-core">
+                        <span class="price-value">Contrato</span>
+                        <span class="price-unit">Consulte</span>
                     </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> Acesso Padrão (2 usuários)</li>
-                        <li><i class="fas fa-check"></i> PDV e Estoque Padrão</li>
-                        <li><i class="fas fa-check"></i> Suporte via Portal (SLA 48h)</li>
-                        <li class="disabled"><i class="fas fa-times"></i> Módulo Fiscal Completo</li>
+
+                    <ul class="matrix-features">
+                        <li>Integração ERP/API Personalizada</li>
+                        <li>Consultoria de Compliance Exclusiva</li>
+                        <li>Servidor Dedicado e SLA Garantido</li>
+                        <li>Treinamento Técnico On-Site</li>
                     </ul>
-                    <a href="auth.html" class="submit-btn delete-btn full-width">Iniciar Teste</a>
                 </div>
+                <a href="#" class="btn-matrix-action">Solicitar Cotação</a>
+            </div>
 
-                <div class="plan-card recommended scroll-reveal delay-100">
-                    <div class="recommended-badge">RECOMENDADO PELOS CONSULTORIAS</div>
-                    <h3>Estratégica</h3>
-                    <p class="plan-subtitle">O ponto de equilíbrio entre conformidade, gestão e suporte de ponta.</p>
-                    <div class="plan-price">
-                        <span class="currency">R$</span>
-                        <span class="amount">199</span>
-                        <span class="period">/mês</span>
-                    </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> **Até 10 Usuários Concorrentes**</li>
-                        <li><i class="fas fa-check"></i> Módulos Fiscal e Financeiro PRO</li>
-                        <li><i class="fas fa-check"></i> **Suporte Dedicado Nível 2**</li>
-                        <li><i class="fas fa-check"></i> Backup e DR em Múltiplas Regiões</li>
-                    </ul>
-                    <a href="auth.html" class="submit-btn blue-btn full-width big-btn">Solicitar Implantação Estratégica</a>
-                </div>
+        </div>
+    </div>
+</section>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        let lastScrollTop = 0;
+        const header = document.querySelector(".glass-header");
 
-                <div class="plan-card scroll-reveal delay-200">
-                    <h3>Corporativa</h3>
-                    <p class="plan-subtitle">Solução completa para grandes redes e integração com sistemas legados.</p>
-                    <div class="plan-price">
-                        <span class="currency">R$</span>
-                        <span class="amount">Sob</span>
-                        <span class="period">Consulta</span>
-                    </div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> Usuários e PDVs Ilimitados</li>
-                        <li><i class="fas fa-check"></i> **API Completa e Suporte Técnico**</li>
-                        <li><i class="fas fa-check"></i> Suporte 24/7 (SLA 1h)</li>
-                        <li><i class="fas fa-check"></i> Gerente de Sucesso Dedicado</li>
-                    </ul>
-                    <a href="#" class="submit-btn purple-btn full-width">Agendar Análise</a>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <section class="cta-final section-padding bg-secondary scroll-reveal">
-        <div class="lp-container cta-content">
-            <h2>Pronto para Auditoria e Escalabilidade?</h2>
-            <p>Fale com nossa equipe sênior. Sem compromisso, analisamos sua infraestrutura atual e propomos o plano de migração ideal.</p>
-            <a href="#" class="submit-btn blue-btn btn-lg">
-                Agendar Consultoria Gratuita <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-    </section>
+        if (!header) return; // Segurança
 
-    <footer class="footer">
-        <div class="lp-container footer-content">
-            <div class="footer-logo">
-                StockBrasil <span class="logo-highlight">PRO</span>
-                <p>Governança. Precisão. Escalabilidade.</p>
-                <p style="font-size:0.8rem; margin-top: 15px;">© 2024 StockBrasil PRO. CNPJ: XX.XXX.XXX/0001-XX</p>
-            </div>
-            <div class="footer-links">
-                <h4>Plataforma</h4>
-                <a href="#plataforma">Módulos</a>
-                <a href="#infraestrutura">Arquitetura</a>
-                <a href="#integracao">API</a>
-            </div>
-            <div class="footer-links">
-                <h4>Jurídico e Suporte</h4>
-                <a href="#faq">FAQ Empresarial</a>
-                <a href="#">Termos de Serviço</a>
-                <a href="#">Política de Privacidade</a>
-            </div>
-             <div class="footer-contact">
-                <h4>Central de Contato</h4>
-                <p>Vendas Estratégicas: (11) 5555-PRO</p>
-                <p>Suporte 24/7: (11) 4004-STOCK</p>
-                <p>Email: consultoria@stockbrasilpro.com.br</p>
-            </div>
-        </div>
-        <div class="footer-bottom lp-container">
-            <p>Desenvolvido para máxima conformidade e performance em ambientes de missão crítica.</p>
-        </div>
-    </footer>
+        window.addEventListener("scroll", function() {
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            // Corrige comportamento em iOS/Mac (scroll negativo)
+            if (scrollTop < 0) return;
 
-    <script>
-        function reveal() {
-            var reveals = document.querySelectorAll(".scroll-reveal");
-            for (var i = 0; i < reveals.length; i++) {
-                var windowHeight = window.innerHeight;
-                var elementTop = reveals[i].getBoundingClientRect().top;
-                var elementVisible = 150; 
-                if (elementTop < windowHeight - elementVisible) {
-                    reveals[i].classList.add("active");
-                }
+            // LÓGICA:
+            // Se rolou mais que 50px E está descendo (scrollTop > last) -> ESCONDE
+            if (scrollTop > 50 && scrollTop > lastScrollTop) {
+                header.classList.add("header-hidden");
+            } 
+            // Se está subindo -> MOSTRA
+            else {
+                header.classList.remove("header-hidden");
             }
-        }
-        window.addEventListener("scroll", reveal);
-        reveal(); 
-    </script>
+            
+            lastScrollTop = scrollTop;
+        }, { passive: true }); // Otimização de performance
+    });
+</script>
 
 </body>
 </html>
