@@ -213,6 +213,8 @@
     <input type="text" id="codigoBarras" class="config-input" placeholder="Opcional">
 </div>
 
+
+
     <div class="form-group">
         <label for="categoria">Categoria *</label>
         <select id="categoria" name="categoria">
@@ -231,7 +233,17 @@
             <option value="">Geral / Sem Fornecedor</option>
         </select>
     </div>
+
+    
+    <div class="form-group">
+        <label for="cProd" style="color:#0A84FF;">Código Ref / Nota (cProd)</label>
+        <input type="text" id="cProd" class="config-input" placeholder="Ex: 175200">
+    </div>
+
+    
 </div>
+
+
 
 
 
@@ -261,7 +273,7 @@
     </div>
     <div>
         <label>Frete / Outros (R$)</label>
-        <input type="number" id="prodFrete" class="config-input" step="0.01" oninput="calcularPrecificacao()">
+        <input type="text" id="prodFrete" class="config-input" placeholder="0,00" oninput="calcularPrecificacao()">
     </div>
 </div>
 
@@ -1197,9 +1209,9 @@
                     <i class="fas fa-chart-line"></i> Apenas Vendas
                 </button>
 
-                <button class="submit-btn blue-btn" onclick="corrigirNotasAntigas()" style="width: 100%;">
-        <i class="fas fa-sync-alt"></i> Sincronizar Histórico
-    </button>
+                <button class="submit-btn blue-btn" onclick="sincronizarHistoricoCompleto()" style="width: 100%;">
+                    <i class="fas fa-sync-alt"></i> Sincronizar
+                </button>
                 
             </div>
         </div>

@@ -1171,7 +1171,7 @@ window.renderProductTable = function() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. CABEÇALHO ATUALIZADO (Removido Lucro, Ajustado para Telas Menores)
+    // 1. CABEÇALHO
     if(thead) {
         thead.innerHTML = `
             <th style="width: 40px; text-align: center; padding: 0;">
@@ -1181,9 +1181,9 @@ window.renderProductTable = function() {
                     </div>
                 </div>
             </th>
-            <th style="width: 80px;">Cód.</th>
-            <th>Produto</th> <th style="width: 110px;">Venda</th>
-            <th style="width: 90px;">Estoque</th>
+            <th style="width: 110px;">Ref / Cód.</th> <th>Produto</th> 
+            <th style="width: 120px;">Venda</th>
+            <th style="width: 100px;">Estoque</th>
             <th style="width: 90px;">Ações</th>
         `;
     }
@@ -1194,21 +1194,37 @@ window.renderProductTable = function() {
         return;
     }
 
-    // Ordena alfabeticamente
     const lista = [...products].sort((a,b) => a.nome.localeCompare(b.nome));
 
     lista.forEach(p => {
         const row = tbody.insertRow();
         if (p.quantidade <= p.minimo) row.classList.add('low-stock-row');
         
-        // Formatação BRASIL FORÇADA (Vírgula)
         const precoFormatado = parseFloat(p.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        // Código Visual (Compacto)
-        let codigoVisual = `<span style="opacity:0.3">-</span>`;
-        if (p.cProd) codigoVisual = `<span style="font-family:monospace; font-weight:bold; color:var(--color-text-primary); font-size:0.8rem;">${p.cProd}</span>`;
+        // --- LÓGICA VISUAL DO CÓDIGO (Agora com Ícones) ---
+        let codigoVisual = `<span style="opacity:0.3; font-size:0.8rem;">---</span>`;
         
-        // Imagem (Pequena)
+        // 1. Prioridade: Código da Nota (cProd)
+        if (p.cProd && p.cProd.trim() !== "" && p.cProd.length < 20) {
+            // Ícone de Papel (Nota) + Código em Negrito
+            codigoVisual = `
+                <div style="display:flex; align-items:center; gap:5px; color:var(--color-text-primary);" title="Código Interno/Nota">
+                    <i class="far fa-file-alt" style="font-size:0.8rem; color:#0A84FF;"></i>
+                    <span style="font-family:monospace; font-weight:bold; letter-spacing:0.5px;">${p.cProd}</span>
+                </div>`;
+        } 
+        // 2. Fallback: Código de Barras (EAN)
+        else if (p.codigoBarras && p.codigoBarras.trim() !== "") {
+            // Ícone de Barras + Código Cinza
+            codigoVisual = `
+                <div style="display:flex; align-items:center; gap:5px; color:#888;" title="Código de Barras (EAN)">
+                    <i class="fas fa-barcode" style="font-size:0.8rem;"></i>
+                    <span style="font-family:monospace;">${p.codigoBarras}</span>
+                </div>`;
+        }
+        // ------------------------------------------------
+
         let imgHtml = '';
         if (p.imagem && p.imagem.length > 10) {
             imgHtml = `<img src="${p.imagem}" style="width:32px; height:32px; border-radius:6px; object-fit:cover; border:1px solid #444; flex-shrink:0;">`;
@@ -1216,7 +1232,6 @@ window.renderProductTable = function() {
             imgHtml = `<div style="width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#666; flex-shrink:0;"><i class="fas fa-box" style="font-size:0.8rem;"></i></div>`;
         }
 
-        // Dados Visuais
         const catVisual = p.categoria || "Geral"; 
         const estVisual = p.estabelecimento || "Matriz"; 
 
@@ -1231,13 +1246,13 @@ window.renderProductTable = function() {
                 <div style="display:flex; align-items:center; gap:10px; max-width: 100%;">
                     ${imgHtml}
                     <div style="display:flex; flex-direction:column; min-width: 0; flex: 1;">
-                        <span style="font-weight:600; color:var(--color-text-primary); font-size:0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.nome}">
+                        <span style="font-weight:600; color:var(--color-text-primary); font-size:0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.nome}">
                             ${p.nome}
                         </span>
                         
                         <div style="display:flex; gap:5px; align-items:center; margin-top:2px;">
-                            <span class="badge" style="background:#333; color:#ccc; border:1px solid #444; padding:1px 5px; font-size:0.65rem; white-space: nowrap;">${catVisual}</span>
-                            <span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A; border:none; padding:1px 5px; font-size:0.65rem; white-space: nowrap;">${estVisual}</span>
+                            <span class="badge" style="background:#333; color:#ccc; border:1px solid #444; padding:1px 6px; font-size:0.65rem;">${catVisual}</span>
+                            <span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A; border:none; padding:1px 6px; font-size:0.65rem;">${estVisual}</span>
                         </div>
                     </div>
                 </div>
@@ -5291,19 +5306,7 @@ window.editProduct = function(id) {
     const p = products.find(x => (x._id === id) || (x.id == id));
     if (!p) return;
 
-    // --- ATUALIZAÇÃO DO CABEÇALHO ---
     document.getElementById("form-title").textContent = "Editar Produto";
-    
-    // Mostra o CÓDIGO DA NOTA (cProd) Visualmente
-    const displayCod = document.getElementById("display-cod-produto");
-    if(displayCod) {
-        // Se tiver código de nota, mostra ele. Se não, avisa.
-        const codigoVisual = p.cProd ? p.cProd : "Produto Manual (Sem Cód. Nota)";
-        displayCod.textContent = `Cód. Nota/Ref: ${codigoVisual}`;
-        displayCod.style.display = 'block';
-    }
-    // ------------------------------------
-
     document.getElementById("submit-btn").innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
     document.getElementById("cancel-edit-btn").style.display = "inline-block";
     document.getElementById("product-id").value = p.id;
@@ -5321,15 +5324,24 @@ window.editProduct = function(id) {
 
     setVal('nome', p.nome);
     setVal('codigoBarras', p.codigoBarras); 
+    
+    // --- NOVO: Carrega o Código da Nota no Input ---
+    setVal('cProd', p.cProd); 
+    // -----------------------------------------------
+
     setVal('quantidade', p.quantidade);
     setVal('minimo', p.minimo);
     
     // Financeiro
     setVal('custo', p.custo);
-    setVal('prodFrete', p.frete);
+    
+    const elFrete = document.getElementById('prodFrete');
+    if(elFrete) {
+        elFrete.value = parseFloat(p.frete || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+    
     setVal('prodMarkup', p.markup || 2.0);
     
-    // Preço com formatação de vírgula (Função nova)
     const elPreco = document.getElementById('preco');
     if(elPreco) {
         elPreco.value = parseFloat(p.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -5337,28 +5349,22 @@ window.editProduct = function(id) {
 
     setVal('prodImagem', p.imagem);
 
-    // Switch Automático
     const switchAuto = document.getElementById('autoMarkupSwitch');
     if (switchAuto) switchAuto.checked = (p.autoMarkup !== false); 
 
-    // Selects com delay
     setTimeout(() => {
         setVal('categoria', p.categoria);
-        
         const estEl = document.getElementById('prodEstabelecimento');
         if(estEl) {
             const estVal = p.estabelecimento || (config.establishments ? config.establishments[0] : "");
             estEl.value = estVal;
         }
-
         setVal('prodFornecedor', p.fornecedor);
-
         if(typeof calcularPrecificacao === 'function') calcularPrecificacao('edit');
     }, 50);
 
     showTab('product-form-tab');
     
-    // Rola para cima
     const formTab = document.getElementById('product-form-tab');
     if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
 }
@@ -5366,27 +5372,29 @@ window.editProduct = function(id) {
 window.calcularPrecificacao = function(origem) {
     // Elementos
     const elCusto = document.getElementById('custo');
-    const elFrete = document.getElementById('prodFrete');
+    const elFrete = document.getElementById('prodFrete'); // Agora é Texto
     const elMarkup = document.getElementById('prodMarkup');
     const elSugerido = document.getElementById('precoSugeridoDisplay');
-    const elPrecoFinal = document.getElementById('preco'); // Agora é type="text"
+    const elPrecoFinal = document.getElementById('preco');
     const elSwitch = document.getElementById('autoMarkupSwitch');
     const elLabel = document.getElementById('label-mode');
 
-    // Helper para converter "12,50" em 12.50
+    // Helper: Converte "1.200,50" para 1200.50
     const lerValor = (val) => {
         if(!val) return 0;
         if(typeof val === 'number') return val;
         return parseFloat(val.toString().replace(/\./g, '').replace(',', '.')) || 0;
     };
 
-    // Helper para formatar 12.50 em "12,50"
+    // Helper: Formata 1200.50 para "1.200,50"
     const formatar = (val) => val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-    // Valores (Lê corretamente com vírgula ou ponto)
+    // Valores
     const custo = parseFloat(elCusto.value) || 0;
-    const frete = parseFloat(elFrete.value) || 0;
+    // O FRETE AGORA USA A FUNÇÃO lerValor PARA ENTENDER A VÍRGULA
+    const frete = lerValor(elFrete ? elFrete.value : "0"); 
     const markup = parseFloat(elMarkup.value) || 0;
+    
     const custoTotal = custo + frete;
     const isAuto = elSwitch.checked;
 
@@ -5400,7 +5408,6 @@ window.calcularPrecificacao = function(origem) {
         elPrecoFinal.setAttribute('readonly', true);
         elPrecoFinal.style.opacity = "0.7";
         
-        // Se não for edição manual, atualiza o valor com VÍRGULA
         if (origem !== 'edit') {
             elPrecoFinal.value = formatar(valorSugerido);
         }
@@ -5409,13 +5416,12 @@ window.calcularPrecificacao = function(origem) {
         elPrecoFinal.removeAttribute('readonly');
         elPrecoFinal.style.opacity = "1";
         
-        // Se estiver vazio, sugere valor inicial
         if ((!elPrecoFinal.value) && origem !== 'edit') {
             elPrecoFinal.value = formatar(custoTotal);
         }
     }
 
-    // 3. Calcula Lucro (Lendo o valor do input que agora tem vírgula)
+    // 3. Calcula Lucro
     const precoVenda = lerValor(elPrecoFinal.value);
     const lucro = precoVenda - custoTotal;
     let margem = 0;
@@ -5433,6 +5439,7 @@ window.calcularPrecificacao = function(origem) {
         spanMargem.style.color = margem < 0 ? '#FF453A' : (margem < 20 ? '#FF9F0A' : 'var(--color-accent-green)');
     }
 }
+
 
 window.calcularLucroReal = function() {
     const custo = parseFloat(document.getElementById('custo').value) || 0;
@@ -5526,7 +5533,13 @@ window.handleProductForm = async function(event) {
     event.preventDefault(); 
     const btn = document.getElementById('submit-btn');
     
-    // Elementos obrigatórios (com proteção se não existirem)
+    // Funções auxiliares
+    const lerValor = (val) => {
+        if(!val) return 0;
+        return parseFloat(val.toString().replace(/\./g, '').replace(',', '.')) || 0;
+    };
+
+    // Elementos
     const elCusto = document.getElementById('custo');
     const elFrete = document.getElementById('prodFrete');
     const elMarkup = document.getElementById('prodMarkup');
@@ -5535,62 +5548,54 @@ window.handleProductForm = async function(event) {
     const elQtd = document.getElementById('quantidade');
     const elMin = document.getElementById('minimo');
 
-    // Valores
+    // Captura Valores
     const custo = parseFloat(elCusto ? elCusto.value : 0) || 0;
-    const frete = parseFloat(elFrete ? elFrete.value : 0) || 0;
+    const frete = lerValor(elFrete ? elFrete.value : "0");
     const markup = parseFloat(elMarkup ? elMarkup.value : 0) || 0;
-    const preco = parseFloat(elPreco ? elPreco.value : 0) || 0;
+    const preco = lerValor(elPreco ? elPreco.value : "0");
+    
     const custoTotal = custo + frete;
 
-    // Validação de Preço
     if (preco < custoTotal) {
         if(typeof customAlert === 'function') customAlert(`AÇÃO BLOQUEADA - Preço menor que custo.`, "error");
         else alert("ERRO: Preço menor que o custo.");
         return; 
     }
 
-    // Dados auxiliares
     const switchAuto = document.getElementById('autoMarkupSwitch');
     const isAuto = switchAuto ? switchAuto.checked : true;
-    
     const idInput = document.getElementById('product-id');
     const isEditing = idInput && idInput.value !== '';
-    
     const nomeProd = elNome ? elNome.value : "Sem Nome";
 
-    // --- CORREÇÃO: REMOVIDA A LEITURA DE 'prodGrupo' QUE TRAVAVA O CÓDIGO ---
-    
-    // Captura campos opcionais com segurança (evita erro se o HTML faltar)
+    // Campos Opcionais
     const elCat = document.getElementById('categoria');
     const elEst = document.getElementById('prodEstabelecimento');
     const elBar = document.getElementById('codigoBarras');
+    
+    // --- NOVO: Captura o Código da Nota Editado ---
+    const elCProd = document.getElementById('cProd'); 
+    // ----------------------------------------------
+
     const elForn = document.getElementById('prodFornecedor');
     const elImg = document.getElementById('prodImagem');
 
     const productData = {
         nome: nomeProd,
-        
-        // Seletor de Categoria
         categoria: elCat ? elCat.value : "Geral",
-        
-        // Seletor de Estabelecimento
         estabelecimento: elEst ? elEst.value : (config.establishments ? config.establishments[0] : "Matriz"),
         
-        // Código de Barras (Opcional)
         codigoBarras: elBar ? elBar.value : "",
+        cProd: elCProd ? elCProd.value.trim() : "", // <--- SALVA O CÓDIGO DA NOTA AQUI
         
-        // Grupo agora vai vazio ou igual a categoria para compatibilidade
         grupo: "", 
-
         preco: preco,
         custo: custo,
         frete: frete,
         markup: markup,
         autoMarkup: isAuto, 
-        
         quantidade: parseInt(elQtd ? elQtd.value : 0),
         minimo: parseInt(elMin ? elMin.value : 0),
-        
         fornecedor: elForn ? elForn.value : "",
         imagem: elImg ? elImg.value : ""
     };
@@ -5600,27 +5605,18 @@ window.handleProductForm = async function(event) {
 
         if (isEditing) {
             await updateDoc(getUserDocumentRef("products", idInput.value), productData);
-            // 📝 LOG DE EDIÇÃO
-            if(typeof logSystemAction === 'function') {
-                await logSystemAction("Edição de Produto", `Alterou o produto: ${nomeProd}`);
-            }
+            if(typeof logSystemAction === 'function') await logSystemAction("Edição de Produto", `Alterou: ${nomeProd}`);
             showToast("Produto atualizado!", "success");
         } else {
             await addDoc(getUserCollectionRef("products"), productData);
-            // 📝 LOG DE CRIAÇÃO
-            if(typeof logSystemAction === 'function') {
-                await logSystemAction("Criação de Produto", `Cadastrou novo produto: ${nomeProd}`);
-            }
+            if(typeof logSystemAction === 'function') await logSystemAction("Criação de Produto", `Criou: ${nomeProd}`);
             showToast("Produto cadastrado!", "success");
         }
 
-        // Reseta e Recarrega
         if(typeof resetProductForm === 'function') resetProductForm(); 
         else document.querySelector(".product-form").reset();
         
         await loadAllData(); 
-        
-        // Volta para a lista
         if(typeof showTab === 'function') showTab('product-list-tab');
 
     } catch (error) {
@@ -10158,70 +10154,121 @@ window.deselecionarTudo = function() {
 window.renderAuditLogs = renderAuditLogs;
 
 // ============================================================
-// FERRAMENTA DE CORREÇÃO DE NOTAS (Conecta Passado e Presente)
+// SUPER SINCRONIZAÇÃO DE HISTÓRICO (Mão Dupla)
 // ============================================================
-window.corrigirNotasAntigas = async function() {
+window.sincronizarHistoricoCompleto = async function() {
     const user = auth.currentUser;
     if (!user) return;
 
-    customConfirm("O sistema vai analisar suas notas fiscais antigas e tentar conectar com os produtos atuais pelo Código de Barras ou Nome. \n\nDeseja iniciar a varredura?", async () => {
+    customConfirm("⚠️ ATENÇÃO: MODO DE CORREÇÃO PROFUNDA\n\nO sistema vai procurar produtos nas notas fiscais antigas comparando NOME e CÓDIGO DE BARRAS.\n\nSe encontrar, ele vai substituir o código atual pelo código da nota (cProd).\n\nDeseja continuar?", async () => {
+        
         try {
-            window.showLoadingScreen("Analisando Histórico...", "Conectando notas aos produtos...");
+            window.showLoadingScreen("Analisando...", "Comparando estoque com histórico de notas...");
             
-            let notasCorrigidas = 0;
+            let produtosCorrigidos = 0;
             const updates = [];
 
-            // Varre todas as notas fiscais importadas
-            for (const nota of inputHistory) {
-                let notaMudou = false;
-                
-                // Varre os itens dentro da nota
-                const novosItens = nota.items.map(itemNota => {
-                    // Tenta achar o produto real no estoque atual
-                    // 1. Pelo Código de Barras (Mais preciso)
-                    let produtoReal = products.find(p => p.codigoBarras && p.codigoBarras === itemNota.ean);
-                    
-                    // 2. Se não achar, tenta pelo Nome (Aproximado)
-                    if (!produtoReal) {
-                        produtoReal = products.find(p => p.nome.toLowerCase().trim() === itemNota.nome.toLowerCase().trim());
-                    }
+            // Função para limpar strings para comparação (remove espaços extras e deixa minusculo)
+            const limparTexto = (txt) => txt ? txt.toString().trim().toLowerCase().replace(/\s+/g, ' ') : "";
 
-                    // Se achou o produto no sistema novo, atualiza o ID na nota antiga
-                    if (produtoReal) {
-                        // Se o ID ou código estava diferente, atualiza
-                        if (itemNota.cProd !== produtoReal.cProd || itemNota.productId !== produtoReal.id) {
-                            itemNota.cProd = produtoReal.cProd || produtoReal.id; // Usa o código novo
-                            itemNota.productId = produtoReal.id; // Vínculo interno
-                            notaMudou = true;
+            console.log("--- INICIANDO VARREDURA ---");
+
+            // 1. Percorre TODOS os produtos do estoque
+            for (const prod of products) {
+                
+                let novoCodigoNota = null;
+                let novoEAN = null;
+                let encontrouNaNota = false;
+
+                // Nome do produto limpo para busca
+                const nomeProdLimpo = limparTexto(prod.nome);
+                const eanProd = prod.codigoBarras ? prod.codigoBarras.trim() : "";
+
+                // 2. Procura esse produto em TODAS as notas fiscais
+                for (const nota of inputHistory) {
+                    if (nota.items) {
+                        const itemNota = nota.items.find(i => {
+                            const nomeItemLimpo = limparTexto(i.nome);
+                            const eanItem = i.ean ? i.ean.trim() : "";
+
+                            // COMPARAÇÃO 1: Código de Barras Bate? (Mais forte)
+                            if (eanItem && eanProd && eanItem === eanProd && eanItem !== "SEM GTIN") {
+                                return true;
+                            }
+
+                            // COMPARAÇÃO 2: Nome Bate? (Exato)
+                            if (nomeItemLimpo === nomeProdLimpo) {
+                                return true;
+                            }
+
+                            return false;
+                        });
+
+                        if (itemNota) {
+                            // ACHOU NA NOTA!
+                            novoCodigoNota = itemNota.cProd; // Código interno da nota (Ex: 175200)
+                            novoEAN = itemNota.ean;          // EAN da nota
+                            encontrouNaNota = true;
+                            break; // Para de procurar nas outras notas
                         }
                     }
-                    return itemNota;
-                });
+                }
 
-                // Se houve alguma correção nesta nota, salva no banco
-                if (notaMudou) {
-                    const notaRef = getUserDocumentRef("input_invoices", nota.id);
-                    updates.push(updateDoc(notaRef, { items: novosItens }));
-                    notasCorrigidas++;
+                // 3. SE ACHOU, VERIFICA SE PRECISA ATUALIZAR
+                if (encontrouNaNota) {
+                    let precisaSalvar = false;
+                    const dadosParaAtualizar = {};
+
+                    // REGRA 1: O código atual é "feio" (ID do banco > 15 chars) OU está vazio OU é diferente do da nota?
+                    const codigoAtual = prod.cProd || "";
+                    const codigoEhFeio = codigoAtual.length > 15; // IDs do firebase tem 20 chars
+                    const codigoEhDiferente = codigoAtual !== novoCodigoNota;
+
+                    if (novoCodigoNota && (codigoEhFeio || codigoEhDiferente)) {
+                        console.log(`🔧 Corrigindo Cód: ${prod.nome} | Antigo: ${codigoAtual} -> Novo: ${novoCodigoNota}`);
+                        dadosParaAtualizar.cProd = novoCodigoNota;
+                        precisaSalvar = true;
+                    }
+
+                    // REGRA 2: Preencher EAN se estiver faltando
+                    if (novoEAN && novoEAN !== "SEM GTIN" && (!prod.codigoBarras || prod.codigoBarras === "")) {
+                        console.log(`📦 Preenchendo EAN: ${prod.nome} -> ${novoEAN}`);
+                        dadosParaAtualizar.codigoBarras = novoEAN;
+                        precisaSalvar = true;
+                    }
+
+                    // 4. Adiciona na fila de atualização
+                    if (precisaSalvar) {
+                        const docRef = getUserDocumentRef("products", prod.id);
+                        updates.push(updateDoc(docRef, dadosParaAtualizar));
+                        produtosCorrigidos++;
+                    }
                 }
             }
 
-            await Promise.all(updates);
-            
-            window.hideLoadingScreen();
-            
-            if (notasCorrigidas > 0) {
-                await logSystemAction("Correção de Sistema", `Atualizou ${notasCorrigidas} notas fiscais antigas para o novo padrão.`);
-                customAlert(`Sucesso! ${notasCorrigidas} notas fiscais foram atualizadas e conectadas aos produtos atuais.`, "success");
-                await loadAllData(); // Recarrega para ver as mudanças
+            console.log(`--- FIM DA VARREDURA: ${produtosCorrigidos} correções encontradas ---`);
+
+            // 5. Executa tudo de uma vez
+            if (updates.length > 0) {
+                await Promise.all(updates);
+                
+                await logSystemAction("Correção em Massa", `Corrigiu códigos de ${produtosCorrigidos} produtos.`);
+                
+                window.hideLoadingScreen();
+                customAlert(`Sucesso! ${produtosCorrigidos} produtos foram corrigidos.\nOs códigos estranhos foram substituídos pelos códigos da Nota Fiscal.`, "success");
+                
+                await loadAllData(); // Recarrega a tela
             } else {
-                showToast("Suas notas já estão sincronizadas!", "success");
+                window.hideLoadingScreen();
+                // Se der zero, explica o motivo provável no console
+                console.warn("Nenhuma correção feita. Motivos possíveis: Nomes muito diferentes ou produtos não existem nas notas importadas.");
+                showToast("Nenhuma correção necessária encontrada. Verifique se os nomes dos produtos batem com as notas.", "info");
             }
 
         } catch (error) {
             window.hideLoadingScreen();
             console.error(error);
-            customAlert("Erro ao corrigir notas: " + error.message, "error");
+            customAlert("Erro na sincronização: " + error.message, "error");
         }
     });
 }
@@ -10234,89 +10281,167 @@ window.adicionarFreteManual = async function(idNota) {
     const nota = inputHistory.find(n => n.id === idNota);
     if (!nota) return showToast("Nota não encontrada.", "error");
 
-    // 2. Pede o valor do frete
-    customPrompt("Lançar Frete", `Digite o valor TOTAL do frete para a Nota Nº ${nota.numero}.\nO sistema fará o rateio proporcional por valor.`, async (valorDigitado) => {
+    // 2. Cria o HTML do Modal de Frete Dinamicamente
+    // (Não precisa mexer no app.html, ele cria e destroi sozinho)
+    const existingModal = document.getElementById('modal-frete-custom');
+    if(existingModal) existingModal.remove();
+
+    const modalHTML = `
+    <div id="modal-frete-custom" class="modal-overlay" style="display:flex; z-index: 5000;">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3><i class="fas fa-truck"></i> Lançamento de Frete</h3>
+            <p style="color:#aaa; font-size:0.9rem; margin-bottom:15px;">
+                Nota Nº <strong>${nota.numero}</strong> | Fornecedor: ${nota.fornecedor}
+            </p>
+
+            <div class="form-group">
+                <label>Valor Total do Frete (R$)</label>
+                <input type="text" id="frete-valor-input" class="config-input" placeholder="0,00" style="font-size:1.2rem; font-weight:bold; color:var(--color-accent-green);">
+            </div>
+
+            <div class="form-group">
+                <label>Método de Distribuição (Rateio)</label>
+                <select id="frete-tipo-select" class="config-input">
+                    <option value="valor">Por Valor (Proporcional ao Preço)</option>
+                    <option value="qtd">Por Unidade (Igual por Item)</option>
+                    <option value="linha">Por Produto (Igual por Linha)</option>
+                </select>
+                <small id="frete-desc-help" style="display:block; margin-top:5px; color:#888; font-size:0.8rem;">
+                    Recomendado: Produtos mais caros absorvem mais frete.
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="submit-btn delete-btn" onclick="document.getElementById('modal-frete-custom').remove()">Cancelar</button>
+                <button type="button" class="submit-btn green-btn" onclick="confirmarRateioFrete('${idNota}')">Confirmar Rateio</button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Foca no input e adiciona listener para explicar as opções
+    setTimeout(() => {
+        const input = document.getElementById('frete-valor-input');
+        input.focus();
         
-        // Converte "100,00" para 100.00
-        const freteTotal = parseFloat(valorDigitado.replace(',', '.')) || 0;
+        const select = document.getElementById('frete-tipo-select');
+        const help = document.getElementById('frete-desc-help');
+        
+        select.addEventListener('change', () => {
+            if(select.value === 'valor') help.innerText = "Recomendado: Produtos mais caros absorvem mais frete.";
+            if(select.value === 'qtd') help.innerText = "Simples: Divide o valor total pela quantidade de peças.";
+            if(select.value === 'linha') help.innerText = "Raro: Divide o valor pelo número de itens diferentes na nota.";
+        });
+    }, 100);
+}
 
-        if (freteTotal <= 0) return showToast("Valor inválido.", "info");
+window.confirmarRateioFrete = async function(idNota) {
+    const valorInput = document.getElementById('frete-valor-input').value;
+    const metodo = document.getElementById('frete-tipo-select').value;
+    const modal = document.getElementById('modal-frete-custom');
 
-        try {
-            window.showLoadingScreen("Calculando Rateio...", "Atualizando custos dos produtos...");
+    // Converte "100,00" para 100.00
+    const freteTotal = parseFloat(valorInput.replace(/\./g, '').replace(',', '.')) || 0;
 
-            // 3. Calcula o total dos produtos da nota para saber a % de cada um
-            // (Usamos o valor dos itens, não o total da nota que pode ter IPI/ST)
-            const itens = nota.items || nota.itens || [];
-            const totalProdutosNota = itens.reduce((acc, item) => acc + (parseFloat(item.total) || 0), 0);
+    if (freteTotal <= 0) {
+        alert("Digite um valor válido.");
+        return;
+    }
 
-            const batchUpdates = [];
-            let itensAtualizados = 0;
+    try {
+        window.showLoadingScreen("Calculando Rateio...", "Atualizando custos...");
+        
+        const nota = inputHistory.find(n => n.id === idNota);
+        const itens = nota.items || nota.itens || [];
+        const batchUpdates = [];
+        let itensAtualizados = 0;
 
-            // 4. Loop de Rateio
-            for (const item of itens) {
-                // Tenta achar o produto vinculado
-                // Pelo ID salvo na importação OU pelo código de barras/nome
-                let prod = products.find(p => p.id === item.productId || p.id === item.cProd);
-                
-                if (!prod) {
-                    // Tenta busca secundária se o vínculo direto falhar
-                    prod = products.find(p => p.codigoBarras === item.ean || p.nome === item.nome);
-                }
+        // --- CÁLCULOS TOTAIS PARA AS FÓRMULAS ---
+        const totalValorNota = itens.reduce((acc, i) => acc + (parseFloat(i.total)||0), 0);
+        const totalQtdPecas = itens.reduce((acc, i) => acc + (parseFloat(i.qtd)||parseFloat(i.quantity)||1), 0);
+        const totalLinhas = itens.length;
 
-                if (prod) {
-                    // MATEMÁTICA DO RATEIO:
-                    // Peso do item = Valor do Item / Valor Total da Nota
-                    // Frete do Item = Frete Total * Peso
-                    // Frete Unitário = Frete do Item / Quantidade
-                    
-                    const valorItem = parseFloat(item.total) || 0;
-                    const qtdItem = parseFloat(item.qtd) || 1;
-                    
-                    if (valorItem > 0 && totalProdutosNota > 0) {
-                        const proporcao = valorItem / totalProdutosNota;
-                        const freteDesteItemTotal = freteTotal * proporcao;
-                        const freteUnitario = freteDesteItemTotal / qtdItem;
-
-                        // Atualiza o produto
-                        const docRef = getUserDocumentRef("products", prod.id);
-                        batchUpdates.push(updateDoc(docRef, { 
-                            frete: freteUnitario // Atualiza o campo 'Frete/Outros'
-                        }));
-                        itensAtualizados++;
-                    }
-                }
+        // --- LOOP DE ATUALIZAÇÃO ---
+        for (const item of itens) {
+            // Busca o produto no estoque
+            let prod = products.find(p => p.id === item.productId || p.id === item.cProd);
+            if (!prod) {
+                prod = products.find(p => p.codigoBarras === item.ean || p.nome === item.nome);
             }
 
-            // 5. Executa
-            await Promise.all(batchUpdates);
+            if (prod) {
+                const valorItem = parseFloat(item.total) || 0;
+                const qtdItem = parseFloat(item.qtd) || parseFloat(item.quantity) || 1;
+                
+                let freteUnitarioCalculado = 0;
 
-            // 6. Lança como Despesa Financeira também (Opcional, mas bom para o caixa)
-            const despesaFrete = {
-                descricao: `Frete s/ Nota ${nota.numero} (${nota.fornecedor})`,
-                valor: freteTotal,
-                categoria: "Operacional",
-                data: new Date().toISOString().split('T')[0],
-                timestamp: new Date().toISOString()
-            };
-            await addDoc(getUserCollectionRef("expenses"), despesaFrete);
+                // === A MÁGICA DOS 3 MÉTODOS ===
+                
+                // 1. POR VALOR (Padrão Contábil)
+                if (metodo === 'valor') {
+                    if (totalValorNota > 0) {
+                        const proporcao = valorItem / totalValorNota; // Ex: Item é 10% da nota
+                        const freteDoItemTotal = freteTotal * proporcao; // Paga 10% do frete
+                        freteUnitarioCalculado = freteDoItemTotal / qtdItem;
+                    }
+                }
+                
+                // 2. POR QUANTIDADE/UNIDADE (Pedido da Cliente)
+                else if (metodo === 'qtd') {
+                    if (totalQtdPecas > 0) {
+                        // Simples: Frete Total / Total de Peças = Frete por Peça
+                        freteUnitarioCalculado = freteTotal / totalQtdPecas;
+                    }
+                }
+                
+                // 3. POR LINHA (Produto Diferente)
+                else if (metodo === 'linha') {
+                    if (totalLinhas > 0) {
+                        const fretePorLinha = freteTotal / totalLinhas;
+                        freteUnitarioCalculado = fretePorLinha / qtdItem;
+                    }
+                }
 
-            window.hideLoadingScreen();
-            
-            await logSystemAction("Frete Manual", `Lançou R$ ${freteTotal.toFixed(2)} na Nota ${nota.numero}. Rateado em ${itensAtualizados} produtos.`);
-            
-            customAlert(`Sucesso!\n\nO frete de R$ ${freteTotal.toFixed(2)} foi dividido proporcionalmente entre ${itensAtualizados} produtos e atualizado no estoque.\n\nTambém foi lançada uma despesa no financeiro.`, "success");
-            
-            await loadAllData();
-
-        } catch (error) {
-            window.hideLoadingScreen();
-            console.error(error);
-            showToast("Erro ao ratear frete: " + error.message, "error");
+                // Atualiza o produto
+                // Se já tinha frete antes, SOMAMOS ou SUBSTITUIMOS? 
+                // Geralmente substitui o valor unitário no campo de referência.
+                const docRef = getUserDocumentRef("products", prod.id);
+                batchUpdates.push(updateDoc(docRef, { 
+                    frete: freteUnitarioCalculado 
+                }));
+                itensAtualizados++;
+            }
         }
 
-    }, "0,00", "text"); // Input tipo texto para aceitar vírgula na máscara visual se tiver
+        await Promise.all(batchUpdates);
+
+        // Lança Despesa Financeira
+        const despesaFrete = {
+            descricao: `Frete (${metodo}) s/ Nota ${nota.numero} - ${nota.fornecedor}`,
+            valor: freteTotal,
+            categoria: "Operacional",
+            data: new Date().toISOString().split('T')[0],
+            timestamp: new Date().toISOString()
+        };
+        await addDoc(getUserCollectionRef("expenses"), despesaFrete);
+
+        window.hideLoadingScreen();
+        if(modal) modal.remove();
+        
+        await logSystemAction("Frete Lançado", `Valor R$ ${freteTotal.toFixed(2)} rateado por [${metodo}] na nota ${nota.numero}.`);
+        
+        customAlert(`Sucesso!\n\nFrete de R$ ${freteTotal.toFixed(2)} distribuído para ${itensAtualizados} produtos usando o método: ${metodo.toUpperCase()}.`, "success");
+        
+        await loadAllData();
+
+    } catch (error) {
+        window.hideLoadingScreen();
+        console.error(error);
+        alert("Erro: " + error.message);
+    }
 }
+
 
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
