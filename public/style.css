@@ -5873,3 +5873,114 @@ input:checked + .slider:before {
     transform: scale(1.05); /* Em vez disso, cresce um pouquinho (Zoom) */
 }
 
+/* ================================================== */
+/* FERRAMENTA VARINHA MÁGICA (HEADER DA TABELA) */
+/* ================================================== */
+
+/* Container da Varinha no Header */
+.magic-wand-header {
+    position: relative;
+    display: inline-block; /* Importante para o posicionamento */
+}
+
+/* O Ícone da Varinha */
+.magic-trigger {
+    color: var(--color-text-secondary);
+    font-size: 1.3rem; /* Um pouco maior para ver as estrelas */
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 8px;
+    border-radius: 50%; /* Redondo */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+}
+
+/* EFEITO DE PODER (ESTRELINHAS BRILHANDO) */
+/* Isso cria o brilho ao redor das estrelas da varinha */
+.magic-trigger i {
+    filter: drop-shadow(0 0 0 rgba(10, 132, 255, 0)); /* Sem brilho normal */
+    transition: filter 0.3s ease;
+}
+
+/* Quando passa o mouse (HOVER) - Ativa o Poder */
+.magic-trigger:hover {
+    background: rgba(10, 132, 255, 0.1);
+    transform: scale(1.1) rotate(-10deg); /* Inclina como se estivesse usando */
+}
+
+.magic-trigger:hover i {
+    color: var(--color-accent-blue);
+    /* O Brilho Neon (As estrelinhas de poder) */
+    filter: drop-shadow(0 0 5px var(--color-accent-blue)) drop-shadow(0 0 10px #fff);
+}
+
+/* Quando está ATIVADO (Clicado) */
+.magic-trigger.active {
+    background: var(--color-accent-blue);
+    color: #fff;
+    box-shadow: 0 0 15px var(--color-accent-blue); /* Brilho forte externo */
+    transform: scale(1.1);
+}
+
+.magic-trigger.active i {
+    filter: drop-shadow(0 0 2px #fff); /* Estrelas brancas brilhantes */
+}
+
+/* A Janelinha "Estilo Photoshop" (Tooltip) */
+.magic-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    width: 150px;
+    background-color: #1a1a1a;
+    color: #fff;
+    text-align: left; /* Texto alinhado à esquerda fica mais elegante */
+    border-radius: 4px;
+    padding: 10px 12px;
+    position: absolute;
+    z-index: 1000;
+    
+    /* POSICIONAMENTO (PUXADO PRA DIREITA) */
+    top: 50%;            /* Meio vertical */
+    left: 100%;          /* Começa logo DEPOIS do ícone (direita) */
+    transform: translateY(-50%); /* Centraliza verticalmente */
+    margin-left: 15px;   /* Espacinho entre a varinha e a janela */
+    
+    /* Estilo Visual */
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    border: 1px solid #333;
+    pointer-events: none; /* O mouse ignora a janela */
+    
+    transition: all 0.2s ease;
+}
+
+/* Título dentro do Tooltip */
+.magic-tooltip strong {
+    display: block;
+    color: var(--color-accent-blue);
+    margin-bottom: 3px;
+    font-size: 0.8rem;
+}
+
+/* Setinha do Tooltip (Agora na esquerda da janela) */
+.magic-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 100%; /* Fica na esquerda da janela */
+    margin-top: -6px;
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent #1a1a1a transparent transparent; /* Aponta para a direita */
+}
+
+/* Mostra o Tooltip ao passar o mouse */
+.magic-trigger:hover .magic-tooltip {
+    visibility: visible;
+    opacity: 1;
+    margin-left: 10px; /* Pequena animação de deslizamento */
+}

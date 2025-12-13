@@ -8,7 +8,6 @@ import {
     reauthenticateWithCredential,
     EmailAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
 const firebaseConfig = {
   apiKey: "AIzaSyBYHAyzwUgvRJ_AP9ZV9MMrtpPb3s3ENIc",
   authDomain: "stockbrasil-e06ff.firebaseapp.com",
@@ -226,24 +225,111 @@ let systemConfig = {
   compactMode: false,
 };
 
+
 async function saveConfigToFirebase() {
     try {
         const user = auth.currentUser;
-        if (!user) return;
+        if (!user) return; 
+
+        const limpar = (arr) => [...new Set(arr.filter(item => item && String(item).trim() !== ""))];
+
+        config.categories = limpar(config.categories);
+        config.paymentTypes = limpar(config.paymentTypes);
+        config.establishments = limpar(config.establishments); // Salva nova lista
 
         const docRef = doc(db, "users", user.uid, "settings", "general");
         
-        // ADICIONEI productGroups AQUI
         await setDoc(docRef, { 
             categories: config.categories, 
             paymentTypes: config.paymentTypes,
-            productGroups: config.productGroups || [] 
+            productGroups: config.productGroups || [],
+            establishments: config.establishments
         }, { merge: true });
 
-        console.log("✅ Configurações (incluindo grupos) salvas na nuvem.");
+        console.log("✅ Configurações salvas.");
+        return true;
     } catch (error) {
-        console.error("❌ Erro ao salvar configs:", error);
+        console.error("❌ Erro ao salvar:", error);
+        return false;
     }
+}
+
+function renderEstablishmentsManager() {
+  const container = document.getElementById("establishments-container");
+  if (!container) return;
+
+  container.innerHTML = "";
+  if (!Array.isArray(config.establishments)) config.establishments = ["Matriz"];
+
+  config.establishments.forEach((est, index) => {
+    if (!est || est.trim() === "") return;
+
+    const div = document.createElement("div");
+    div.className = "category-item"; // Reusa estilo CSS
+    div.innerHTML = `
+            <span class="category-name"><i class="fas fa-store-alt" style="color:#FF9F0A; margin-right:8px;"></i> ${est}</span>
+            <div class="category-actions">
+                <button class="delete-category-btn" onclick="deleteEstablishment(${index})" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+    container.appendChild(div);
+  });
+}
+
+window.addNewEstablishment = async function() {
+  const input = document.getElementById("new-establishment-name");
+  const name = input.value.trim();
+
+  if (!name) return showToast("Digite um nome!", "error");
+  if (config.establishments.includes(name)) return showToast("Já existe!", "info");
+
+  config.establishments.push(name);
+  persistData();
+  
+  const btn = document.getElementById('btn-add-est');
+  if(btn) setBtnLoading(btn, true);
+  
+  await saveConfigToFirebase();
+  
+  if(btn) setBtnLoading(btn, false);
+  
+  renderEstablishmentsManager();
+  updateEstablishmentSelect(); 
+  input.value = "";
+  showToast("Local criado!", "success");
+}
+
+window.deleteEstablishment = async function(index) {
+    const nome = config.establishments[index];
+    customConfirm(`Excluir o local "${nome}"?`, async () => {
+        config.establishments.splice(index, 1);
+        persistData();
+        await saveConfigToFirebase();
+        renderEstablishmentsManager();
+        updateEstablishmentSelect();
+        showToast("Removido!", "success");
+    });
+}
+
+window.updateEstablishmentSelect = function(selected = "") {
+    const select = document.getElementById("prodEstabelecimento");
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Selecione...</option>';
+    
+    if (!config.establishments || config.establishments.length === 0) {
+        config.establishments = ["Matriz"];
+    }
+
+    config.establishments.forEach(est => {
+        const option = document.createElement("option");
+        option.value = est;
+        option.textContent = est;
+        if (est === selected) option.selected = true;
+        select.appendChild(option);
+    });
 }
 
 // =================================================================
@@ -291,9 +377,6 @@ window.closeCustomConfirm = () => {
     _safeConfirmCallback = null;
 }
 
-// 3. Prompt (AGORA COM MÁSCARA DE DATA E VALOR PADRÃO)
-// 3. Prompt (CORRIGIDO: Fecha antes de executar para não travar janelas em sequência)
-// No seu script.js, mude a assinatura:
 window.customPrompt = function(title, message, callback, defaultValue = "", inputType = "text") {
     const modal = document.getElementById('custom-prompt');
     
@@ -309,17 +392,28 @@ window.customPrompt = function(title, message, callback, defaultValue = "", inpu
     const inp = document.getElementById('prompt-input');
     const btn = document.getElementById('btn-prompt-confirm');
     
+    // --- LIMPEZA DE SEGURANÇA ---
+    inp.value = ""; // Limpa qualquer resíduo anterior
+    
+    // Truques para impedir o navegador de preencher senha salva
+    inp.setAttribute('autocomplete', 'new-password'); 
+    inp.setAttribute('data-lpignore', 'true'); // Ignora LastPass
+    
+    // Configura o tipo
     inp.type = inputType;
     t.textContent = title;
     m.textContent = message;
-    inp.value = defaultValue; 
-    modal.style.display = 'flex';
-
-    inp.removeAttribute('readonly');
+    
+    // Só define valor padrão se NÃO for senha
+    if (inputType !== 'password') {
+        inp.value = defaultValue; 
+    }
 
     modal.style.display = 'flex';
     
-    // Guarda o callback na variável global segura
+    // Mantém readonly por um instante para evitar flash de preenchimento
+    inp.setAttribute('readonly', 'readonly');
+
     _safePromptCallback = callback;
     
     // Lógica da Máscara de Data (Barras automáticas)
@@ -333,31 +427,35 @@ window.customPrompt = function(title, message, callback, defaultValue = "", inpu
         }
     };
 
+    // Remove o bloqueio e foca após o modal abrir
     setTimeout(() => {
+        inp.removeAttribute('readonly');
         inp.focus();
-        if(defaultValue) inp.select(); 
-    }, 100);
+        if(defaultValue && inputType !== 'password') inp.select(); 
+    }, 150);
 
-    // --- A CORREÇÃO ESTÁ AQUI ---
+    // Ação do Botão
     btn.onclick = function() {
-        const valorDigitado = inp.value; // 1. Guarda o valor
-        const acaoSalva = _safePromptCallback; // 2. Guarda a ação
+        const valorDigitado = inp.value; 
+        const acaoSalva = _safePromptCallback; 
         
-        window.closeCustomPrompt(); // 3. FECHA A JANELA PRIMEIRO
+        window.closeCustomPrompt(); // Fecha primeiro
         
-        if (acaoSalva) acaoSalva(valorDigitado); // 4. DEPOIS EXECUTA (que pode abrir outra janela)
+        if (acaoSalva) acaoSalva(valorDigitado); // Executa depois
     };
 }
-
 
 
 window.closeCustomPrompt = () => {
     const m = document.getElementById('custom-prompt');
     const inp = document.getElementById('prompt-input');
+    
     if (inp) {
-        inp.setAttribute('readonly', 'readonly');
-        inp.type = 'text'; // Opcional, reseta o tipo para não ficar "password" em outras chamadas
+        inp.value = ""; // LIMPA O CAMPO VISUALMENTE
+        inp.type = 'text'; // Reseta para texto (engana o navegador para não salvar senha)
+        inp.setAttribute('readonly', 'readonly'); // Trava de novo
     }
+    
     if(m) m.style.display = 'none';
     _safePromptCallback = null;
 }
@@ -532,7 +630,9 @@ function updateLoader(percent, message) {
     }
 }
 
-// 2. A Função Principal
+if (!config.establishments) config.establishments = ["Matriz"]; 
+
+// 2. CORREÇÃO DA FUNÇÃO loadAllData (Havia um erro de digitação 'onfig')
 async function loadAllData() {
     try {
         const user = auth.currentUser;
@@ -540,7 +640,6 @@ async function loadAllData() {
 
         updateLoader(10, "Conectando ao banco de dados...");
 
-        // 1. Prepara as promessas (buscas)
         const pProdutos = getDocs(getUserCollectionRef("products"));
         const pVendas = getDocs(getUserCollectionRef("sales"));
         const pClientes = getDocs(getUserCollectionRef("clients"));
@@ -548,84 +647,84 @@ async function loadAllData() {
         const pConfig = getDoc(doc(db, "users", user.uid, "settings", "general"));
         const pDespesas = getDocs(query(getUserCollectionRef("expenses"), orderBy("data", "desc")));
         const pNotasEntrada = getDocs(query(getUserCollectionRef("input_invoices"), orderBy("dataEmissao", "desc")));
-        // 2. Executa e Atualiza a Barra
-        
-        // Produtos (30%)
+
         const produtosSnap = await pProdutos;
         products = [];
         produtosSnap.forEach((doc) => products.push({ id: doc.id, ...doc.data() }));
         updateLoader(40, `Carregados ${products.length} produtos...`);
 
-        // Vendas (30%)
         const vendasSnap = await pVendas;
         salesHistory = [];
         vendasSnap.forEach((doc) => salesHistory.push({ id: doc.id, ...doc.data() }));
         salesHistory.sort((a, b) => new Date(b.timestamp || b.date) - new Date(a.timestamp || a.date));
-        updateLoader(70, `Carregadas ${salesHistory.length} vendas...`);
         
-        //notas
         const notasSnap = await pNotasEntrada;
         inputHistory = [];
         notasSnap.forEach((doc) => inputHistory.push({ id: doc.id, ...doc.data() }));
 
-        // Parceiros (15%)
         const [clientsSnap, suppSnap] = await Promise.all([pClientes, pFornecedores]);
         clientesReais = [];
         clientsSnap.forEach(doc => clientesReais.push({id: doc.id, ...doc.data()}));
         fornecedoresReais = [];
         suppSnap.forEach(doc => fornecedoresReais.push({id: doc.id, ...doc.data()}));
-        updateLoader(85, "Sincronizando parceiros...");
 
-        // Configurações e Financeiro (10%)
+        // --- CARREGAMENTO DE CONFIGURAÇÕES ---
         const [settingsSnap, despesasSnap] = await Promise.all([pConfig, pDespesas]);
         
+        const faxina = (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return [...new Set(arr.filter(item => item && String(item).trim() !== ""))];
+        };
+
         if (settingsSnap.exists()) {
             const d = settingsSnap.data();
-            if (d.categories) config.categories = d.categories;
-            if (d.paymentTypes) config.paymentTypes = d.paymentTypes;
-            if (d.productGroups) config.productGroups = d.productGroups;
+            config.categories = faxina(d.categories);
+            config.paymentTypes = faxina(d.paymentTypes);
+            config.productGroups = faxina(d.productGroups); // Mantemos por compatibilidade, mas não usaremos na tela
+            
+            // CARREGA ESTABELECIMENTOS
+            config.establishments = faxina(d.establishments); 
+            if(config.establishments.length === 0) config.establishments = ["Matriz"];
+        } else {
+            config.categories = ["Geral"];
+            config.paymentTypes = ["Dinheiro", "Pix"];
+            config.productGroups = [];
+            config.establishments = ["Matriz"];
         }
 
         expensesData = [];
         despesasSnap.forEach(d => expensesData.push({id: d.id, ...d.data()}));
-        updateLoader(95, "Finalizando interface...");
-
-        // 3. Renderiza Tudo
+        
+        // Renderização
         savedCarts = safeLocalStorageParse("savedCarts", []);
         systemConfig = safeLocalStorageParse("systemConfig", systemConfig);
         if (document.body) document.body.setAttribute('data-theme', systemConfig.theme || 'dark');
 
-        // Funções de Renderização Seguras
         const renderFunctions = [
             renderProductTable,
             updateDashboardMetrics,
-            updateCategorySelect,
-            updateGroupDatalist,
+            updateCategorySelect, 
             renderClientsTable,
             renderSuppliersTable,
             renderExpensesTable,
+            renderCategoriesManager, 
+            renderPaymentsManager,
+            renderEstablishmentsManager, // NOVO
+            updateEstablishmentSelect,   // NOVO
             initializeDashboardCharts,
             atualizarDashboardExecutivo
         ];
 
-        renderFunctions.forEach(fn => {
-            if (typeof fn === 'function') fn();
-        });
+        renderFunctions.forEach(fn => { if (typeof fn === 'function') fn(); });
 
-        // 100% - FIM
         updateLoader(100, "Bem-vindo!");
-
         if(typeof renderInvoicesTable === 'function') renderInvoicesTable();
 
     } catch (error) {
-        console.error("❌ ERRO FATAL:", error);
-        updateLoader(100, "Erro ao carregar."); // Força o fim para não travar
-        alert("Erro ao carregar dados: " + error.message);
+        console.error("❌ ERRO NO LOAD:", error);
+        updateLoader(100, "Erro ao carregar.");
     }
-    
 }
-
-
 /**
  * Envia uma coleção de itens (com IDs originais) para o Firebase.
  * @param {string} collectionName - Nome da coleção ('products' ou 'sales').
@@ -1015,34 +1114,39 @@ async function deleteProduct(id) {
     const user = auth.currentUser;
     if (!user) { customAlert("Erro de autenticação.", "error"); return; }
 
-    customConfirm("Tem certeza que deseja excluir este produto permanentemente? Esta ação é irreversível.", async () => {
-        
-        // 🚨 NOVO: Pede a senha do Admin antes de prosseguir
+    // Busca nome do produto antes de apagar para o log
+    const prod = products.find(p => p.id === id || p._id === id);
+    const nomeProd = prod ? prod.nome : "Desconhecido";
+
+    customConfirm(`Tem certeza que deseja excluir o produto "${nomeProd}"?`, async () => {
         const senha = await getPasswordViaPrompt("Autorização", "Digite sua senha para confirmar a exclusão:");
         if (!senha) return;
 
         try {
             window.showLoadingScreen("Verificando...", "Autenticando...");
-            
             const credential = EmailAuthProvider.credential(user.email, senha);
             await reauthenticateWithCredential(user, credential);
             
             const productRef = doc(db, "users", user.uid, "products", id);
             await deleteDoc(productRef);
             
+            // 📝 LOG DE EXCLUSÃO
+            await logSystemAction("Exclusão de Produto", `Apagou o produto: ${nomeProd} (ID: ${id})`);
+
             window.hideLoadingScreen();
             customAlert("Produto excluído com sucesso!", "success");
             await loadAllData();
         } catch (error) {
             window.hideLoadingScreen();
             if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-                showToast("Senha incorreta. Exclusão bloqueada.", "error");
+                showToast("Senha incorreta.", "error");
             } else {
                 customAlert("Erro ao excluir: " + error.message, "error");
             }
         }
     });
 }
+
 function resetProductForm() {
   const form = document.querySelector(".product-form");
   if (form) {
@@ -1060,85 +1164,115 @@ function resetProductForm() {
   }
 }
 
-function renderProductTable() {
+window.renderProductTable = function() {
     const tbody = document.querySelector('#product-table tbody');
     const thead = document.querySelector('#product-table thead tr');
     
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // ATUALIZAÇÃO DO CABEÇALHO (Se necessário, para adicionar colunas)
-    // Vamos garantir que o cabeçalho tenha as colunas certas via JS para não quebrar o HTML
-    if(thead && thead.children.length < 8) {
+    // 1. CABEÇALHO (8 Colunas Fixas)
+    if(thead) {
         thead.innerHTML = `
-            <th>ID</th>
-            <th>Produto</th>
-            <th>Grupo/Cat.</th>
-            <th>Custo</th>
-            <th>Venda</th>
-            <th>Lucro</th>
-            <th>Estoque</th>
-            <th>Ações</th>
+            <th style="width: 50px; text-align: center; padding: 0;">
+                <div class="magic-wand-header">
+                    <div class="magic-trigger" id="master-magic-wand" onclick="toggleSelectAllVisual(this)">
+                        <i class="fas fa-magic"></i>
+                        <span class="magic-tooltip">Seleção Mágica<br><small style="color:#aaa;">(Selecionar Tudo)</small></span>
+                    </div>
+                </div>
+            </th>
+            <th style="width: 90px;">Cód.</th>
+            <th>Produto & Categoria</th>
+            <th style="width: 140px;">Estabelecimento</th>
+            <th style="width: 110px;">Venda</th>
+            <th style="width: 110px;">Lucro</th>
+            <th style="width: 90px;">Estoque</th>
+            <th style="width: 100px;">Ações</th>
         `;
     }
 
-    // --- ESTADO VAZIO ---
     if (!products || products.length === 0) {
-        tbody.innerHTML = `
-            <tr class="empty-row">
-                <td colspan="8">
-                    <div class="empty-state-container" style="border:none; background:transparent;">
-                        <i class="fas fa-box-open empty-state-icon"></i>
-                        <h3 class="empty-state-title">Seu estoque está vazio</h3>
-                        <p class="empty-state-description">Cadastre seus produtos com precificação inteligente.</p>
-                        <button class="submit-btn blue-btn" onclick="showTab('product-form-tab')">
-                            <i class="fas fa-plus"></i> Novo Produto
-                        </button>
-                    </div>
-                </td>
-            </tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; opacity:0.5;">Nenhum produto cadastrado.</td></tr>`;
         document.getElementById('total-products').textContent = '0';
         return;
     }
 
-    products.forEach(p => {
+    const lista = [...products].sort((a,b) => a.nome.localeCompare(b.nome));
+
+    lista.forEach(p => {
         const row = tbody.insertRow();
         if (p.quantidade <= p.minimo) row.classList.add('low-stock-row');
         
-        // Cálculos de visualização
-        const custoTotal = (parseFloat(p.custo) || 0) + (parseFloat(p.frete) || 0);
-        const precoVenda = parseFloat(p.preco) || 0;
-        const lucro = precoVenda - custoTotal;
-        const margem = precoVenda > 0 ? ((lucro / precoVenda) * 100).toFixed(0) : 0;
-        
-        // Formatação do Grupo (Se não tiver grupo, mostra categoria)
-        const grupoExibicao = p.grupo ? `${p.grupo} <small style='color:#888'>(${p.categoria})</small>` : p.categoria;
+        const custo = parseFloat(p.custo) || 0;
+        const preco = parseFloat(p.preco) || 0;
+        const lucro = preco - custo;
+        const margem = preco > 0 ? ((lucro / preco) * 100) : 0;
 
+        // Visual do Código
+        let codigoVisual = `<span style="opacity:0.3">---</span>`;
+        if (p.cProd) codigoVisual = `<span style="font-family:monospace; font-weight:bold; color:var(--color-text-primary); letter-spacing:1px;">${p.cProd}</span>`;
+        else if (p.codigoBarras) codigoVisual = `<span style="font-size:0.8rem; color:#888;">${p.codigoBarras}</span>`;
+
+        // Visual da Imagem
+        let imgHtml = '';
+        if (p.imagem && p.imagem.length > 10) {
+            imgHtml = `<img src="${p.imagem}" style="width:35px; height:35px; border-radius:6px; object-fit:cover; border:1px solid #444;">`;
+        } else {
+            imgHtml = `<div style="width:35px; height:35px; border-radius:6px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#666;"><i class="fas fa-box"></i></div>`;
+        }
+
+        const catVisual = p.categoria || "Geral"; 
+        const estVisual = p.estabelecimento || "Matriz"; 
+
+        // 8 CÉLULAS EXATAS
         row.innerHTML = `
-            <td><small style="opacity:0.5">#${p.id.slice(-4)}</small></td>
-            <td>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    ${p.imagem ? `<img src="${p.imagem}" style="width:30px; height:30px; object-fit:cover; border-radius:4px;">` : '<i class="fas fa-box" style="opacity:0.3"></i>'}
-                    <strong>${p.nome}</strong>
+            <td style="text-align: center;">
+                <input type="checkbox" class="product-check" value="${p.id}" onchange="updateBulkBar()">
+            </td>
+            
+            <td>${codigoVisual}</td>
+            
+            <td onclick="openProductPreview('${p.id}')" style="cursor: pointer;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    ${imgHtml}
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight:600; color:var(--color-text-primary); font-size:0.95rem;">${p.nome}</span>
+                        <span style="font-size:0.75rem; color:#aaa; margin-top:2px;">
+                            <span class="badge" style="background:#333; color:#ccc; border:1px solid #444; padding:2px 6px; font-size:0.7rem;">${catVisual}</span>
+                        </span>
+                    </div>
                 </div>
             </td>
-            <td>${grupoExibicao}</td>
-            <td style="color:#aaa;">R$ ${custoTotal.toFixed(2)}</td>
-            <td style="font-weight:bold; color:var(--color-text-primary);">R$ ${precoVenda.toFixed(2)}</td>
+
             <td>
-                <span class="badge ${margem > 20 ? 'badge-success' : 'badge-warning'}">
-                    ${margem}% (R$ ${lucro.toFixed(2)})
+                <span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A; border:1px solid rgba(255, 159, 10, 0.3);">
+                    <i class="fas fa-map-marker-alt"></i> ${estVisual}
                 </span>
             </td>
-            <td>${getEstoqueBadge(p.quantidade, p.minimo, p.categoria)}</td>
+
+            <td style="font-weight:bold;">R$ ${preco.toFixed(2)}</td>
+            
             <td>
-                <button class="action-btn edit-btn" onclick="editProduct('${p.id}')"><i class="fas fa-pencil-alt"></i></button>
-                <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i></button>
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <span style="color:${lucro >= 0 ? 'var(--color-accent-green)' : '#ff453a'}; font-weight:bold; font-size:0.9rem;">
+                        R$ ${lucro.toFixed(2)}
+                    </span>
+                    <span style="font-size:0.7rem; color:#888;">${margem.toFixed(0)}%</span>
+                </div>
+            </td>
+
+            <td>${getEstoqueBadge(p.quantidade, p.minimo, "Geral")}</td>
+            
+            <td>
+                <div style="display:flex; gap:8px;">
+                    <button class="action-btn edit-btn" onclick="editProduct('${p.id}')"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i></button>
+                </div>
             </td>
         `;
     });
 }
-
 
 function showUndoModal(type, detail, logId) {
   document.getElementById("undo-action-type").textContent = type;
@@ -1896,6 +2030,8 @@ async function processSaleDirect(paymentType, clientNameInput, discountValue) {
         };
         
         await addDoc(getUserCollectionRef("sales"), sale);
+        await logSystemAction("Nova Venda", `Venda realizada. Valor: R$ ${finalTotal.toFixed(2)}. Cliente: ${finalClientName}. Pagamento: ${paymentType}`);
+
 
         // Finaliza
         cart = [];
@@ -2780,17 +2916,27 @@ function renderCategoriesManager() {
   if (!container) return;
 
   container.innerHTML = "";
+  if (!Array.isArray(config.categories)) config.categories = [];
+
+  // Muda o título da lista visualmente
+  const header = document.querySelector('.categories-list h5');
+  if(header) header.textContent = "Minhas Categorias";
 
   config.categories.forEach((category, index) => {
+    if (!category || category.trim() === "") return;
+
     const categoryElement = document.createElement("div");
     categoryElement.className = "category-item";
     categoryElement.innerHTML = `
-            <span class="category-name">${category}</span>
+            <span class="category-name">
+                <i class="fas fa-tags" style="color:var(--color-accent-purple); margin-right:8px;"></i> 
+                ${category}
+            </span>
             <div class="category-actions">
-                <button class="edit-category-btn" onclick="editCategory(${index})" title="Editar">
+                <button class="edit-category-btn" onclick="editCategory(${index})" title="Editar Nome">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="delete-category-btn" onclick="deleteCategory(${index})" title="Excluir">
+                <button class="delete-category-btn" onclick="deleteCategory(${index})" title="Excluir Estabelecimento">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -2799,34 +2945,37 @@ function renderCategoriesManager() {
   });
 }
 
+
 async function addNewCategory() {
   const input = document.getElementById("new-category-name");
   const name = input.value.trim();
 
   if (!name) {
-    alert("Digite um nome para a categoria!");
+    showToast("Digite o nome do estabelecimento (Ex: Lanchonete)!", "error");
     return;
   }
 
   if (config.categories.includes(name)) {
-    alert("Esta categoria já existe!");
+    showToast("Este estabelecimento já existe!", "info");
     return;
   }
 
   config.categories.push(name);
-  
-  // Salva Local
   persistData();
   
-  // SALVA NA NUVEM (CORREÇÃO)
-  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
+  const btn = document.querySelector('.categories-manager .blue-btn');
+  setBtnLoading(btn, true);
 
+  await saveConfigToFirebase();
+  
+  setBtnLoading(btn, false);
   renderCategoriesManager();
-  updateCategorySelect();
+  updateCategorySelect(); // Atualiza o select lá no formulário de produtos
 
   input.value = "";
-  // alert(`Categoria "${name}" adicionada!`); // Opcional
+  showToast("Estabelecimento criado com sucesso!", "success");
 }
+
 
 async function editCategory(index) {
   const newName = prompt("Editar nome da categoria:", config.categories[index]);
@@ -2847,47 +2996,63 @@ async function editCategory(index) {
 }
 
 async function deleteCategory(index) {
-  const categoryName = config.categories[index];
+    // Pega o nome antes de apagar para usar na mensagem
+    const categoryName = config.categories[index];
 
-  if (!confirm(`Tem certeza que deseja excluir a categoria "${categoryName}"?`)) {
-    return;
-  }
+    customConfirm(`Tem certeza que deseja excluir a categoria "${categoryName}" permanentemente?`, async () => {
+        try {
+            window.showLoadingScreen("Sincronizando...", "Atualizando banco de dados...");
 
-  // Verifica se tem produtos usando essa categoria
-  const productsUsingCategory = products.filter((p) => p.categoria === categoryName);
+            // 1. Verificação de Segurança: Existe produto usando?
+            const emUso = products.some(p => p.categoria === categoryName);
+            if (emUso) {
+                window.hideLoadingScreen();
+                return customAlert(`Não é possível excluir. Existem produtos usando a categoria "${categoryName}".`, "error");
+            }
 
-  if (productsUsingCategory.length > 0) {
-    if (!confirm(`⚠️ ${productsUsingCategory.length} produto(s) usam esta categoria. Eles serão movidos para "${config.categories[0]}". Continuar?`)) {
-      return;
-    }
-    // Move os produtos para a primeira categoria disponível
-    productsUsingCategory.forEach((product) => {
-      product.categoria = config.categories[0];
+            // 2. Remove do Array Local
+            config.categories.splice(index, 1);
+            
+            // 3. Salva no LocalStorage (Backup imediato)
+            persistData();
+            
+            // 4. Salva na Nuvem e ESPERA (Await)
+            const salvou = await saveConfigToFirebase();
+
+            // 5. Atualiza a Tela
+            renderCategoriesManager();
+            updateCategorySelect();
+            
+            window.hideLoadingScreen();
+
+            if (salvou) {
+                showToast("Categoria removida e sincronizada!", "success");
+            } else {
+                showToast("Categoria removida localmente, mas houve erro na nuvem.", "warning");
+            }
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            console.error(error);
+            showToast("Erro ao excluir: " + error.message, "error");
+            // Se der erro crítico, recarrega os dados originais para evitar desincronia
+            await loadAllData(); 
+        }
     });
-    // Se quiser salvar a alteração dos produtos na nuvem também, precisaria de um loop aqui, 
-    // mas vamos focar na categoria primeiro.
-    renderProductTable();
-  }
-
-  config.categories.splice(index, 1);
-  
-  // Salva Local
-  persistData();
-  
-  // SALVA NA NUVEM (CORREÇÃO)
-  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
-
-  renderCategoriesManager();
-  updateCategorySelect();
-  alert("Categoria excluída!");
 }
+
 function renderPaymentsManager() {
   const container = document.getElementById("payments-container");
   if (!container) return;
 
   container.innerHTML = "";
 
+  if (!Array.isArray(config.paymentTypes)) config.paymentTypes = [];
+
   config.paymentTypes.forEach((payment, index) => {
+    // Se for fantasma, PULA
+    if (!payment || payment.trim() === "") return;
+
     const paymentElement = document.createElement("div");
     paymentElement.className = "payment-item";
     paymentElement.innerHTML = `
@@ -2906,31 +3071,34 @@ function renderPaymentsManager() {
 }
 
 async function addNewPayment() {
-  const input = document.getElementById("new-payment-name");
-  const name = input.value.trim();
+    const input = document.getElementById("new-payment-name");
+    const name = input.value.trim();
 
-  if (!name) {
-    alert("Digite um nome para o método de pagamento!");
-    return;
-  }
+    if (!name) {
+        showToast("Digite um nome!", "error");
+        return;
+    }
 
-  if (config.paymentTypes.includes(name)) {
-    alert("Este método de pagamento já existe!");
-    return;
-  }
+    if (config.paymentTypes.includes(name)) {
+        showToast("Já existe!", "info");
+        return;
+    }
 
-  config.paymentTypes.push(name);
-  
-  // Salva Local
-  persistData();
-  
-  // SALVA NA NUVEM (CORREÇÃO)
-  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
-  
-  renderPaymentsManager();
+    config.paymentTypes.push(name);
+    
+    persistData();
+    
+    const btn = document.querySelector('.payments-manager .blue-btn');
+    setBtnLoading(btn, true);
 
-  input.value = "";
-  // alert(`Método "${name}" adicionado!`);
+    await saveConfigToFirebase();
+    
+    setBtnLoading(btn, false);
+    
+    renderPaymentsManager();
+
+    input.value = "";
+    showToast("Pagamento adicionado!", "success");
 }
 
 async function editPayment(index) {
@@ -2951,22 +3119,38 @@ async function editPayment(index) {
 }
 
 async function deletePayment(index) {
-  const paymentName = config.paymentTypes[index];
+    const paymentName = config.paymentTypes[index];
 
-  if (!confirm(`Tem certeza que deseja excluir o método "${paymentName}"?`)) {
-    return;
-  }
+    customConfirm(`Excluir a forma de pagamento "${paymentName}"?`, async () => {
+        try {
+            window.showLoadingScreen("Sincronizando...", "Removendo do sistema...");
 
-  config.paymentTypes.splice(index, 1);
-  
-  // Salva Local
-  persistData();
-  
-  // SALVA NA NUVEM (CORREÇÃO)
-  if(typeof saveConfigToFirebase === 'function') await saveConfigToFirebase();
-  
-  renderPaymentsManager();
-  alert("Método de pagamento excluído!");
+            // 1. Remove do Array Local
+            config.paymentTypes.splice(index, 1);
+            
+            // 2. Salva Local
+            persistData();
+            
+            // 3. Salva na Nuvem e ESPERA
+            const salvou = await saveConfigToFirebase();
+            
+            // 4. Atualiza Visual
+            renderPaymentsManager();
+            
+            window.hideLoadingScreen();
+
+            if (salvou) {
+                showToast("Forma de pagamento removida!", "success");
+            } else {
+                showToast("Atenção: Erro ao sincronizar com a nuvem.", "warning");
+            }
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            showToast("Erro ao excluir: " + error.message, "error");
+            await loadAllData();
+        }
+    });
 }
 
 function renderGeneralConfig() {
@@ -3153,55 +3337,72 @@ async function clearAllData() {
         return showToast("Erro: Usuário não autenticado.", "error");
     }
 
-    customConfirm("⚠️ PERIGO: Isso vai apagar TODOS os produtos e vendas da sua conta.\nDeseja continuar?", () => {
-        customPrompt("Segurança", "Digite a senha '192837' para confirmar:", async (senha) => {
-            if (senha === "192837") {
-                try {
-                    // Adicionamos a tela de carregamento para ficar bonito
-                    if(window.showLoadingScreen) window.showLoadingScreen("Limpando Sistema...", "Excluindo registros");
+    // 1. Confirmação visual forte
+    customConfirm("PERIGO CRÍTICO: Isso apagará PERMANENTEMENTE todos os clientes, vendas, produtos, financeiro e notas.\n\nDeseja realmente continuar?", async () => {
+        
+        // 2. Pede a senha REAL do usuário (substituindo a fixa "192837")
+        const senha = await getPasswordViaPrompt("Segurança Máxima", "Digite sua senha para confirmar a formatação:");
+        
+        if (!senha) return; // Se cancelar, para aqui
 
-                    // 1. Limpa LocalStorage
-                    localStorage.clear();
-                    
-                    // 2. Apaga do Firebase (Caminho CORRETO: users/{uid}/products)
-                    // Buscamos as referências corretas do usuário
-                    const prodsRef = collection(db, "users", user.uid, "products");
-                    const salesRef = collection(db, "users", user.uid, "sales");
-                    
-                    // Busca os dados para deletar
-                    const [prodsSnap, salesSnap] = await Promise.all([
-                        getDocs(prodsRef),
-                        getDocs(salesRef)
-                    ]);
+        try {
+            window.showLoadingScreen("Formatando Sistema...", "Validando permissões de administrador...");
 
-                    const deletePromises = [];
+            // 3. Validação de Segurança Real (Firebase Auth)
+            // Se a senha estiver errada, o código vai para o bloco 'catch' automaticamente
+            const credential = EmailAuthProvider.credential(user.email, senha);
+            await reauthenticateWithCredential(user, credential);
 
-                    // Prepara as deleções
-                    prodsSnap.forEach(d => {
-                        deletePromises.push(deleteDoc(doc(db, "users", user.uid, "products", d.id)));
-                    });
-                    
-                    salesSnap.forEach(d => {
-                        deletePromises.push(deleteDoc(doc(db, "users", user.uid, "sales", d.id)));
-                    });
-                    
-                    // Executa tudo junto
-                    await Promise.all(deletePromises);
-                    
-                    if(window.hideLoadingScreen) window.hideLoadingScreen();
-                    
-                    customAlert("Sistema zerado com sucesso!", "success");
-                    setTimeout(() => location.reload(), 2000);
+            window.updateLoadingMessage("Apagando Dados...", "Removendo coleções do banco de dados...");
 
-                } catch (error) {
-                    if(window.hideLoadingScreen) window.hideLoadingScreen();
-                    console.error("Erro na limpeza:", error);
-                    customAlert("Erro ao limpar: " + error.message, "error");
-                }
-            } else {
-                customAlert("Senha incorreta.", "error");
+            // 4. Lista COMPLETA de coleções para apagar (Resolvendo o problema de vestígios)
+            const collectionsToDelete = [
+                "products", 
+                "sales", 
+                "clients", 
+                "suppliers", 
+                "expenses", 
+                "input_invoices" // Notas Fiscais que estavam sobrando
+            ];
+
+            const deletePromises = [];
+
+            // 5. Loop para apagar documento por documento
+            for (const colName of collectionsToDelete) {
+                const colRef = collection(db, "users", user.uid, colName);
+                const snapshot = await getDocs(colRef);
+                
+                snapshot.forEach(docSnap => {
+                    deletePromises.push(deleteDoc(docSnap.ref));
+                });
             }
-        });
+
+            // 6. Apaga também as configurações (Zera categorias e formas de pagto)
+            const settingsRef = doc(db, "users", user.uid, "settings", "general");
+            deletePromises.push(deleteDoc(settingsRef));
+
+            // Executa todas as exclusões
+            await Promise.all(deletePromises);
+
+            // 7. Limpa o LocalStorage (Memória do navegador)
+            localStorage.clear();
+
+            window.hideLoadingScreen();
+            
+            // Avisa e recarrega
+            customAlert("O sistema foi resetado com sucesso! A página será recarregada em 3 segundos.", "success");
+            setTimeout(() => location.reload(), 3000);
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            console.error("Erro no reset:", error);
+            
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                showToast("Senha incorreta. A formatação foi bloqueada.", "error");
+            } else {
+                showToast("Erro ao limpar dados: " + error.message, "error");
+            }
+        }
     });
 }
 
@@ -5101,51 +5302,78 @@ function imprimirRelatorioLucro(startDate, endDate) {
     doc.save("Lucros.pdf");
 }
 
+// ARQUIVO: script.js
+
 window.editProduct = function(id) {
+    // 1. Encontra o produto
     const p = products.find(x => (x._id === id) || (x.id == id));
     if (!p) return;
 
+    // 2. Muda o título e exibe o botão cancelar
+    const titleEl = document.getElementById("form-title");
+    const btnSubmit = document.getElementById("submit-btn");
+    const btnCancel = document.getElementById("cancel-edit-btn");
+    const idInput = document.getElementById("product-id");
+
+    if(titleEl) titleEl.textContent = "Editar Produto";
+    if(btnSubmit) btnSubmit.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
+    if(btnCancel) btnCancel.style.display = "inline-block";
+    if(idInput) idInput.value = p.id;
+
+    // 3. Atualiza as listas
     updateCategorySelect(); 
+    updateEstablishmentSelect(); 
+    updateProductSupplierDropdown();
 
-    // Preenche Dados Básicos
-    document.getElementById('product-id').value = p.id;
-    document.getElementById('nome').value = p.nome;
-    document.getElementById('categoria').value = p.categoria;
-    document.getElementById('prodGrupo').value = p.grupo || "";
-    document.getElementById('codigoBarras').value = p.codigoBarras || "";
-    document.getElementById('quantidade').value = p.quantidade;
-    document.getElementById('minimo').value = p.minimo;
-    document.getElementById('prodFornecedor').value = p.fornecedor || "";
-    document.getElementById('prodImagem').value = p.imagem || "";
+    // 4. PREENCHE OS CAMPOS (Com proteção contra erro de 'null')
+    const setVal = (eid, val) => { 
+        const el = document.getElementById(eid); 
+        if(el) el.value = val !== undefined ? val : ""; 
+    };
 
-    // Preenche Financeiro
-    document.getElementById('custo').value = p.custo || 0;
-    document.getElementById('prodFrete').value = p.frete || 0;
-    document.getElementById('prodMarkup').value = p.markup || 2.0;
+    setVal('nome', p.nome);
+    setVal('codigoBarras', p.codigoBarras); // AGORA NÃO TRAVA MAIS SE FALTAR O HTML
+    setVal('quantidade', p.quantidade);
+    setVal('minimo', p.minimo);
     
-    // --- O SEGREDO 1: Joga o preço salvo no input IMEDIATAMENTE ---
-    document.getElementById('preco').value = parseFloat(p.preco).toFixed(2);
+    // Financeiro
+    setVal('custo', p.custo);
+    setVal('prodFrete', p.frete);
+    setVal('prodMarkup', p.markup || 2.0);
+    setVal('preco', p.preco);
 
-    // --- O SEGREDO 2: Recupera o estado do botão ---
+    // Imagem
+    setVal('prodImagem', p.imagem);
+
+    // 5. Switch Automático
     const switchAuto = document.getElementById('autoMarkupSwitch');
-    
-    // Se existe a propriedade salva explicitamente (true ou false)
-    if (p.autoMarkup !== undefined && p.autoMarkup !== null) {
-        switchAuto.checked = p.autoMarkup;
-    } else {
-        // Se é produto antigo (sem essa info), assume MANUAL para não estragar seu preço
-        switchAuto.checked = false; 
+    if (switchAuto) {
+        switchAuto.checked = (p.autoMarkup !== false); 
     }
 
-    // Chama o cálculo com a flag 'edit'. 
-    // Isso atualiza as cores e bloqueios, mas NÃO muda os números.
-    calcularPrecificacao('edit'); 
+    // 6. Preenche os Selects com delay
+    setTimeout(() => {
+        setVal('categoria', p.categoria);
+        
+        // Lógica do Estabelecimento
+        const estEl = document.getElementById('prodEstabelecimento');
+        if(estEl) {
+            const estVal = p.estabelecimento || (config.establishments ? config.establishments[0] : "");
+            estEl.value = estVal;
+        }
 
-    // Abre a aba
-    document.getElementById('form-title').textContent = 'Editar Produto';
-    document.getElementById('submit-btn').innerHTML = '<i class="fas fa-save"></i> Salvar Edição';
-    document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
+        setVal('prodFornecedor', p.fornecedor);
+
+        // Recalcula visual
+        if(typeof calcularPrecificacao === 'function') calcularPrecificacao('edit');
+    }, 50);
+
+    // 7. Abre a aba
     showTab('product-form-tab');
+    
+    // Rola suavemente
+    const formTab = document.getElementById('product-form-tab');
+    if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
 }
 
 window.calcularPrecificacao = function(origem) {
@@ -5303,87 +5531,108 @@ window.handleProductForm = async function(event) {
     event.preventDefault(); 
     const btn = document.getElementById('submit-btn');
     
-    // 1. PEGAR VALORES (Garante números)
-    const custo = parseFloat(document.getElementById('custo').value) || 0;
-    const frete = parseFloat(document.getElementById('prodFrete').value) || 0;
-    const markup = parseFloat(document.getElementById('prodMarkup').value) || 0;
-    const preco = parseFloat(document.getElementById('preco').value) || 0;
-    
+    // Elementos obrigatórios (com proteção se não existirem)
+    const elCusto = document.getElementById('custo');
+    const elFrete = document.getElementById('prodFrete');
+    const elMarkup = document.getElementById('prodMarkup');
+    const elPreco = document.getElementById('preco');
+    const elNome = document.getElementById('nome');
+    const elQtd = document.getElementById('quantidade');
+    const elMin = document.getElementById('minimo');
+
+    // Valores
+    const custo = parseFloat(elCusto ? elCusto.value : 0) || 0;
+    const frete = parseFloat(elFrete ? elFrete.value : 0) || 0;
+    const markup = parseFloat(elMarkup ? elMarkup.value : 0) || 0;
+    const preco = parseFloat(elPreco ? elPreco.value : 0) || 0;
     const custoTotal = custo + frete;
 
-    // --- A CORREÇÃO DO BLOQUEIO ESTÁ AQUI ---
-    // Se o preço for menor que o custo total (prejuízo)
+    // Validação de Preço
     if (preco < custoTotal) {
-        // Toca o alerta
-        if(typeof customAlert === 'function') {
-            customAlert(`AÇÃO BLOQUEADA - O preço de venda (R$ ${preco.toFixed(2)}) é menor que o custo (R$ ${custoTotal.toFixed(2)}).`, "error");
-        } else {
-            alert("ERRO: Preço menor que o custo. Operação cancelada.");
-        }
-        return; // <--- ESSE RETURN É O QUE IMPEDE DE SALVAR. NÃO REMOVA!
+        if(typeof customAlert === 'function') customAlert(`AÇÃO BLOQUEADA - Preço menor que custo.`, "error");
+        else alert("ERRO: Preço menor que o custo.");
+        return; 
     }
 
-    // 2. PREPARAR DADOS
-    // Pega se o botão está ligado ou desligado AGORA
-    const isAuto = document.getElementById('autoMarkupSwitch').checked;
-    const idInput = document.getElementById('product-id').value;
-    const isEditing = idInput && idInput !== '';
+    // Dados auxiliares
+    const switchAuto = document.getElementById('autoMarkupSwitch');
+    const isAuto = switchAuto ? switchAuto.checked : true;
+    
+    const idInput = document.getElementById('product-id');
+    const isEditing = idInput && idInput.value !== '';
+    
+    const nomeProd = elNome ? elNome.value : "Sem Nome";
 
-    // Lógica de Grupos (Mantida)
-    const inputGrupo = document.getElementById('prodGrupo').value.trim();
-    let grupoFinal = inputGrupo;
-    if (config.productGroups && inputGrupo) {
-        const existente = config.productGroups.find(g => g.toLowerCase() === inputGrupo.toLowerCase());
-        if(existente) grupoFinal = existente;
-        else {
-            config.productGroups.push(inputGrupo);
-            persistData(); saveConfigToFirebase();
-        }
-    }
+    // --- CORREÇÃO: REMOVIDA A LEITURA DE 'prodGrupo' QUE TRAVAVA O CÓDIGO ---
+    
+    // Captura campos opcionais com segurança (evita erro se o HTML faltar)
+    const elCat = document.getElementById('categoria');
+    const elEst = document.getElementById('prodEstabelecimento');
+    const elBar = document.getElementById('codigoBarras');
+    const elForn = document.getElementById('prodFornecedor');
+    const elImg = document.getElementById('prodImagem');
 
     const productData = {
-        nome: document.getElementById('nome').value,
-        categoria: document.getElementById('categoria').value,
-        codigoBarras: document.getElementById('codigoBarras').value || "",
-        grupo: grupoFinal,
+        nome: nomeProd,
         
-        // FINANCEIRO
+        // Seletor de Categoria
+        categoria: elCat ? elCat.value : "Geral",
+        
+        // Seletor de Estabelecimento
+        estabelecimento: elEst ? elEst.value : (config.establishments ? config.establishments[0] : "Matriz"),
+        
+        // Código de Barras (Opcional)
+        codigoBarras: elBar ? elBar.value : "",
+        
+        // Grupo agora vai vazio ou igual a categoria para compatibilidade
+        grupo: "", 
+
         preco: preco,
         custo: custo,
         frete: frete,
         markup: markup,
-        
-        // --- SALVAMOS SUA ESCOLHA "DESLIGADO" AQUI ---
         autoMarkup: isAuto, 
-
-        quantidade: parseInt(document.getElementById('quantidade').value || 0),
-        minimo: parseInt(document.getElementById('minimo').value || 0),
-        fornecedor: document.getElementById('prodFornecedor').value || "",
-        imagem: document.getElementById('prodImagem').value || ""
+        
+        quantidade: parseInt(elQtd ? elQtd.value : 0),
+        minimo: parseInt(elMin ? elMin.value : 0),
+        
+        fornecedor: elForn ? elForn.value : "",
+        imagem: elImg ? elImg.value : ""
     };
 
-    // 3. ENVIAR PRO BANCO
     try {
-        setBtnLoading(btn, true);
+        if(btn) setBtnLoading(btn, true);
 
         if (isEditing) {
-            await updateDoc(getUserDocumentRef("products", idInput), productData);
+            await updateDoc(getUserDocumentRef("products", idInput.value), productData);
+            // 📝 LOG DE EDIÇÃO
+            if(typeof logSystemAction === 'function') {
+                await logSystemAction("Edição de Produto", `Alterou o produto: ${nomeProd}`);
+            }
             showToast("Produto atualizado!", "success");
         } else {
             await addDoc(getUserCollectionRef("products"), productData);
+            // 📝 LOG DE CRIAÇÃO
+            if(typeof logSystemAction === 'function') {
+                await logSystemAction("Criação de Produto", `Cadastrou novo produto: ${nomeProd}`);
+            }
             showToast("Produto cadastrado!", "success");
         }
 
-        document.querySelector(".product-form").reset();
-        resetProductForm(); 
+        // Reseta e Recarrega
+        if(typeof resetProductForm === 'function') resetProductForm(); 
+        else document.querySelector(".product-form").reset();
+        
         await loadAllData(); 
-        showTab('product-list-tab');
+        
+        // Volta para a lista
+        if(typeof showTab === 'function') showTab('product-list-tab');
 
     } catch (error) {
         console.error(error);
         showToast("Erro ao salvar: " + error.message, "error");
     } finally {
-        setBtnLoading(btn, false);
+        if(btn) setBtnLoading(btn, false);
     }
 }
 
@@ -5866,12 +6115,22 @@ window.handleClientForm = async function(e) {
         }
         fecharModalCliente();
         await loadPartnersData(); // Recarrega a tabela
+    // ... dentro de handleClientForm ...
+if (id) {
+    await updateDoc(getUserDocumentRef("clients", id), data);
+    await logSystemAction("Edição de Cliente", `Editou dados de: ${data.nome}`); // 📝 LOG
+} else {
+    await addDoc(getUserCollectionRef("clients"), data);
+    await logSystemAction("Novo Cliente", `Cadastrou cliente: ${data.nome}`); // 📝 LOG
+}
+// ...
     } catch (error) {
         console.error(error);
         showToast("Erro ao salvar: " + error.message, "error");
     } finally {
         setBtnLoading(btn, false);
     }
+
 }
 
 window.renderClientsTable = function() {
@@ -6173,6 +6432,11 @@ async function deletePartner(collectionName, id) {
             window.hideLoadingScreen();
             showToast("Registro excluído com sucesso!", "success");
             await loadPartnersData(); // Recarrega listas para atualizar a UI
+        // ... dentro de deletePartner ...
+await deleteDoc(getUserDocumentRef(collectionName, id));
+// 📝 LOG
+await logSystemAction("Exclusão de Parceiro", `Removeu um registro da coleção ${collectionName} (ID: ${id})`);
+// ...
 
         } catch (error) {
             window.hideLoadingScreen();
@@ -6934,15 +7198,14 @@ window.processarXMLNota = async function(input) {
     const file = input.files[0];
     const reader = new FileReader();
 
-    window.showLoadingScreen("Lendo XML Fiscal...", "Extraindo NCM, CFOP e Impostos...");
+    window.showLoadingScreen("Lendo XML Fiscal...", "Verificando integridade e duplicidade...");
 
     reader.onload = async function(e) {
         try {
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(e.target.result, "text/xml");
 
-            // --- 1. CABEÇALHO E DADOS GERAIS ---
-            // Helper seguro para pegar tags
+            // --- 1. CABEÇALHO ---
             const getTag = (parent, tag) => parent ? parent.getElementsByTagName(tag)[0] : null;
             const getVal = (parent, tag) => {
                 const el = getTag(parent, tag);
@@ -6951,32 +7214,42 @@ window.processarXMLNota = async function(input) {
 
             const ide = getTag(xmlDoc, "ide");
             const emit = getTag(xmlDoc, "emit");
-            const infProt = getTag(xmlDoc, "infProt");
             const total = getTag(xmlDoc, "total");
             const infNFe = getTag(xmlDoc, "infNFe");
+            const infProt = getTag(xmlDoc, "infProt");
 
             if (!emit) throw new Error("XML inválido: Emitente não encontrado.");
 
-            // Dados da Nota
             const nNF = getVal(ide, "nNF");
             const serie = getVal(ide, "serie");
+            const cnpjFornecedor = getVal(emit, "CNPJ");
+            
+            // === 🔒 BLOQUEIO DE DUPLICIDADE ===
+            // Verifica se já existe uma nota com mesmo Número E mesmo CNPJ
+            const duplicada = inputHistory.find(n => String(n.numero) === String(nNF) && String(n.cnpj) === String(cnpjFornecedor));
+            
+            if (duplicada) {
+                window.hideLoadingScreen();
+                input.value = ""; // Limpa input
+                // Aviso sonoro ou visual forte
+                customAlert(`⛔ IMPORTAÇÃO BLOQUEADA\n\nA Nota Fiscal nº ${nNF} deste fornecedor já consta no sistema (Importada em: ${new Date(duplicada.timestamp).toLocaleDateString()}).`, "error");
+                return; // PARA TUDO AQUI
+            }
+            // ==================================
+
             const natOp = getVal(ide, "natOp");
             const dhEmi = getVal(ide, "dhEmi") || new Date().toISOString();
-            
-            // Chave de Acesso e Protocolo
             let chaveAcesso = infNFe ? infNFe.getAttribute("Id") : "";
             if (chaveAcesso) chaveAcesso = chaveAcesso.replace("NFe", "");
             const nProt = infProt ? getVal(infProt, "nProt") : "";
 
             // Dados do Fornecedor
             const nomeFornecedor = getVal(emit, "xNome");
-            const cnpjFornecedor = getVal(emit, "CNPJ");
             const ieFornecedor = getVal(emit, "IE");
             
-            // Endereço
             const enderEmit = getTag(emit, "enderEmit");
             let enderecoCompleto = "";
-            let enderecoObj = {}; // Para salvar na ficha do fornecedor
+            let enderecoObj = {};
 
             if (enderEmit) {
                 enderecoObj = {
@@ -7004,19 +7277,20 @@ window.processarXMLNota = async function(input) {
                 }
             }
 
-            // Garante Fornecedor (Cria ou Atualiza)
+            // Garante Fornecedor
             let fornecedorId = await garantirFornecedor(nomeFornecedor, cnpjFornecedor, ieFornecedor, enderecoObj);
 
-            // --- 2. ITENS (DETALHES) ---
+            // --- 2. ITENS ---
             const dets = xmlDoc.getElementsByTagName("det");
             let itensNota = [];
             let somaCalculada = 0;
+
+            window.updateLoadingMessage("Processando Itens...", `Lendo ${dets.length} produtos...`);
 
             for (let i = 0; i < dets.length; i++) {
                 const prod = getTag(dets[i], "prod");
                 const imposto = getTag(dets[i], "imposto");
 
-                // Dados do Produto
                 const cProd = getVal(prod, "cProd");
                 const cEAN = getVal(prod, "cEAN");
                 const xProd = getVal(prod, "xProd");
@@ -7029,22 +7303,19 @@ window.processarXMLNota = async function(input) {
                 
                 somaCalculada += vProdItem;
 
-                // Impostos do Item (ICMS/IPI)
+                // Impostos
                 let vICMSItem = 0, pICMSItem = 0, vBCItem = 0, CST = "";
                 let vIPIItem = 0, pIPIItem = 0;
 
                 if (imposto) {
-                    // ICMS: Pode estar em várias tags (ICMS00, ICMS20, etc)
                     const icmsContainer = getTag(imposto, "ICMS");
                     if (icmsContainer && icmsContainer.children.length > 0) {
-                        const tagICMS = icmsContainer.children[0]; // Pega a primeira tag filha
+                        const tagICMS = icmsContainer.children[0];
                         CST = getVal(tagICMS, "CST") || getVal(tagICMS, "CSOSN");
                         vBCItem = parseFloat(getVal(tagICMS, "vBC")) || 0;
                         pICMSItem = parseFloat(getVal(tagICMS, "pICMS")) || 0;
                         vICMSItem = parseFloat(getVal(tagICMS, "vICMS")) || 0;
                     }
-                    
-                    // IPI
                     const ipiContainer = getTag(imposto, "IPI");
                     if (ipiContainer) {
                         const ipiTrib = getTag(ipiContainer, "IPITrib");
@@ -7055,32 +7326,17 @@ window.processarXMLNota = async function(input) {
                     }
                 }
 
-                // Monta objeto do item
                 itensNota.push({
-                    cProd: cProd,
-                    ean: cEAN,
-                    nome: xProd,
-                    ncm: NCM,
-                    cfop: CFOP,
-                    cst: CST,
-                    un: uCom,
-                    qtd: qCom,
-                    valorUnit: vUnCom,
-                    total: vProdItem,
-                    vBC: vBCItem,
-                    pICMS: pICMSItem,
-                    vICMS: vICMSItem,
-                    vIPI: vIPIItem,
-                    pIPI: pIPIItem
+                    cProd, ean: cEAN, nome: xProd, ncm: NCM, cfop: CFOP, cst: CST,
+                    un: uCom, qtd: qCom, valorUnit: vUnCom, total: vProdItem,
+                    vBC: vBCItem, pICMS: pICMSItem, vICMS: vICMSItem, vIPI: vIPIItem, pIPI: pIPIItem
                 });
 
-                // --- ATUALIZA ESTOQUE (Lógica Mantida) ---
+                // ATUALIZA ESTOQUE
                 let produtoExistente = null;
-                // Busca por EAN (se válido)
                 if (cEAN && cEAN !== "SEM GTIN" && cEAN.trim() !== "") {
                     produtoExistente = products.find(p => p.codigoBarras === cEAN);
                 }
-                // Se não achou, busca por nome
                 if (!produtoExistente) {
                     produtoExistente = products.find(p => p.nome.toLowerCase().trim() === xProd.toLowerCase().trim());
                 }
@@ -7090,23 +7346,17 @@ window.processarXMLNota = async function(input) {
                     await updateDoc(getUserDocumentRef("products", produtoExistente.id), {
                         quantidade: novaQtd,
                         custo: vUnCom,
-                        fornecedor: fornecedorId
+                        fornecedor: fornecedorId,
+                        cProd: cProd
                     });
                 } else {
                     const novoProduto = {
-                        nome: xProd,
+                        nome: xProd, cProd: cProd,
                         codigoBarras: (cEAN && cEAN !== "SEM GTIN") ? cEAN : "",
-                        categoria: "Geral",
-                        grupo: "Importado XML",
+                        categoria: "Geral", grupo: "Importado XML",
                         fornecedor: fornecedorId,
-                        quantidade: parseInt(qCom),
-                        minimo: 1,
-                        custo: vUnCom,
-                        frete: 0,
-                        markup: 2.0,
-                        preco: vUnCom * 2.0, 
-                        autoMarkup: true,
-                        imagem: ""
+                        quantidade: parseInt(qCom), minimo: 1,
+                        custo: vUnCom, frete: 0, markup: 2.0, preco: vUnCom * 2.0, autoMarkup: true, imagem: ""
                     };
                     await addDoc(getUserCollectionRef("products"), novoProduto);
                 }
@@ -7114,35 +7364,24 @@ window.processarXMLNota = async function(input) {
 
             if (vNF === 0) vNF = somaCalculada;
 
-            // --- 3. SALVA O REGISTRO DA NOTA (Histórico) ---
+            // SALVA A NOTA
             const notaFiscalData = {
-                numero: nNF,
-                serie: serie,
-                natOp: natOp,
-                chNFe: chaveAcesso,
-                nProt: nProt,
-                dataEmissao: dhEmi,
-                fornecedor: nomeFornecedor,
-                cnpj: cnpjFornecedor,
-                ie: ieFornecedor,
-                endereco: enderecoCompleto,
-                // Totais
-                valorTotal: vNF,
-                vBC: vBC,
-                vICMS: vICMS,
-                vST: vST,
-                vIPI: vIPI,
-                // Itens
-                items: itensNota,
-                timestamp: new Date().toISOString()
+                numero: nNF, serie, natOp, chNFe: chaveAcesso, nProt,
+                dataEmissao: dhEmi, fornecedor: nomeFornecedor,
+                cnpj: cnpjFornecedor, ie: ieFornecedor, endereco: enderecoCompleto,
+                valorTotal: vNF, vBC, vICMS, vST, vIPI,
+                items: itensNota, timestamp: new Date().toISOString()
             };
 
             await addDoc(getUserCollectionRef("input_invoices"), notaFiscalData);
+            
+            // 📝 LOG DE AÇÃO
+            await logSystemAction("Importação XML", `Nota Fiscal Nº ${nNF} importada. Fornecedor: ${nomeFornecedor}. Total: R$ ${vNF.toFixed(2)}`);
 
             window.hideLoadingScreen();
             showToast(`Sucesso! Nota ${nNF} importada.`, "success");
-            input.value = ""; // Limpa input
-            await loadAllData(); // Recarrega
+            input.value = "";
+            await loadAllData();
 
         } catch (error) {
             console.error(error);
@@ -7150,8 +7389,6 @@ window.processarXMLNota = async function(input) {
             showToast("Erro ao processar XML: " + error.message, "error");
         }
     };
-    
-    // Leitura como texto para parsing
     reader.readAsText(file);
 };
 
@@ -7511,6 +7748,12 @@ async function handleExpenseForm(e) {
         // Recarrega o painel para atualizar os cálculos
         await loadFinancialDashboard();
 
+        // ... dentro de handleExpenseForm ...
+        await addDoc(getUserCollectionRef("expenses"), despesa);
+        // 📝 LOG
+        await logSystemAction("Despesa Financeira", `Lançou despesa: ${despesa.descricao} - R$ ${despesa.valor.toFixed(2)}`);
+        // ...
+
     } catch (error) {
         showToast("Erro: " + error.message, "error");
     } finally {
@@ -7548,55 +7791,70 @@ async function reverseSale(saleId) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Busca a venda
+    // Busca a venda localmente para ter os dados
     const sale = salesHistory.find(s => s.id === saleId);
     if (!sale) return showToast("Venda não encontrada localmente.", "error");
 
-    customConfirm(`Deseja ESTORNAR a venda #${saleId.slice(-4)}?\nOs itens voltarão para o estoque e o valor será subtraído do caixa.`, async () => {
+    // Passo 1: Confirmação Inicial
+    customConfirm(`⚠️ Deseja iniciar o estorno da venda #${saleId.slice(-4)}?`, async () => {
         
-        // Segurança: Pede senha do admin para estornar
-        const senha = await getPasswordViaPrompt("Estorno", "Senha do Admin para confirmar:");
-        if (!senha) return;
-
-        try {
-            window.showLoadingScreen("Estornando...", "Devolvendo itens ao estoque");
+        // Passo 2: Pede o MOTIVO (Obrigatório)
+        customPrompt("Motivo do Estorno", "Por que esta venda está sendo cancelada?", async (motivo) => {
             
-            // Re-auth simples para garantir segurança
-            const credential = EmailAuthProvider.credential(user.email, senha);
-            await reauthenticateWithCredential(user, credential);
-
-            // 1. Devolve Estoque
-            if (sale.items && Array.isArray(sale.items)) {
-                for (const item of sale.items) {
-                    // Busca produto atual no banco (para ter qtd atualizada)
-                    const prodRef = getUserDocumentRef("products", item.id);
-                    const prodSnap = await getDoc(prodRef);
-                    
-                    if (prodSnap.exists()) {
-                        const prodData = prodSnap.data();
-                        // Soma a quantidade vendida de volta
-                        await updateDoc(prodRef, { 
-                            quantidade: (parseInt(prodData.quantidade) || 0) + parseInt(item.quantity) 
-                        });
-                    }
-                }
+            if (!motivo || motivo.trim().length < 3) {
+                return showToast("O motivo é obrigatório para estornar.", "error");
             }
 
-            // 2. Apaga a Venda
-            await deleteDoc(getUserDocumentRef("sales", sale.id));
+            // Passo 3: Pede a SENHA do Admin
+            const senha = await getPasswordViaPrompt("Autorização", "Digite sua senha de LOGIN para confirmar:");
+            if (!senha) return;
 
-            window.hideLoadingScreen();
-            showToast("Venda estornada e estoque atualizado!", "success");
-            
-            // Recarrega
-            await loadAllData();
+            try {
+                window.showLoadingScreen("Processando Estorno...", "Devolvendo itens e registrando log...");
+                
+                // Re-autentica
+                const credential = EmailAuthProvider.credential(user.email, senha);
+                await reauthenticateWithCredential(user, credential);
 
-        } catch (error) {
-            window.hideLoadingScreen();
-            showToast("Erro no estorno: " + error.message, "error");
-        }
+                // 1. Devolve Estoque
+                if (sale.items && Array.isArray(sale.items)) {
+                    for (const item of sale.items) {
+                        const prodRef = doc(db, "users", user.uid, "products", item.id);
+                        const prodSnap = await getDoc(prodRef);
+                        
+                        if (prodSnap.exists()) {
+                            const prodData = prodSnap.data();
+                            await updateDoc(prodRef, { 
+                                quantidade: (parseInt(prodData.quantidade) || 0) + parseInt(item.quantity) 
+                            });
+                        }
+                    }
+                }
+
+                // 2. Apaga a Venda
+                await deleteDoc(doc(db, "users", user.uid, "sales", saleId));
+
+                // 3. GRAVA O LOG COM O MOTIVO (Aqui está a mágica!)
+                await logSystemAction("Estorno de Venda", `Venda #${saleId.slice(-4)} cancelada. Motivo: ${motivo}. Valor: R$ ${parseFloat(sale.total).toFixed(2)}`);
+
+                window.hideLoadingScreen();
+                showToast("Estorno realizado e registrado!", "success");
+                
+                // Recarrega
+                await loadAllData();
+
+            } catch (error) {
+                window.hideLoadingScreen();
+                if (error.code === 'auth/wrong-password') {
+                    showToast("Senha incorreta.", "error");
+                } else {
+                    showToast("Erro: " + error.message, "error");
+                }
+            }
+        }, "", "text"); // Input tipo texto para o motivo
     });
 }
+
 function checkBirthdays() {
     const today = new Date();
     const currentMonth = today.getMonth();
@@ -9134,9 +9392,28 @@ window.renderInvoicesTable = function(lista = null) {
         const dataVisual = new Date(nota.dataEmissao).toLocaleDateString("pt-BR");
         const itensQtd = nota.items ? nota.items.length : (nota.itens ? nota.itens.length : 0);
 
-        // Dados para busca
-        const searchString = `${nota.numero} ${nota.fornecedor} ${nota.cnpj} R$${nota.valorTotal}`.toLowerCase();
+        // --- CORREÇÃO DA BUSCA POR ID DO FORNECEDOR ---
+        let idFornecedorEncontrado = "";
+        
+        // Verifica se a lista global de fornecedores existe e cruza os dados
+        if (typeof fornecedoresReais !== 'undefined' && Array.isArray(fornecedoresReais)) {
+            // Tenta encontrar o fornecedor pelo CNPJ (mais seguro) ou pelo Nome
+            const fornecedorObj = fornecedoresReais.find(f => 
+                (nota.cnpj && f.cnpj === nota.cnpj) || 
+                (f.nome && nota.fornecedor && f.nome.toLowerCase() === nota.fornecedor.toLowerCase())
+            );
+
+            if (fornecedorObj) {
+                idFornecedorEncontrado = fornecedorObj.id; // Pega o ID real do fornecedor (ex: 8s7d98...)
+            }
+        }
+
+        // Monta a string de busca incluindo o ID DA NOTA e o ID DO FORNECEDOR
+        // O usuário não vê isso, mas o filtro lê
+        const searchString = `${nota.id} ${nota.numero} ${nota.fornecedor} ${nota.cnpj} R$${nota.valorTotal} ${idFornecedorEncontrado}`.toLowerCase();
+        
         row.setAttribute("data-search", searchString);
+        // ---------------------------------------------------
 
         row.innerHTML = `
             <td>${dataVisual}</td>
@@ -9144,15 +9421,66 @@ window.renderInvoicesTable = function(lista = null) {
             <td>
                 <div>${nota.fornecedor}</div>
                 <small style="color:#888; font-size:0.75rem;">${nota.cnpj || ''}</small>
+                ${idFornecedorEncontrado ? `<i class="fas fa-link" title="Fornecedor Vinculado" style="font-size:0.7rem; color:#0A84FF; margin-left:5px;"></i>` : ''}
             </td>
             <td><span class="badge badge-info">${itensQtd} itens</span></td>
             <td style="font-weight:bold; color:var(--color-accent-purple);">R$ ${parseFloat(nota.valorTotal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
             <td>
-                <button class="action-btn view-btn" onclick="verDetalhesNota('${nota.id}')" title="Ver Itens">
-                    <i class="fas fa-eye"></i>
-                </button>
+                <div style="display:flex; gap:8px;">
+                    <button class="action-btn view-btn" onclick="verDetalhesNota('${nota.id}')" title="Ver Itens">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn delete-btn" onclick="deleteInvoice('${nota.id}')" title="Excluir Registro">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
             </td>
         `;
+    });
+}
+
+// EXCLUIR NOTA FISCAL (COM SENHA E LOG)
+window.deleteInvoice = async function(id) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Busca dados da nota para o log e confirmação
+    const nota = inputHistory.find(n => n.id === id);
+    const numeroNota = nota ? nota.numero : "Desconhecido";
+
+    customConfirm(`Deseja excluir o registro da Nota Fiscal nº ${numeroNota}?\n\nIsso apaga o histórico de entrada, mas NÃO remove o estoque que já foi adicionado aos produtos.`, async () => {
+        
+        // Pede a senha do Admin
+        const senha = await getPasswordViaPrompt("Segurança", "Digite sua senha de LOGIN para confirmar a exclusão:");
+        if (!senha) return;
+
+        try {
+            window.showLoadingScreen("Excluindo...", "Validando permissões...");
+
+            // Validação de Segurança
+            const credential = EmailAuthProvider.credential(user.email, senha);
+            await reauthenticateWithCredential(user, credential);
+
+            // Apaga do Banco
+            await deleteDoc(getUserDocumentRef("input_invoices", id));
+
+            // 📝 LOG DE AUDITORIA
+            await logSystemAction("Exclusão de Nota", `Apagou a NF nº ${numeroNota} do fornecedor ${nota.fornecedor || '?'}.`);
+
+            window.hideLoadingScreen();
+            showToast("Registro da nota excluído com sucesso!", "success");
+            
+            // Recarrega lista
+            await loadAllData();
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            if (error.code === 'auth/wrong-password') {
+                showToast("Senha incorreta. Ação bloqueada.", "error");
+            } else {
+                showToast("Erro ao excluir: " + error.message, "error");
+            }
+        }
     });
 }
 
@@ -9455,17 +9783,6 @@ function formatarDataPtBr(dateStr) {
 // LÓGICA DA SIDEBAR ACCORDION
 // ============================================================
 
-window.toggleNavGroup = function(header) {
-    const group = header.parentElement;
-    
-    // Fecha outros grupos (opcional: se quiser que só um fique aberto por vez)
-    // document.querySelectorAll('.nav-group').forEach(g => {
-    //    if(g !== group) g.classList.remove('open');
-    // });
-
-    // Alterna o atual
-    group.classList.toggle('open');
-}
 
 // Atualizar a função setupNavigation existente para abrir o grupo do item ativo
 // Procure a função setupNavigation no seu código e adicione este trecho no final dela:
@@ -9491,14 +9808,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(autoOpenActiveGroup, 500); // Pequeno delay para garantir renderização
 });
 
-// 1. Cria a função normal
-function toggleNavGroup(header) {
-    const group = header.parentElement;
-    group.classList.toggle('open');
-}
 
-// 2. Joga ela para o mundo (Global)
-window.toggleNavGroup = toggleNavGroup;
+
 
 
 window.toggleNavGroup = function(header) {
@@ -9506,6 +9817,331 @@ window.toggleNavGroup = function(header) {
     group.classList.toggle('open');
 }
 
+
+// ARQUIVO: script.js
+
+window.openProductPreview = function(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+
+    // Elementos da Modal
+    const modal = document.getElementById('product-preview-modal');
+    const imgEl = document.getElementById('preview-img');
+    const noImgEl = document.getElementById('preview-no-img');
+    
+    // 1. Imagem
+    if (p.imagem && p.imagem.length > 10) {
+        imgEl.src = p.imagem;
+        imgEl.style.display = 'block';
+        noImgEl.style.display = 'none';
+    } else {
+        imgEl.style.display = 'none';
+        noImgEl.style.display = 'block';
+    }
+
+    // 2. Textos Básicos
+    document.getElementById('preview-name').textContent = p.nome;
+    document.getElementById('preview-category').textContent = `${p.categoria} ${p.grupo ? ' > ' + p.grupo : ''}`;
+    document.getElementById('preview-price').textContent = `R$ ${parseFloat(p.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    
+    // 3. Códigos
+    document.getElementById('preview-cprod').textContent = p.cProd || "Não informado";
+    document.getElementById('preview-ean').textContent = p.codigoBarras || "Sem GTIN";
+
+    // 4. Financeiro
+    document.getElementById('preview-cost').textContent = `R$ ${parseFloat(p.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    
+    const lucro = parseFloat(p.preco) - parseFloat(p.custo);
+    const elProfit = document.getElementById('preview-profit');
+    elProfit.textContent = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+    elProfit.style.color = lucro >= 0 ? 'var(--color-accent-green)' : '#FF453A';
+
+    // 5. Estoque
+    document.getElementById('preview-stock').textContent = `${p.quantidade} unidades (Min: ${p.minimo})`;
+
+    // 6. Fornecedor (Busca nome pelo ID)
+    let nomeFornecedor = "Não vinculado";
+    if (p.fornecedor) {
+        const f = fornecedoresReais.find(x => x.id === p.fornecedor);
+        if (f) nomeFornecedor = f.nome;
+    }
+    document.getElementById('preview-supplier').textContent = nomeFornecedor;
+
+    // 7. Botão Editar dentro do preview
+    const btnEdit = document.getElementById('btn-edit-preview');
+    btnEdit.onclick = function() {
+        modal.style.display = 'none';
+        editProduct(p.id);
+    };
+
+    modal.style.display = 'flex';
+}
+
+
+async function logSystemAction(acao, detalhe) {
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // Pega o nome do usuário logado ou "Sistema"
+        const userName = document.getElementById("sidebar-user-name") 
+            ? document.getElementById("sidebar-user-name").innerText 
+            : user.email;
+
+        const logData = {
+            action: acao,       // Ex: "Estorno", "Exclusão", "Edição"
+            detail: detalhe,    // Ex: "Venda #1234 - Motivo: Cliente desistiu"
+            user: userName,     // Quem fez
+            email: user.email,
+            timestamp: new Date().toISOString()
+        };
+
+        // Salva na subcoleção 'audit_logs'
+        await addDoc(collection(db, "users", user.uid, "audit_logs"), logData);
+        console.log("📝 Log registrado:", acao);
+
+    } catch (error) {
+        console.error("Erro ao gravar log:", error);
+    }
+}
+
+// 2. Renderizar Tabela de Logs (Na aba Configurações)
+// 2. Renderizar Tabelas de Logs (SEPARADAS)
+window.renderAuditLogs = async function() {
+    const tbodyGeral = document.getElementById("audit-geral-tbody");
+    const tbodyEstornos = document.getElementById("audit-estornos-tbody");
+    
+    if (!tbodyGeral || !tbodyEstornos) return;
+
+    const loadingHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
+    tbodyGeral.innerHTML = loadingHTML;
+    tbodyEstornos.innerHTML = loadingHTML;
+
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        // Busca os últimos 100 logs para não pesar
+        const q = query(collection(db, "users", user.uid, "audit_logs"), orderBy("timestamp", "desc"), limit(100));
+        const querySnapshot = await getDocs(q);
+
+        tbodyGeral.innerHTML = "";
+        tbodyEstornos.innerHTML = "";
+
+        if (querySnapshot.empty) {
+            tbodyGeral.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Sem histórico recente.</td></tr>';
+            tbodyEstornos.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">Nenhum estorno registrado.</td></tr>';
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const log = doc.data();
+            const dataFormatada = new Date(log.timestamp).toLocaleString("pt-BR");
+            
+            // --- TABELA GERAL (Mostra tudo) ---
+            let corBadge = "gray";
+            if (log.action.includes("Exclu")) corBadge = "#FF453A"; // Vermelho
+            if (log.action.includes("Edi") || log.action.includes("Alter")) corBadge = "#FF9F0A"; // Laranja
+            if (log.action.includes("Cri") || log.action.includes("Venda") || log.action.includes("Adic")) corBadge = "#30D158"; // Verde
+            if (log.action.includes("Login")) corBadge = "#0A84FF"; // Azul
+
+            const rowGeral = document.createElement("tr");
+            rowGeral.innerHTML = `
+                <td style="font-size:0.8rem; color:#aaa;">${dataFormatada}</td>
+                <td><span class="badge" style="background:${corBadge}20; color:${corBadge}; border:1px solid ${corBadge}40; font-size:0.7rem;">${log.action}</span></td>
+                <td style="font-weight:600; color:var(--color-text-primary); font-size:0.85rem;">${log.user}</td>
+                <td style="font-size:0.85rem;">${log.detail}</td>
+            `;
+            tbodyGeral.appendChild(rowGeral);
+
+            // --- TABELA DE ESTORNOS (Só mostra se for estorno) ---
+            if (log.action.includes("Estorno")) {
+                const rowEstorno = document.createElement("tr");
+                rowEstorno.innerHTML = `
+                    <td style="font-size:0.9rem; color:#fff;">${dataFormatada}</td>
+                    <td style="font-weight:600; color:#FF453A;">${log.user}</td>
+                    <td style="color:#ddd;">${log.detail}</td>
+                `;
+                tbodyEstornos.appendChild(rowEstorno);
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro logs:", error);
+    }
+}
+
+// ============================================================
+// LÓGICA DE EDIÇÃO EM MASSA (MAGIC PEN)
+// ============================================================
+
+// 1. Atualiza a Barra Flutuante
+window.updateBulkBar = function() {
+    const checks = document.querySelectorAll('.product-check:checked');
+    const bar = document.getElementById('bulk-actions-bar');
+    const countSpan = document.getElementById('bulk-count');
+    
+    if (!bar) return;
+
+    if (checks.length > 0) {
+        countSpan.innerText = checks.length;
+        // Faz a barra subir (aparecer)
+        bar.style.transform = "translateX(-50%) translateY(0)";
+    } else {
+        // Faz a barra descer (sumir)
+        bar.style.transform = "translateX(-50%) translateY(100px)";
+    }
+}
+
+// 2. Selecionar/Deselecionar Tudo
+window.toggleSelectAllProducts = function(source) {
+    const checks = document.querySelectorAll('.product-check');
+    checks.forEach(c => c.checked = source.checked);
+    updateBulkBar();
+}
+
+window.deselecionarTudo = function() {
+    const checks = document.querySelectorAll('.product-check');
+    checks.forEach(c => c.checked = false);
+    // Desmarca também o header se houver
+    const headerCheck = document.querySelector('#product-table thead input[type="checkbox"]');
+    if(headerCheck) headerCheck.checked = false;
+    
+    updateBulkBar();
+}
+
+// 3. Abrir o Modal e Carregar Opções
+window.abrirModalBulkEdit = function() {
+    const count = document.querySelectorAll('.product-check:checked').length;
+    if(count === 0) return;
+
+    // Proteção contra o erro "innerText of null"
+    const countEl = document.getElementById('bulk-modal-count');
+    if (countEl) {
+        countEl.innerText = count;
+    } 
+    
+    // 1. Popula Categorias
+    const selCat = document.getElementById('bulk-categoria');
+    if (selCat) {
+        selCat.innerHTML = '<option value="">-- Não Alterar --</option>';
+        if(config.categories) {
+            config.categories.forEach(c => {
+                selCat.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+        }
+    }
+
+    // 2. Popula ESTABELECIMENTOS
+    const selEst = document.getElementById('bulk-estabelecimento');
+    if (selEst) {
+        selEst.innerHTML = '<option value="">-- Não Alterar --</option>';
+        if(config.establishments) {
+            config.establishments.forEach(e => {
+                selEst.innerHTML += `<option value="${e}">${e}</option>`;
+            });
+        }
+    }
+
+    // 3. Popula Fornecedores
+    const selForn = document.getElementById('bulk-fornecedor');
+    if (selForn) {
+        selForn.innerHTML = '<option value="">-- Não Alterar --</option>';
+        if (typeof fornecedoresReais !== 'undefined') {
+            fornecedoresReais.forEach(f => {
+                selForn.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
+            });
+        }
+    }
+
+    const modal = document.getElementById('bulk-edit-modal');
+    if(modal) modal.style.display = 'flex';
+}
+
+// 4. Executar a Edição em Massa (O Coração da Função)
+window.handleBulkEdit = async function(e) {
+    e.preventDefault();
+    
+    const novaCat = document.getElementById('bulk-categoria').value;
+    // Pega o valor do novo select de estabelecimento
+    const novoEst = document.getElementById('bulk-estabelecimento') ? document.getElementById('bulk-estabelecimento').value : "";
+    const novoForn = document.getElementById('bulk-fornecedor').value;
+
+    if (!novaCat && !novoEst && !novoForn) {
+        showToast("Nenhuma alteração selecionada.", "info");
+        return;
+    }
+
+    const checks = document.querySelectorAll('.product-check:checked');
+    const ids = Array.from(checks).map(c => c.value);
+    const btn = e.target.querySelector('button[type="submit"]');
+    
+    customConfirm(`Aplicar alterações em ${ids.length} produtos?`, async () => {
+        try {
+            setBtnLoading(btn, true);
+            window.showLoadingScreen("Aplicando...", "Atualizando produtos...");
+
+            const batchUpdates = [];
+            const updateData = {};
+
+            if (novaCat) updateData.categoria = novaCat;
+            if (novoEst) updateData.estabelecimento = novoEst; // Salva no campo certo
+            if (novoForn) updateData.fornecedor = novoForn;
+
+            for (const id of ids) {
+                const docRef = getUserDocumentRef("products", id);
+                batchUpdates.push(updateDoc(docRef, updateData));
+            }
+
+            await Promise.all(batchUpdates);
+            await logSystemAction("Edição em Massa", `Atualizou ${ids.length} produtos.`);
+
+            window.hideLoadingScreen();
+            showToast("Sucesso!", "success");
+            
+            document.getElementById('bulk-edit-modal').style.display = 'none';
+            deselecionarTudo();
+            await loadAllData();
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            console.error(error);
+            showToast("Erro: " + error.message, "error");
+        } finally {
+            setBtnLoading(btn, false);
+        }
+    });
+}
+
+// ATIVAR A VARINHA MÁGICA (SELEÇÃO VISUAL)
+window.toggleSelectAllVisual = function(element) {
+    // 1. Alterna estado visual da varinha
+    const isActive = element.classList.contains('active');
+    
+    if (isActive) {
+        element.classList.remove('active'); // Desliga
+    } else {
+        element.classList.add('active'); // Liga (Fica Azul Neon)
+    }
+
+    // 2. Marca/Desmarca todos os checkboxes reais
+    const checks = document.querySelectorAll('.product-check');
+    checks.forEach(c => c.checked = !isActive);
+
+    // 3. Atualiza a barra flutuante
+    updateBulkBar();
+}
+
+// Atualização extra: Quando desmarcar tudo na barra, desliga a varinha também
+const originalDeselecionar = window.deselecionarTudo;
+window.deselecionarTudo = function() {
+    originalDeselecionar(); // Chama a original
+    // Desliga a varinha visualmente
+    const wand = document.getElementById('master-magic-wand');
+    if(wand) wand.classList.remove('active');
+}
+
+window.renderAuditLogs = renderAuditLogs;
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
 // ============================================================
