@@ -1171,61 +1171,55 @@ window.renderProductTable = function() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. CABEÇALHO (8 Colunas Fixas)
+    // 1. CABEÇALHO ATUALIZADO (Removido Lucro, Ajustado para Telas Menores)
     if(thead) {
         thead.innerHTML = `
-            <th style="width: 50px; text-align: center; padding: 0;">
+            <th style="width: 40px; text-align: center; padding: 0;">
                 <div class="magic-wand-header">
                     <div class="magic-trigger" id="master-magic-wand" onclick="toggleSelectAllVisual(this)">
                         <i class="fas fa-magic"></i>
-                        <span class="magic-tooltip">Seleção Mágica<br><small style="color:#aaa;">(Selecionar Tudo)</small></span>
                     </div>
                 </div>
             </th>
-            <th style="width: 90px;">Cód.</th>
-            <th>Produto & Categoria</th>
-            <th style="width: 140px;">Estabelecimento</th>
-            <th style="width: 110px;">Venda</th>
-            <th style="width: 110px;">Lucro</th>
+            <th style="width: 80px;">Cód.</th>
+            <th>Produto</th> <th style="width: 110px;">Venda</th>
             <th style="width: 90px;">Estoque</th>
-            <th style="width: 100px;">Ações</th>
+            <th style="width: 90px;">Ações</th>
         `;
     }
 
     if (!products || products.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; opacity:0.5;">Nenhum produto cadastrado.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; opacity:0.5;">Nenhum produto cadastrado.</td></tr>`;
         document.getElementById('total-products').textContent = '0';
         return;
     }
 
+    // Ordena alfabeticamente
     const lista = [...products].sort((a,b) => a.nome.localeCompare(b.nome));
 
     lista.forEach(p => {
         const row = tbody.insertRow();
         if (p.quantidade <= p.minimo) row.classList.add('low-stock-row');
         
-        const custo = parseFloat(p.custo) || 0;
-        const preco = parseFloat(p.preco) || 0;
-        const lucro = preco - custo;
-        const margem = preco > 0 ? ((lucro / preco) * 100) : 0;
+        // Formatação BRASIL FORÇADA (Vírgula)
+        const precoFormatado = parseFloat(p.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        // Visual do Código
-        let codigoVisual = `<span style="opacity:0.3">---</span>`;
-        if (p.cProd) codigoVisual = `<span style="font-family:monospace; font-weight:bold; color:var(--color-text-primary); letter-spacing:1px;">${p.cProd}</span>`;
-        else if (p.codigoBarras) codigoVisual = `<span style="font-size:0.8rem; color:#888;">${p.codigoBarras}</span>`;
-
-        // Visual da Imagem
+        // Código Visual (Compacto)
+        let codigoVisual = `<span style="opacity:0.3">-</span>`;
+        if (p.cProd) codigoVisual = `<span style="font-family:monospace; font-weight:bold; color:var(--color-text-primary); font-size:0.8rem;">${p.cProd}</span>`;
+        
+        // Imagem (Pequena)
         let imgHtml = '';
         if (p.imagem && p.imagem.length > 10) {
-            imgHtml = `<img src="${p.imagem}" style="width:35px; height:35px; border-radius:6px; object-fit:cover; border:1px solid #444;">`;
+            imgHtml = `<img src="${p.imagem}" style="width:32px; height:32px; border-radius:6px; object-fit:cover; border:1px solid #444; flex-shrink:0;">`;
         } else {
-            imgHtml = `<div style="width:35px; height:35px; border-radius:6px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#666;"><i class="fas fa-box"></i></div>`;
+            imgHtml = `<div style="width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#666; flex-shrink:0;"><i class="fas fa-box" style="font-size:0.8rem;"></i></div>`;
         }
 
+        // Dados Visuais
         const catVisual = p.categoria || "Geral"; 
         const estVisual = p.estabelecimento || "Matriz"; 
 
-        // 8 CÉLULAS EXATAS
         row.innerHTML = `
             <td style="text-align: center;">
                 <input type="checkbox" class="product-check" value="${p.id}" onchange="updateBulkBar()">
@@ -1234,38 +1228,27 @@ window.renderProductTable = function() {
             <td>${codigoVisual}</td>
             
             <td onclick="openProductPreview('${p.id}')" style="cursor: pointer;">
-                <div style="display:flex; align-items:center; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px; max-width: 100%;">
                     ${imgHtml}
-                    <div style="display:flex; flex-direction:column;">
-                        <span style="font-weight:600; color:var(--color-text-primary); font-size:0.95rem;">${p.nome}</span>
-                        <span style="font-size:0.75rem; color:#aaa; margin-top:2px;">
-                            <span class="badge" style="background:#333; color:#ccc; border:1px solid #444; padding:2px 6px; font-size:0.7rem;">${catVisual}</span>
+                    <div style="display:flex; flex-direction:column; min-width: 0; flex: 1;">
+                        <span style="font-weight:600; color:var(--color-text-primary); font-size:0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.nome}">
+                            ${p.nome}
                         </span>
+                        
+                        <div style="display:flex; gap:5px; align-items:center; margin-top:2px;">
+                            <span class="badge" style="background:#333; color:#ccc; border:1px solid #444; padding:1px 5px; font-size:0.65rem; white-space: nowrap;">${catVisual}</span>
+                            <span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A; border:none; padding:1px 5px; font-size:0.65rem; white-space: nowrap;">${estVisual}</span>
+                        </div>
                     </div>
                 </div>
             </td>
 
-            <td>
-                <span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A; border:1px solid rgba(255, 159, 10, 0.3);">
-                    <i class="fas fa-map-marker-alt"></i> ${estVisual}
-                </span>
-            </td>
-
-            <td style="font-weight:bold;">R$ ${preco.toFixed(2)}</td>
+            <td style="font-weight:bold; font-size:1rem; color:var(--color-text-primary);">R$ ${precoFormatado}</td>
             
-            <td>
-                <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                    <span style="color:${lucro >= 0 ? 'var(--color-accent-green)' : '#ff453a'}; font-weight:bold; font-size:0.9rem;">
-                        R$ ${lucro.toFixed(2)}
-                    </span>
-                    <span style="font-size:0.7rem; color:#888;">${margem.toFixed(0)}%</span>
-                </div>
-            </td>
-
             <td>${getEstoqueBadge(p.quantidade, p.minimo, "Geral")}</td>
             
             <td>
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:5px;">
                     <button class="action-btn edit-btn" onclick="editProduct('${p.id}')"><i class="fas fa-pencil-alt"></i></button>
                     <button class="action-btn delete-btn" onclick="deleteProduct('${p.id}')"><i class="fas fa-trash"></i></button>
                 </div>
@@ -5305,34 +5288,39 @@ function imprimirRelatorioLucro(startDate, endDate) {
 // ARQUIVO: script.js
 
 window.editProduct = function(id) {
-    // 1. Encontra o produto
     const p = products.find(x => (x._id === id) || (x.id == id));
     if (!p) return;
 
-    // 2. Muda o título e exibe o botão cancelar
-    const titleEl = document.getElementById("form-title");
-    const btnSubmit = document.getElementById("submit-btn");
-    const btnCancel = document.getElementById("cancel-edit-btn");
-    const idInput = document.getElementById("product-id");
+    // --- ATUALIZAÇÃO DO CABEÇALHO ---
+    document.getElementById("form-title").textContent = "Editar Produto";
+    
+    // Mostra o CÓDIGO DA NOTA (cProd) Visualmente
+    const displayCod = document.getElementById("display-cod-produto");
+    if(displayCod) {
+        // Se tiver código de nota, mostra ele. Se não, avisa.
+        const codigoVisual = p.cProd ? p.cProd : "Produto Manual (Sem Cód. Nota)";
+        displayCod.textContent = `Cód. Nota/Ref: ${codigoVisual}`;
+        displayCod.style.display = 'block';
+    }
+    // ------------------------------------
 
-    if(titleEl) titleEl.textContent = "Editar Produto";
-    if(btnSubmit) btnSubmit.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
-    if(btnCancel) btnCancel.style.display = "inline-block";
-    if(idInput) idInput.value = p.id;
+    document.getElementById("submit-btn").innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
+    document.getElementById("cancel-edit-btn").style.display = "inline-block";
+    document.getElementById("product-id").value = p.id;
 
     // 3. Atualiza as listas
     updateCategorySelect(); 
     updateEstablishmentSelect(); 
     updateProductSupplierDropdown();
 
-    // 4. PREENCHE OS CAMPOS (Com proteção contra erro de 'null')
+    // 4. PREENCHE OS CAMPOS
     const setVal = (eid, val) => { 
         const el = document.getElementById(eid); 
         if(el) el.value = val !== undefined ? val : ""; 
     };
 
     setVal('nome', p.nome);
-    setVal('codigoBarras', p.codigoBarras); // AGORA NÃO TRAVA MAIS SE FALTAR O HTML
+    setVal('codigoBarras', p.codigoBarras); 
     setVal('quantidade', p.quantidade);
     setVal('minimo', p.minimo);
     
@@ -5340,22 +5328,23 @@ window.editProduct = function(id) {
     setVal('custo', p.custo);
     setVal('prodFrete', p.frete);
     setVal('prodMarkup', p.markup || 2.0);
-    setVal('preco', p.preco);
-
-    // Imagem
-    setVal('prodImagem', p.imagem);
-
-    // 5. Switch Automático
-    const switchAuto = document.getElementById('autoMarkupSwitch');
-    if (switchAuto) {
-        switchAuto.checked = (p.autoMarkup !== false); 
+    
+    // Preço com formatação de vírgula (Função nova)
+    const elPreco = document.getElementById('preco');
+    if(elPreco) {
+        elPreco.value = parseFloat(p.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
-    // 6. Preenche os Selects com delay
+    setVal('prodImagem', p.imagem);
+
+    // Switch Automático
+    const switchAuto = document.getElementById('autoMarkupSwitch');
+    if (switchAuto) switchAuto.checked = (p.autoMarkup !== false); 
+
+    // Selects com delay
     setTimeout(() => {
         setVal('categoria', p.categoria);
         
-        // Lógica do Estabelecimento
         const estEl = document.getElementById('prodEstabelecimento');
         if(estEl) {
             const estVal = p.estabelecimento || (config.establishments ? config.establishments[0] : "");
@@ -5364,14 +5353,12 @@ window.editProduct = function(id) {
 
         setVal('prodFornecedor', p.fornecedor);
 
-        // Recalcula visual
         if(typeof calcularPrecificacao === 'function') calcularPrecificacao('edit');
     }, 50);
 
-    // 7. Abre a aba
     showTab('product-form-tab');
     
-    // Rola suavemente
+    // Rola para cima
     const formTab = document.getElementById('product-form-tab');
     if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
 }
@@ -5381,56 +5368,55 @@ window.calcularPrecificacao = function(origem) {
     const elCusto = document.getElementById('custo');
     const elFrete = document.getElementById('prodFrete');
     const elMarkup = document.getElementById('prodMarkup');
-    const elSugerido = document.getElementById('precoSugeridoDisplay'); // O campo cinza
-    const elPrecoFinal = document.getElementById('preco'); // O campo verde
+    const elSugerido = document.getElementById('precoSugeridoDisplay');
+    const elPrecoFinal = document.getElementById('preco'); // Agora é type="text"
     const elSwitch = document.getElementById('autoMarkupSwitch');
     const elLabel = document.getElementById('label-mode');
 
-    // Valores
+    // Helper para converter "12,50" em 12.50
+    const lerValor = (val) => {
+        if(!val) return 0;
+        if(typeof val === 'number') return val;
+        return parseFloat(val.toString().replace(/\./g, '').replace(',', '.')) || 0;
+    };
+
+    // Helper para formatar 12.50 em "12,50"
+    const formatar = (val) => val.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Valores (Lê corretamente com vírgula ou ponto)
     const custo = parseFloat(elCusto.value) || 0;
     const frete = parseFloat(elFrete.value) || 0;
     const markup = parseFloat(elMarkup.value) || 0;
     const custoTotal = custo + frete;
     const isAuto = elSwitch.checked;
 
-    // 1. Sempre atualiza o Preço Sugerido (Matemático) apenas para visualização
+    // 1. Atualiza Preço Sugerido (Cinza)
     const valorSugerido = custoTotal * markup;
-    if (elSugerido) elSugerido.value = `R$ ${valorSugerido.toFixed(2)}`;
+    if (elSugerido) elSugerido.value = `R$ ${formatar(valorSugerido)}`;
 
-    // 2. Controla o Preço Real
+    // 2. Controla o Preço Real (Verde)
     if (isAuto) {
-        // --- MODO AUTOMÁTICO ---
         if(elLabel) { elLabel.innerText = "Automático"; elLabel.style.color = "#0A84FF"; }
-        
-        // Bloqueia digitação
         elPrecoFinal.setAttribute('readonly', true);
         elPrecoFinal.style.opacity = "0.7";
-        elPrecoFinal.style.borderColor = "#444";
-
-        // Se NÃO for apenas carregando a tela ('edit'), atualiza o valor
-        if (origem !== 'edit') {
-            elPrecoFinal.value = valorSugerido.toFixed(2);
-        }
-
-    } else {
-        // --- MODO MANUAL (Livre) ---
-        if(elLabel) { elLabel.innerText = "Manual"; elLabel.style.color = "#FF9F0A"; }
         
-        // Libera digitação
+        // Se não for edição manual, atualiza o valor com VÍRGULA
+        if (origem !== 'edit') {
+            elPrecoFinal.value = formatar(valorSugerido);
+        }
+    } else {
+        if(elLabel) { elLabel.innerText = "Manual"; elLabel.style.color = "#FF9F0A"; }
         elPrecoFinal.removeAttribute('readonly');
         elPrecoFinal.style.opacity = "1";
-        elPrecoFinal.style.borderColor = "#FF9F0A"; // Borda laranja
-
-        // SEGREDO: Se estiver no modo manual, NÃO altera o valor do input!
-        // Deixa o valor que veio do banco ou que você digitou.
-        // A única exceção é se o campo estiver vazio/zero, aí sugerimos algo.
-        if ((!elPrecoFinal.value || parseFloat(elPrecoFinal.value) === 0) && origem !== 'edit') {
-            elPrecoFinal.value = custoTotal.toFixed(2);
+        
+        // Se estiver vazio, sugere valor inicial
+        if ((!elPrecoFinal.value) && origem !== 'edit') {
+            elPrecoFinal.value = formatar(custoTotal);
         }
     }
 
-    // 3. Calcula Lucro Real (Baseado no que está no campo Preço Final agora)
-    const precoVenda = parseFloat(elPrecoFinal.value) || 0;
+    // 3. Calcula Lucro (Lendo o valor do input que agora tem vírgula)
+    const precoVenda = lerValor(elPrecoFinal.value);
     const lucro = precoVenda - custoTotal;
     let margem = 0;
     if (precoVenda > 0) margem = (lucro / precoVenda) * 100;
@@ -5439,8 +5425,8 @@ window.calcularPrecificacao = function(origem) {
     const spanMargem = document.getElementById('spanMargem');
 
     if(spanLucro) {
-        spanLucro.innerText = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        spanLucro.style.color = lucro < 0 ? '#FF453A' : 'var(--color-accent-green)'; // Vermelho se prejuízo
+        spanLucro.innerText = `R$ ${formatar(lucro)}`;
+        spanLucro.style.color = lucro < 0 ? '#FF453A' : 'var(--color-accent-green)';
     }
     if(spanMargem) {
         spanMargem.innerText = `${margem.toFixed(1)}%`;
@@ -5476,31 +5462,40 @@ window.calcularLucroReal = function() {
 window.resetProductForm = function() {
     const form = document.querySelector(".product-form");
     if (form) {
-        form.reset();
+        form.reset(); // Limpa os inputs visíveis
+        
+        // 1. LIMPA O ID OCULTO (Fundamental para não editar o produto errado depois)
         document.getElementById("product-id").value = "";
+        
+        // 2. Reseta textos e botões
         document.getElementById("form-title").textContent = "Novo Produto";
         document.getElementById("submit-btn").innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar';
         document.getElementById("cancel-edit-btn").style.display = "none";
 
-        // CONFIGURAÇÕES PADRÃO (O que você pediu)
-        
-        // 1. Estoque Mínimo Padrão = 1
+        // 3. LIMPA O VISUAL DO CÓDIGO DA NOTA (Correção solicitada)
+        const displayCod = document.getElementById("display-cod-produto");
+        if(displayCod) {
+            displayCod.textContent = "";
+            displayCod.style.display = 'none';
+        }
+
+        // 4. Configurações Padrão de Novo Cadastro
         const inputMinimo = document.getElementById("minimo");
         if(inputMinimo) inputMinimo.value = 1;
 
-        // 2. Categoria Padrão (A primeira da lista)
         const catSelect = document.getElementById("categoria");
-        if(catSelect && config.categories.length > 0) {
+        if(catSelect && config.categories && config.categories.length > 0) {
             catSelect.value = config.categories[0];
         }
-
-        // 3. Automático Ligado
-        const switchAuto = document.getElementById('autoMarkupSwitch');
-        if(switchAuto) {
-            switchAuto.checked = true;
-        }
         
-        calcularPrecificacao('reset');
+        // Zera o preço visualmente com vírgula
+        const elPreco = document.getElementById('preco');
+        if(elPreco) elPreco.value = "";
+
+        const switchAuto = document.getElementById('autoMarkupSwitch');
+        if(switchAuto) switchAuto.checked = true;
+        
+        if(typeof calcularPrecificacao === 'function') calcularPrecificacao('reset');
     }
 }
 
@@ -7198,7 +7193,7 @@ window.processarXMLNota = async function(input) {
     const file = input.files[0];
     const reader = new FileReader();
 
-    window.showLoadingScreen("Lendo XML Fiscal...", "Verificando integridade e duplicidade...");
+    window.showLoadingScreen("Lendo XML Fiscal...", "Calculando custos e fretes...");
 
     reader.onload = async function(e) {
         try {
@@ -7225,17 +7220,14 @@ window.processarXMLNota = async function(input) {
             const cnpjFornecedor = getVal(emit, "CNPJ");
             
             // === 🔒 BLOQUEIO DE DUPLICIDADE ===
-            // Verifica se já existe uma nota com mesmo Número E mesmo CNPJ
             const duplicada = inputHistory.find(n => String(n.numero) === String(nNF) && String(n.cnpj) === String(cnpjFornecedor));
             
             if (duplicada) {
                 window.hideLoadingScreen();
-                input.value = ""; // Limpa input
-                // Aviso sonoro ou visual forte
-                customAlert(`⛔ IMPORTAÇÃO BLOQUEADA\n\nA Nota Fiscal nº ${nNF} deste fornecedor já consta no sistema (Importada em: ${new Date(duplicada.timestamp).toLocaleDateString()}).`, "error");
-                return; // PARA TUDO AQUI
+                input.value = ""; 
+                customAlert(`⛔ IMPORTAÇÃO BLOQUEADA\n\nA Nota Fiscal nº ${nNF} já consta no sistema.`, "error");
+                return; 
             }
-            // ==================================
 
             const natOp = getVal(ide, "natOp");
             const dhEmi = getVal(ide, "dhEmi") || new Date().toISOString();
@@ -7263,7 +7255,7 @@ window.processarXMLNota = async function(input) {
                 enderecoCompleto = `${enderecoObj.rua}, ${enderecoObj.num} - ${enderecoObj.bairro}, ${enderecoObj.cidade}/${enderecoObj.uf}`;
             }
 
-            // Totais
+            // Totais da Nota
             let vNF=0, vBC=0, vICMS=0, vST=0, vProd=0, vIPI=0;
             if (total) {
                 const icmsTot = getTag(total, "ICMSTot");
@@ -7297,10 +7289,20 @@ window.processarXMLNota = async function(input) {
                 const NCM = getVal(prod, "NCM");
                 const CFOP = getVal(prod, "CFOP");
                 const uCom = getVal(prod, "uCom");
-                const qCom = parseFloat(getVal(prod, "qCom"));
-                const vUnCom = parseFloat(getVal(prod, "vUnCom"));
-                const vProdItem = parseFloat(getVal(prod, "vProd"));
                 
+                const qCom = parseFloat(getVal(prod, "qCom")); // Quantidade
+                const vUnCom = parseFloat(getVal(prod, "vUnCom")); // Valor Unitário (CUSTO DO PRODUTO)
+                const vProdItem = parseFloat(getVal(prod, "vProd")); // Valor Total do Item
+                
+                // === 🚚 CÁLCULO DO FRETE DO ITEM ===
+                // Pega o frete total deste item específico
+                const vFreteItemTotal = parseFloat(getVal(prod, "vFrete")) || 0;
+                
+                // Divide pela quantidade para saber o frete unitário
+                // Ex: Frete R$ 10,00 para 10 itens = R$ 1,00 de frete por unidade
+                const freteUnitario = qCom > 0 ? (vFreteItemTotal / qCom) : 0;
+                // ===================================
+
                 somaCalculada += vProdItem;
 
                 // Impostos
@@ -7329,14 +7331,17 @@ window.processarXMLNota = async function(input) {
                 itensNota.push({
                     cProd, ean: cEAN, nome: xProd, ncm: NCM, cfop: CFOP, cst: CST,
                     un: uCom, qtd: qCom, valorUnit: vUnCom, total: vProdItem,
-                    vBC: vBCItem, pICMS: pICMSItem, vICMS: vICMSItem, vIPI: vIPIItem, pIPI: pIPIItem
+                    vBC: vBCItem, pICMS: pICMSItem, vICMS: vICMSItem, vIPI: vIPIItem, pIPI: pIPIItem,
+                    vFrete: vFreteItemTotal // Guarda o frete total no histórico da nota
                 });
 
-                // ATUALIZA ESTOQUE
+                // ATUALIZA ESTOQUE NO BANCO
                 let produtoExistente = null;
+                // 1. Tenta por Código de Barras
                 if (cEAN && cEAN !== "SEM GTIN" && cEAN.trim() !== "") {
                     produtoExistente = products.find(p => p.codigoBarras === cEAN);
                 }
+                // 2. Tenta por Nome
                 if (!produtoExistente) {
                     produtoExistente = products.find(p => p.nome.toLowerCase().trim() === xProd.toLowerCase().trim());
                 }
@@ -7345,7 +7350,8 @@ window.processarXMLNota = async function(input) {
                     const novaQtd = (parseInt(produtoExistente.quantidade) || 0) + parseInt(qCom);
                     await updateDoc(getUserDocumentRef("products", produtoExistente.id), {
                         quantidade: novaQtd,
-                        custo: vUnCom,
+                        custo: vUnCom, // Atualiza Custo Unitário
+                        frete: freteUnitario, // 🟢 ATUALIZA O FRETE UNITÁRIO (Frete / Outros)
                         fornecedor: fornecedorId,
                         cProd: cProd
                     });
@@ -7353,10 +7359,14 @@ window.processarXMLNota = async function(input) {
                     const novoProduto = {
                         nome: xProd, cProd: cProd,
                         codigoBarras: (cEAN && cEAN !== "SEM GTIN") ? cEAN : "",
-                        categoria: "Geral", grupo: "Importado XML",
+                        categoria: "Geral", 
+                        estabelecimento: (config.establishments ? config.establishments[0] : "Matriz"),
                         fornecedor: fornecedorId,
                         quantidade: parseInt(qCom), minimo: 1,
-                        custo: vUnCom, frete: 0, markup: 2.0, preco: vUnCom * 2.0, autoMarkup: true, imagem: ""
+                        custo: vUnCom, // Custo Unitário
+                        frete: freteUnitario, // 🟢 FRETE UNITÁRIO INICIAL
+                        markup: 2.0, preco: (vUnCom + freteUnitario) * 2.0, // Preço sugere custo + frete
+                        autoMarkup: true, imagem: ""
                     };
                     await addDoc(getUserCollectionRef("products"), novoProduto);
                 }
@@ -7364,7 +7374,7 @@ window.processarXMLNota = async function(input) {
 
             if (vNF === 0) vNF = somaCalculada;
 
-            // SALVA A NOTA
+            // SALVA A NOTA NO HISTÓRICO
             const notaFiscalData = {
                 numero: nNF, serie, natOp, chNFe: chaveAcesso, nProt,
                 dataEmissao: dhEmi, fornecedor: nomeFornecedor,
@@ -7379,7 +7389,7 @@ window.processarXMLNota = async function(input) {
             await logSystemAction("Importação XML", `Nota Fiscal Nº ${nNF} importada. Fornecedor: ${nomeFornecedor}. Total: R$ ${vNF.toFixed(2)}`);
 
             window.hideLoadingScreen();
-            showToast(`Sucesso! Nota ${nNF} importada.`, "success");
+            showToast(`Sucesso! Nota ${nNF} importada e fretes calculados.`, "success");
             input.value = "";
             await loadAllData();
 
@@ -9427,6 +9437,10 @@ window.renderInvoicesTable = function(lista = null) {
             <td style="font-weight:bold; color:var(--color-accent-purple);">R$ ${parseFloat(nota.valorTotal).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
             <td>
                 <div style="display:flex; gap:8px;">
+                    <button class="action-btn" style="background:#FF9F0A; color:white; border:none;" onclick="adicionarFreteManual('${nota.id}')" title="Lançar Frete Manual (Rateio)">
+                        <i class="fas fa-truck"></i>
+                    </button>
+
                     <button class="action-btn view-btn" onclick="verDetalhesNota('${nota.id}')" title="Ver Itens">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -10142,6 +10156,168 @@ window.deselecionarTudo = function() {
 }
 
 window.renderAuditLogs = renderAuditLogs;
+
+// ============================================================
+// FERRAMENTA DE CORREÇÃO DE NOTAS (Conecta Passado e Presente)
+// ============================================================
+window.corrigirNotasAntigas = async function() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    customConfirm("O sistema vai analisar suas notas fiscais antigas e tentar conectar com os produtos atuais pelo Código de Barras ou Nome. \n\nDeseja iniciar a varredura?", async () => {
+        try {
+            window.showLoadingScreen("Analisando Histórico...", "Conectando notas aos produtos...");
+            
+            let notasCorrigidas = 0;
+            const updates = [];
+
+            // Varre todas as notas fiscais importadas
+            for (const nota of inputHistory) {
+                let notaMudou = false;
+                
+                // Varre os itens dentro da nota
+                const novosItens = nota.items.map(itemNota => {
+                    // Tenta achar o produto real no estoque atual
+                    // 1. Pelo Código de Barras (Mais preciso)
+                    let produtoReal = products.find(p => p.codigoBarras && p.codigoBarras === itemNota.ean);
+                    
+                    // 2. Se não achar, tenta pelo Nome (Aproximado)
+                    if (!produtoReal) {
+                        produtoReal = products.find(p => p.nome.toLowerCase().trim() === itemNota.nome.toLowerCase().trim());
+                    }
+
+                    // Se achou o produto no sistema novo, atualiza o ID na nota antiga
+                    if (produtoReal) {
+                        // Se o ID ou código estava diferente, atualiza
+                        if (itemNota.cProd !== produtoReal.cProd || itemNota.productId !== produtoReal.id) {
+                            itemNota.cProd = produtoReal.cProd || produtoReal.id; // Usa o código novo
+                            itemNota.productId = produtoReal.id; // Vínculo interno
+                            notaMudou = true;
+                        }
+                    }
+                    return itemNota;
+                });
+
+                // Se houve alguma correção nesta nota, salva no banco
+                if (notaMudou) {
+                    const notaRef = getUserDocumentRef("input_invoices", nota.id);
+                    updates.push(updateDoc(notaRef, { items: novosItens }));
+                    notasCorrigidas++;
+                }
+            }
+
+            await Promise.all(updates);
+            
+            window.hideLoadingScreen();
+            
+            if (notasCorrigidas > 0) {
+                await logSystemAction("Correção de Sistema", `Atualizou ${notasCorrigidas} notas fiscais antigas para o novo padrão.`);
+                customAlert(`Sucesso! ${notasCorrigidas} notas fiscais foram atualizadas e conectadas aos produtos atuais.`, "success");
+                await loadAllData(); // Recarrega para ver as mudanças
+            } else {
+                showToast("Suas notas já estão sincronizadas!", "success");
+            }
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            console.error(error);
+            customAlert("Erro ao corrigir notas: " + error.message, "error");
+        }
+    });
+}
+
+window.adicionarFreteManual = async function(idNota) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // 1. Busca a nota
+    const nota = inputHistory.find(n => n.id === idNota);
+    if (!nota) return showToast("Nota não encontrada.", "error");
+
+    // 2. Pede o valor do frete
+    customPrompt("Lançar Frete", `Digite o valor TOTAL do frete para a Nota Nº ${nota.numero}.\nO sistema fará o rateio proporcional por valor.`, async (valorDigitado) => {
+        
+        // Converte "100,00" para 100.00
+        const freteTotal = parseFloat(valorDigitado.replace(',', '.')) || 0;
+
+        if (freteTotal <= 0) return showToast("Valor inválido.", "info");
+
+        try {
+            window.showLoadingScreen("Calculando Rateio...", "Atualizando custos dos produtos...");
+
+            // 3. Calcula o total dos produtos da nota para saber a % de cada um
+            // (Usamos o valor dos itens, não o total da nota que pode ter IPI/ST)
+            const itens = nota.items || nota.itens || [];
+            const totalProdutosNota = itens.reduce((acc, item) => acc + (parseFloat(item.total) || 0), 0);
+
+            const batchUpdates = [];
+            let itensAtualizados = 0;
+
+            // 4. Loop de Rateio
+            for (const item of itens) {
+                // Tenta achar o produto vinculado
+                // Pelo ID salvo na importação OU pelo código de barras/nome
+                let prod = products.find(p => p.id === item.productId || p.id === item.cProd);
+                
+                if (!prod) {
+                    // Tenta busca secundária se o vínculo direto falhar
+                    prod = products.find(p => p.codigoBarras === item.ean || p.nome === item.nome);
+                }
+
+                if (prod) {
+                    // MATEMÁTICA DO RATEIO:
+                    // Peso do item = Valor do Item / Valor Total da Nota
+                    // Frete do Item = Frete Total * Peso
+                    // Frete Unitário = Frete do Item / Quantidade
+                    
+                    const valorItem = parseFloat(item.total) || 0;
+                    const qtdItem = parseFloat(item.qtd) || 1;
+                    
+                    if (valorItem > 0 && totalProdutosNota > 0) {
+                        const proporcao = valorItem / totalProdutosNota;
+                        const freteDesteItemTotal = freteTotal * proporcao;
+                        const freteUnitario = freteDesteItemTotal / qtdItem;
+
+                        // Atualiza o produto
+                        const docRef = getUserDocumentRef("products", prod.id);
+                        batchUpdates.push(updateDoc(docRef, { 
+                            frete: freteUnitario // Atualiza o campo 'Frete/Outros'
+                        }));
+                        itensAtualizados++;
+                    }
+                }
+            }
+
+            // 5. Executa
+            await Promise.all(batchUpdates);
+
+            // 6. Lança como Despesa Financeira também (Opcional, mas bom para o caixa)
+            const despesaFrete = {
+                descricao: `Frete s/ Nota ${nota.numero} (${nota.fornecedor})`,
+                valor: freteTotal,
+                categoria: "Operacional",
+                data: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString()
+            };
+            await addDoc(getUserCollectionRef("expenses"), despesaFrete);
+
+            window.hideLoadingScreen();
+            
+            await logSystemAction("Frete Manual", `Lançou R$ ${freteTotal.toFixed(2)} na Nota ${nota.numero}. Rateado em ${itensAtualizados} produtos.`);
+            
+            customAlert(`Sucesso!\n\nO frete de R$ ${freteTotal.toFixed(2)} foi dividido proporcionalmente entre ${itensAtualizados} produtos e atualizado no estoque.\n\nTambém foi lançada uma despesa no financeiro.`, "success");
+            
+            await loadAllData();
+
+        } catch (error) {
+            window.hideLoadingScreen();
+            console.error(error);
+            showToast("Erro ao ratear frete: " + error.message, "error");
+        }
+
+    }, "0,00", "text"); // Input tipo texto para aceitar vírgula na máscara visual se tiver
+}
+
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
 // ============================================================
