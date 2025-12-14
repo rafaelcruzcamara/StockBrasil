@@ -5510,21 +5510,55 @@ window.converterImagemParaBase64 = function(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         
-        // Verifica tamanho (Max 1MB para não travar o banco)
-        if(file.size > 1024 * 1024) {
-            showToast("A imagem é muito grande! Use imagens menores que 1MB.", "error");
-            input.value = ""; // Limpa
-            return;
-        }
+        window.showLoadingScreen("Processando Imagem...", "Comprimindo para salvar...");
 
         const reader = new FileReader();
-        
         reader.onload = function(e) {
-            // Joga o código da imagem direto no input de texto
-            document.getElementById('prodImagem').value = e.target.result;
-            showToast("Imagem carregada!", "success");
-        }
-        
+            const img = new Image();
+            img.src = e.target.result;
+            
+            img.onload = function() {
+                // 1. Configurações de Redimensionamento
+                const maxWidth = 800; // Máximo 800px de largura
+                const maxHeight = 800;
+                let width = img.width;
+                let height = img.height;
+
+                // Calcula nova proporção
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                }
+
+                // 2. Cria um Canvas para desenhar a imagem menor
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 3. Converte para JPEG com qualidade 0.7 (70%)
+                // Isso reduz uma foto de 5MB para uns 50KB-100KB
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                // 4. Salva no input oculto
+                document.getElementById('prodImagem').value = dataUrl;
+                
+                // Mostra preview se tiver
+                const preview = document.getElementById('image-preview-box'); 
+                if(preview) preview.style.backgroundImage = `url(${dataUrl})`;
+
+                window.hideLoadingScreen();
+                showToast("Imagem processada e pronta!", "success");
+            };
+        };
         reader.readAsDataURL(file);
     }
 }
