@@ -5984,3 +5984,252 @@ input:checked + .slider:before {
     opacity: 1;
     margin-left: 10px; /* Pequena animação de deslizamento */
 }
+
+/* LISTA COMPACTA E OTIMIZADA */
+#product-table td {
+    padding: 8px 10px; /* Reduzi o padding vertical */
+    vertical-align: middle;
+}
+
+.product-info-compact {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.product-name-compact {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-size: 0.95rem;
+    
+    /* Limite de caracteres visual (reticências) */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px; /* Ajuste conforme sua tela */
+    display: block;
+}
+
+.product-meta-compact {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 2px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.meta-tag {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1px 4px;
+    border-radius: 3px;
+    border: 1px solid #444;
+}
+
+
+/* ============================================================
+   FORMULÁRIO PRO 2.0 (LAYOUT CORRIGIDO)
+   ============================================================ */
+
+/* Container Principal do Grid */
+.layout-form-split {
+    display: grid;
+    grid-template-columns: 2fr 1fr; /* Esquerda Maior, Direita Menor */
+    gap: 25px;
+    align-items: start;
+}
+
+/* No celular, vira uma coluna só */
+@media (max-width: 900px) {
+    .layout-form-split {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Estilo das Seções (Caixas) */
+.modern-section {
+    background: var(--color-bg-secondary);
+    padding: 25px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modern-header {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Grids internos dos campos */
+.grid-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+.grid-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+
+/* Inputs Modernos */
+.input-wrapper label {
+    display: block;
+    font-size: 0.85rem;
+    color: #aaa;
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.modern-input {
+    width: 100% !important;
+    padding: 12px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    box-sizing: border-box; /* Essencial para não vazar */
+}
+
+.modern-input:focus {
+    border-color: var(--color-accent-blue);
+    background: #1a1d21;
+}
+
+/* Área de Upload de Imagem */
+.upload-area {
+    border: 2px dashed var(--color-border);
+    background: var(--color-bg-tertiary);
+    border-radius: 12px;
+    height: 200px; /* Altura fixa */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.upload-area:hover {
+    border-color: var(--color-accent-blue);
+    background: rgba(10, 132, 255, 0.05);
+}
+
+.upload-placeholder {
+    text-align: center;
+    color: #666;
+}
+
+.upload-placeholder i { font-size: 2.5rem; margin-bottom: 10px; }
+
+.image-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Garante que a foto preencha o quadrado */
+    display: none;
+}
+
+/* Cartão de Preço (Destaque) */
+.price-card {
+    background: linear-gradient(145deg, rgba(10, 132, 255, 0.05), transparent);
+    border: 1px solid var(--color-accent-blue);
+}
+
+.big-price {
+    font-size: 1.6rem !important;
+    font-weight: bold;
+    color: #30D158 !important;
+    padding-left: 40px !important;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 15px;
+    top: 42px; /* Ajuste fino da posição do R$ */
+    font-size: 1.2rem;
+    color: #30D158;
+    font-weight: bold;
+    z-index: 2;
+}
+
+/* Responsividade do Modal de Detalhes */
+@media (max-width: 768px) {
+    .preview-body-grid {
+        grid-template-columns: 1fr !important; /* Vira 1 coluna */
+        height: auto !important;
+        min-height: auto !important;
+    }
+    
+    /* A foto fica em cima com altura fixa */
+    .preview-body-grid > div:first-child {
+        height: 250px;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+    }
+    
+    #product-preview-modal .modal-content {
+        width: 95% !important;
+        max-height: 90vh !important;
+    }
+}
+
+/* --- CSS DO NOVO MODAL DE PREVIEW --- */
+.preview-grid-container {
+    display: grid;
+    grid-template-columns: 350px 1fr; /* Esquerda fixa, Direita flexível */
+    min-height: 450px;
+}
+
+.preview-image-side {
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-right: 1px solid var(--color-border);
+    overflow: hidden;
+}
+
+.preview-image-side img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Garante que a foto inteira apareça */
+}
+
+.floating-price {
+    position: absolute;
+    bottom: 20px;
+    background: rgba(0,0,0,0.8);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--color-accent-green);
+    color: var(--color-accent-green);
+    font-weight: bold;
+    font-size: 1.3rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.preview-info-side {
+    padding: 30px;
+    overflow-y: auto;
+    max-height: 600px;
+    background-color: var(--color-bg-secondary);
+}
+
+/* Responsividade para celular */
+@media (max-width: 768px) {
+    .preview-grid-container {
+        grid-template-columns: 1fr; /* Vira uma coluna só */
+        grid-template-rows: 300px auto;
+    }
+    .preview-image-side {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+    }
+}

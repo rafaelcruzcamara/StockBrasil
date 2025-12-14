@@ -1153,10 +1153,11 @@ function resetProductForm() {
     form.reset();
     document.getElementById("product-id").value = "";
     document.getElementById("form-title").textContent =
-      "Formulário de Cadastro de Produto";
+      "Formulário de Cadastro";
     document.getElementById("submit-btn").innerHTML =
       '<i class="fas fa-plus-circle"></i> Cadastrar Produto';
     document.getElementById("cancel-edit-btn").style.display = "none";
+    
 
     setTimeout(() => {
       updateCategorySelect(config.categories[0] || "");
@@ -1164,14 +1165,15 @@ function resetProductForm() {
   }
 }
 
-window.renderProductTable = function() {
+
+window.renderProductTable = function(listaParaRenderizar = null) {
     const tbody = document.querySelector('#product-table tbody');
     const thead = document.querySelector('#product-table thead tr');
     
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. CABEÇALHO
+    // --- CABEÇALHO ---
     if(thead) {
         thead.innerHTML = `
             <th style="width: 40px; text-align: center; padding: 0;">
@@ -1181,86 +1183,160 @@ window.renderProductTable = function() {
                     </div>
                 </div>
             </th>
-            <th style="width: 110px;">Ref / Cód.</th> <th>Produto</th> 
+            <th>Produto / Detalhes</th> 
             <th style="width: 120px;">Venda</th>
             <th style="width: 100px;">Estoque</th>
-            <th style="width: 90px;">Ações</th>
+            <th style="width: 80px;">Ações</th>
         `;
     }
 
-    if (!products || products.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; opacity:0.5;">Nenhum produto cadastrado.</td></tr>`;
+    // Define qual lista usar
+    let lista = listaParaRenderizar || (produtosFiltradosGlobal.length > 0 ? produtosFiltradosGlobal : products);
+    const termoBusca = document.getElementById('universal-search') ? document.getElementById('universal-search').value : "";
+    
+    if (!termoBusca && !listaParaRenderizar) lista = products;
+
+    if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; opacity:0.5;">Nenhum produto encontrado.</td></tr>`;
         document.getElementById('total-products').textContent = '0';
         return;
     }
 
-    const lista = [...products].sort((a,b) => a.nome.localeCompare(b.nome));
+    document.getElementById('total-products').textContent = lista.length;
 
+    // --- LÓGICA DE ORDENAÇÃO ---
+    const sortMode = document.getElementById('sort-order') ? document.getElementById('sort-order').value : 'nome-asc';
+    
+    // MAPA DE TIMELINE (Se o usuário escolher ordenar por entrada)
+    let mapaOrdem = {}; 
+    
+    if (sortMode === 'data-entrada') {
+        // 1. Pega notas ordenadas (Mais recente primeiro)
+        // inputHistory é sua variável global de notas
+        const notasTimeline = [...inputHistory].sort((a, b) => {
+            const da = new Date(a.dataEmissao || a.timestamp);
+            const db = new Date(b.dataEmissao || b.timestamp);
+            return db - da; // Decrescente
+        });
+
+        let contador = 0;
+
+        // 2. Cria o índice de prioridade (0 = item 1 da nota mais nova)
+        notasTimeline.forEach(nota => {
+            const itens = nota.items || nota.itens || [];
+            itens.forEach(item => {
+                // Gera chaves para identificar o produto
+                const chaves = [];
+                if(item.cProd) chaves.push('cprod_' + item.cProd);
+                if(item.ean && item.ean !== "SEM GTIN") chaves.push('ean_' + item.ean);
+                if(item.nome) chaves.push('nome_' + item.nome.trim().toLowerCase());
+
+                // Salva a posição (apenas se ainda não foi salvo, para priorizar a entrada mais recente)
+                chaves.forEach(k => {
+                    if (mapaOrdem[k] === undefined) {
+                        mapaOrdem[k] = contador;
+                    }
+                });
+                contador++;
+            });
+        });
+    }
+
+    // APLICA A ORDENAÇÃO
+    lista.sort((a, b) => {
+        // Valores seguros
+        const nomeA = a.nome || "";
+        const nomeB = b.nome || "";
+        const custoA = parseFloat(a.custo)||0;
+        const custoB = parseFloat(b.custo)||0;
+        const qtdA = parseInt(a.quantidade)||0;
+        const qtdB = parseInt(b.quantidade)||0;
+
+        switch(sortMode) {
+            case 'nome-asc': return nomeA.localeCompare(nomeB);
+            case 'nome-desc': return nomeB.localeCompare(nomeA);
+            
+            case 'custo-asc': return custoA - custoB;
+            case 'custo-desc': return custoB - custoA;
+            
+            case 'estoque-asc': return qtdA - qtdB;
+            case 'estoque-desc': return qtdB - qtdA;
+
+            // --- NOVA LÓGICA: TIMELINE ---
+            case 'data-entrada':
+                // Tenta achar o índice do produto A
+                let posA = 99999999; // Se não achar, vai pro final
+                if (a.cProd && mapaOrdem['cprod_' + a.cProd] !== undefined) posA = mapaOrdem['cprod_' + a.cProd];
+                else if (a.codigoBarras && mapaOrdem['ean_' + a.codigoBarras] !== undefined) posA = mapaOrdem['ean_' + a.codigoBarras];
+                else if (mapaOrdem['nome_' + a.nome.trim().toLowerCase()] !== undefined) posA = mapaOrdem['nome_' + a.nome.trim().toLowerCase()];
+
+                // Tenta achar o índice do produto B
+                let posB = 99999999;
+                if (b.cProd && mapaOrdem['cprod_' + b.cProd] !== undefined) posB = mapaOrdem['cprod_' + b.cProd];
+                else if (b.codigoBarras && mapaOrdem['ean_' + b.codigoBarras] !== undefined) posB = mapaOrdem['ean_' + b.codigoBarras];
+                else if (mapaOrdem['nome_' + b.nome.trim().toLowerCase()] !== undefined) posB = mapaOrdem['nome_' + b.nome.trim().toLowerCase()];
+
+                return posA - posB;
+            
+            default: return 0;
+        }
+    });
+
+    // --- RENDERIZAÇÃO DAS LINHAS ---
     lista.forEach(p => {
         const row = tbody.insertRow();
         if (p.quantidade <= p.minimo) row.classList.add('low-stock-row');
         
-        const precoFormatado = parseFloat(p.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        // --- LÓGICA VISUAL DO CÓDIGO (Agora com Ícones) ---
-        let codigoVisual = `<span style="opacity:0.3; font-size:0.8rem;">---</span>`;
+        const precoVenda = parseFloat(p.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         
-        // 1. Prioridade: Código da Nota (cProd)
-        if (p.cProd && p.cProd.trim() !== "" && p.cProd.length < 20) {
-            // Ícone de Papel (Nota) + Código em Negrito
-            codigoVisual = `
-                <div style="display:flex; align-items:center; gap:5px; color:var(--color-text-primary);" title="Código Interno/Nota">
-                    <i class="far fa-file-alt" style="font-size:0.8rem; color:#0A84FF;"></i>
-                    <span style="font-family:monospace; font-weight:bold; letter-spacing:0.5px;">${p.cProd}</span>
-                </div>`;
-        } 
-        // 2. Fallback: Código de Barras (EAN)
-        else if (p.codigoBarras && p.codigoBarras.trim() !== "") {
-            // Ícone de Barras + Código Cinza
-            codigoVisual = `
-                <div style="display:flex; align-items:center; gap:5px; color:#888;" title="Código de Barras (EAN)">
-                    <i class="fas fa-barcode" style="font-size:0.8rem;"></i>
-                    <span style="font-family:monospace;">${p.codigoBarras}</span>
-                </div>`;
-        }
-        // ------------------------------------------------
-
-        let imgHtml = '';
-        if (p.imagem && p.imagem.length > 10) {
-            imgHtml = `<img src="${p.imagem}" style="width:32px; height:32px; border-radius:6px; object-fit:cover; border:1px solid #444; flex-shrink:0;">`;
-        } else {
-            imgHtml = `<div style="width:32px; height:32px; border-radius:6px; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; color:#666; flex-shrink:0;"><i class="fas fa-box" style="font-size:0.8rem;"></i></div>`;
+        // CÓDIGO LIMPO (Sem IDs estranhos)
+        let refLimpa = "S/ Ref";
+        let iconeRef = "fas fa-tag";
+        
+        if (p.cProd && p.cProd.trim() !== "") {
+            refLimpa = p.cProd;
+            iconeRef = "far fa-file-alt";
+        } else if (p.codigoBarras && p.codigoBarras.trim() !== "") {
+            refLimpa = p.codigoBarras;
+            iconeRef = "fas fa-barcode";
         }
 
-        const catVisual = p.categoria || "Geral"; 
-        const estVisual = p.estabelecimento || "Matriz"; 
+        // Imagem
+        let imgHtml = p.imagem && p.imagem.length > 10 
+            ? `<img src="${p.imagem}" style="width:42px; height:42px; border-radius:6px; object-fit:cover; border:1px solid #333;">`
+            : `<div style="width:42px; height:42px; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; color:#666;"><i class="fas fa-box"></i></div>`;
 
         row.innerHTML = `
             <td style="text-align: center;">
                 <input type="checkbox" class="product-check" value="${p.id}" onchange="updateBulkBar()">
             </td>
             
-            <td>${codigoVisual}</td>
-            
             <td onclick="openProductPreview('${p.id}')" style="cursor: pointer;">
-                <div style="display:flex; align-items:center; gap:10px; max-width: 100%;">
+                <div style="display:flex; align-items:center; gap:12px;">
                     ${imgHtml}
-                    <div style="display:flex; flex-direction:column; min-width: 0; flex: 1;">
-                        <span style="font-weight:600; color:var(--color-text-primary); font-size:0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.nome}">
-                            ${p.nome}
-                        </span>
+                    <div style="flex:1; min-width: 0; overflow: hidden;">
                         
-                        <div style="display:flex; gap:5px; align-items:center; margin-top:2px;">
-                            <span class="badge" style="background:#333; color:#ccc; border:1px solid #444; padding:1px 6px; font-size:0.65rem;">${catVisual}</span>
-                            <span class="badge" style="background:rgba(255, 159, 10, 0.15); color:#FF9F0A; border:none; padding:1px 6px; font-size:0.65rem;">${estVisual}</span>
+                        <div style="font-weight:600; font-size:0.95rem; color:var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;" title="${p.nome}">
+                            ${p.nome}
+                        </div>
+                        
+                        <div style="display:flex; align-items:center; gap:10px; font-size:0.75rem; color:#aaa; margin-top:4px;">
+                            
+                            <span style="font-family:monospace; background:rgba(10, 132, 255, 0.1); color:#0A84FF; padding:1px 5px; border-radius:3px; border:1px solid rgba(10,132,255,0.2);">
+                                <i class="${iconeRef}"></i> ${refLimpa}
+                            </span>
+
+                            <span>${p.categoria || 'Geral'}</span>
+                            <span style="color:#666;">•</span>
+                            <span>${p.estabelecimento || 'Matriz'}</span>
                         </div>
                     </div>
                 </div>
             </td>
 
-            <td style="font-weight:bold; font-size:1rem; color:var(--color-text-primary);">R$ ${precoFormatado}</td>
+            <td style="font-weight:bold; font-size:1rem; color:var(--color-text-primary);">R$ ${precoVenda}</td>
             
-            <td>${getEstoqueBadge(p.quantidade, p.minimo, "Geral")}</td>
+            <td>${getEstoqueBadge(p.quantidade, p.minimo, p.categoria)}</td>
             
             <td>
                 <div style="display:flex; gap:5px;">
@@ -5306,15 +5382,22 @@ window.editProduct = function(id) {
     const p = products.find(x => (x._id === id) || (x.id == id));
     if (!p) return;
 
-    document.getElementById("form-title").textContent = "Editar Produto";
-    document.getElementById("submit-btn").innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
-    document.getElementById("cancel-edit-btn").style.display = "inline-block";
-    document.getElementById("product-id").value = p.id;
+    // --- PROTEÇÃO CONTRA ERROS DE ID ---
+    const elTitle = document.getElementById("form-title");
+    const elBtn = document.getElementById("submit-btn");
+    const elCancel = document.getElementById("cancel-edit-btn");
+    const elId = document.getElementById("product-id");
+
+    if(elTitle) elTitle.innerHTML = 'Editar Produto';
+    if(elBtn) elBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Alterações';
+    if(elCancel) elCancel.style.display = "inline-flex"; // Mostra o botão cancelar
+    if(elId) elId.value = p.id;
+    // ------------------------------------
 
     // 3. Atualiza as listas
-    updateCategorySelect(); 
-    updateEstablishmentSelect(); 
-    updateProductSupplierDropdown();
+    if(typeof updateCategorySelect === 'function') updateCategorySelect(); 
+    if(typeof updateEstablishmentSelect === 'function') updateEstablishmentSelect(); 
+    if(typeof updateProductSupplierDropdown === 'function') updateProductSupplierDropdown();
 
     // 4. PREENCHE OS CAMPOS
     const setVal = (eid, val) => { 
@@ -5324,46 +5407,70 @@ window.editProduct = function(id) {
 
     setVal('nome', p.nome);
     setVal('codigoBarras', p.codigoBarras); 
-    
-    // --- NOVO: Carrega o Código da Nota no Input ---
     setVal('cProd', p.cProd); 
-    // -----------------------------------------------
-
     setVal('quantidade', p.quantidade);
     setVal('minimo', p.minimo);
-    
-    // Financeiro
+    setVal('unidade', p.unidade || "UN");
+    setVal('ncm', p.ncm);
+    setVal('localizacao', p.localizacao);
     setVal('custo', p.custo);
     
     const elFrete = document.getElementById('prodFrete');
     if(elFrete) {
-        elFrete.value = parseFloat(p.frete || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        // Formata para BR se for número
+        let valorFrete = p.frete || 0;
+        if (typeof valorFrete === 'number') {
+            valorFrete = valorFrete.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        elFrete.value = valorFrete;
     }
     
     setVal('prodMarkup', p.markup || 2.0);
     
+    // Preço
     const elPreco = document.getElementById('preco');
     if(elPreco) {
-        elPreco.value = parseFloat(p.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        let valorPreco = p.preco || 0;
+        if (typeof valorPreco === 'number') {
+            valorPreco = valorPreco.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        elPreco.value = valorPreco;
     }
 
+    // Imagem (Salva no hidden)
     setVal('prodImagem', p.imagem);
 
+    // Switch Automático
     const switchAuto = document.getElementById('autoMarkupSwitch');
     if (switchAuto) switchAuto.checked = (p.autoMarkup !== false); 
 
+    // IMAGEM: Atualiza o preview visualmente
+    const preview = document.getElementById('form-image-preview');
+    const placeholder = document.getElementById('form-image-placeholder');
+    
+    if (preview && placeholder) {
+        if (p.imagem && p.imagem.length > 10) {
+            preview.src = p.imagem;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+        } else {
+            preview.src = "";
+            preview.style.display = 'none';
+            placeholder.style.display = 'flex';
+        }
+    }
+
+    // Selects (Com pequeno delay para garantir que a lista carregou)
     setTimeout(() => {
         setVal('categoria', p.categoria);
-        const estEl = document.getElementById('prodEstabelecimento');
-        if(estEl) {
-            const estVal = p.estabelecimento || (config.establishments ? config.establishments[0] : "");
-            estEl.value = estVal;
-        }
+        setVal('prodEstabelecimento', p.estabelecimento || "Matriz");
         setVal('prodFornecedor', p.fornecedor);
+        
         if(typeof calcularPrecificacao === 'function') calcularPrecificacao('edit');
     }, 50);
 
-    showTab('product-form-tab');
+    // Muda de aba e rola para o topo
+    if(typeof showTab === 'function') showTab('product-form-tab');
     
     const formTab = document.getElementById('product-form-tab');
     if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
@@ -5465,152 +5572,286 @@ window.calcularLucroReal = function() {
     }
 }
 
-// 3. AO CRIAR NOVO (RESET)
-window.resetProductForm = function() {
-    const form = document.querySelector(".product-form");
-    if (form) {
-        form.reset(); // Limpa os inputs visíveis
-        
-        // 1. LIMPA O ID OCULTO (Fundamental para não editar o produto errado depois)
-        document.getElementById("product-id").value = "";
-        
-        // 2. Reseta textos e botões
-        document.getElementById("form-title").textContent = "Novo Produto";
-        document.getElementById("submit-btn").innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar';
-        document.getElementById("cancel-edit-btn").style.display = "none";
 
-        // 3. LIMPA O VISUAL DO CÓDIGO DA NOTA (Correção solicitada)
-        const displayCod = document.getElementById("display-cod-produto");
-        if(displayCod) {
-            displayCod.textContent = "";
-            displayCod.style.display = 'none';
-        }
-
-        // 4. Configurações Padrão de Novo Cadastro
-        const inputMinimo = document.getElementById("minimo");
-        if(inputMinimo) inputMinimo.value = 1;
-
-        const catSelect = document.getElementById("categoria");
-        if(catSelect && config.categories && config.categories.length > 0) {
-            catSelect.value = config.categories[0];
-        }
-        
-        // Zera o preço visualmente com vírgula
-        const elPreco = document.getElementById('preco');
-        if(elPreco) elPreco.value = "";
-
-        const switchAuto = document.getElementById('autoMarkupSwitch');
-        if(switchAuto) switchAuto.checked = true;
-        
-        if(typeof calcularPrecificacao === 'function') calcularPrecificacao('reset');
-    }
-}
 
 window.converterImagemParaBase64 = function(input) {
     if (input.files && input.files[0]) {
         const file = input.files[0];
         
-        window.showLoadingScreen("Processando Imagem...", "Comprimindo para salvar...");
+        window.showLoadingScreen("Processando...", "Otimizando imagem...");
 
         const reader = new FileReader();
+        
         reader.onload = function(e) {
             const img = new Image();
             img.src = e.target.result;
             
             img.onload = function() {
-                // 1. Configurações de Redimensionamento
-                const maxWidth = 800; // Máximo 800px de largura
+                // 1. Redimensionamento (Canvas)
+                const maxWidth = 800;
                 const maxHeight = 800;
                 let width = img.width;
                 let height = img.height;
 
-                // Calcula nova proporção
                 if (width > height) {
-                    if (width > maxWidth) {
-                        height *= maxWidth / width;
-                        width = maxWidth;
-                    }
+                    if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
                 } else {
-                    if (height > maxHeight) {
-                        width *= maxHeight / height;
-                        height = maxHeight;
-                    }
+                    if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
                 }
 
-                // 2. Cria um Canvas para desenhar a imagem menor
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // 3. Converte para JPEG com qualidade 0.7 (70%)
-                // Isso reduz uma foto de 5MB para uns 50KB-100KB
+                // 2. Compressão
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
-                // 4. Salva no input oculto
-                document.getElementById('prodImagem').value = dataUrl;
-                
-                // Mostra preview se tiver
-                const preview = document.getElementById('image-preview-box'); 
-                if(preview) preview.style.backgroundImage = `url(${dataUrl})`;
+                // 3. Atualiza o HTML (CORREÇÃO AQUI)
+                const inputHidden = document.getElementById('prodImagem');
+                const preview = document.getElementById('form-image-preview');
+                const placeholder = document.getElementById('form-image-placeholder');
 
+                if(inputHidden) inputHidden.value = dataUrl;
+                
+                if (preview && placeholder) {
+                    preview.src = dataUrl;
+                    preview.style.display = 'block';
+                    placeholder.style.display = 'none';
+                }
+
+                window.hideLoadingScreen(); // Agora vai fechar!
+            };
+
+            img.onerror = function() {
                 window.hideLoadingScreen();
-                showToast("Imagem processada e pronta!", "success");
+                alert("Erro ao ler a imagem. Tente outra.");
             };
         };
         reader.readAsDataURL(file);
     }
 }
 
+// 1. LIMPA A FOTO (CORRIGIDA)
+window.limparImagemForm = function() {
+    // 1. Limpa os valores dos inputs (Hidden e File)
+    const inputHidden = document.getElementById('prodImagem');
+    const inputFile = document.getElementById('prodImagemFile');
+    
+    if(inputHidden) inputHidden.value = "";
+    if(inputFile) inputFile.value = ""; // Reseta o seletor de arquivo
+    
+    // 2. Força o visual a sumir
+    const preview = document.getElementById('form-image-preview');
+    const placeholder = document.getElementById('form-image-placeholder');
+    
+    if (preview) {
+        preview.src = "data:,"; // Define como vazio válido para limpar o buffer de memória
+        preview.style.cssText = "display: none !important;"; // Força o desaparecimento
+    }
+    
+    if (placeholder) {
+        placeholder.style.cssText = "display: flex !important;"; // Força o aparecimento do texto "Clique para enviar"
+    }
+}
+
+
+// 2. BOTÃO CANCELAR / RESETAR (ATUALIZADA)
+window.resetProductForm = function() {
+    console.log("🔄 Resetando para Modo Novo Produto...");
+
+    const form = document.querySelector(".product-form");
+    
+    if (form) {
+        // 1. Limpa todos os inputs de texto
+        form.reset(); 
+        
+        // 2. APAGA O ID (Isso diz pro sistema: "Não é edição, é NOVO")
+        document.getElementById("product-id").value = "";
+        
+        // 3. Muda o Título e o Botão para "Cadastrar"
+        const elTitle = document.getElementById("form-title");
+        const elBtn = document.getElementById("submit-btn");
+        
+        if(elTitle) elTitle.innerHTML = '<i class="fas fa-box"></i> Novo Produto';
+        if(elBtn) elBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Produto';
+        
+        // 4. ESCONDE O BOTÃO CANCELAR (Pois em "Novo Produto" não tem o que cancelar)
+        const btnCancel = document.getElementById("cancel-edit-btn");
+        if(btnCancel) btnCancel.style.display = "none";
+
+        // 5. DESTRÓI A FOTO (Chama a função de força bruta)
+        if (typeof limparImagemForm === 'function') {
+            limparImagemForm();
+        } else {
+            // Fallback se a função não existir (Segurança)
+            const preview = document.getElementById('form-image-preview');
+            const placeholder = document.getElementById('form-image-placeholder');
+            if(preview) { preview.src = ""; preview.style.display = 'none'; }
+            if(placeholder) placeholder.style.display = 'flex';
+        }
+
+        // 6. Reseta configurações padrão
+        if(typeof updateCategorySelect === 'function') updateCategorySelect();
+        
+        const unidade = document.getElementById("unidade");
+        if(unidade) unidade.value = "UN";
+        
+        const markup = document.getElementById("prodMarkup");
+        if(markup) markup.value = "2.0";
+
+        const switchAuto = document.getElementById('autoMarkupSwitch');
+        if(switchAuto) switchAuto.checked = true;
+
+        // 7. Zera os cálculos de lucro
+        if(typeof calcularPrecificacao === 'function') calcularPrecificacao('reset');
+
+        // 8. Rola a tela para o topo suavemente
+        const formTab = document.getElementById('product-form-tab');
+        if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// 3. PREENCHER O NOVO MODAL DE DETALHES (ATUALIZADA)
+window.openProductPreview = function(id) {
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+
+    // Elementos da Imagem
+    const imgEl = document.getElementById('preview-img');
+    const noImgEl = document.getElementById('preview-no-img');
+    
+    // Lógica de Exibição da Imagem
+    if (p.imagem && p.imagem.length > 20) {
+        imgEl.src = p.imagem;
+        imgEl.style.display = 'block';
+        if(noImgEl) noImgEl.style.display = 'none';
+    } else {
+        imgEl.style.display = 'none';
+        if(noImgEl) noImgEl.style.display = 'block';
+    }
+
+    // Preenchimento de Textos
+    const setTxt = (id, val) => {
+        const el = document.getElementById(id);
+        if(el) el.textContent = val || "-";
+    };
+
+    setTxt('preview-name', p.nome);
+    setTxt('preview-category', p.categoria || "GERAL");
+    setTxt('preview-price', `R$ ${parseFloat(p.preco || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+    
+    // Fornecedor
+    let nomeForn = "Não informado";
+    if(p.fornecedor && typeof fornecedoresReais !== 'undefined') {
+        const f = fornecedoresReais.find(x => x.id === p.fornecedor);
+        if(f) nomeForn = f.nome;
+    }
+    setTxt('preview-supplier', nomeForn);
+
+    // Códigos
+    setTxt('preview-ean', p.codigoBarras || "---");
+    setTxt('preview-cprod', p.cProd || "---");
+
+    // Dados Fiscais e Estoque
+    setTxt('preview-stock', `${p.quantidade} ${p.unidade || 'UN'}`);
+    
+    const localHtml = p.localizacao ? `<i class="fas fa-map-marker-alt"></i> ${p.localizacao}` : "---";
+    document.getElementById('preview-local').innerHTML = localHtml;
+    
+    setTxt('preview-ncm', p.ncm || "---");
+    setTxt('preview-estab', p.estabelecimento || "Matriz");
+
+    // Financeiro
+    setTxt('preview-cost', `R$ ${parseFloat(p.custo || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`);
+    
+    const lucro = parseFloat(p.preco || 0) - parseFloat(p.custo || 0);
+    const elProfit = document.getElementById('preview-profit');
+    if(elProfit) {
+        elProfit.textContent = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        elProfit.style.color = lucro >= 0 ? 'var(--color-accent-green)' : '#FF453A';
+    }
+
+    // Botão Editar
+    const btnEdit = document.getElementById('btn-edit-preview');
+    btnEdit.onclick = function() {
+        document.getElementById('product-preview-modal').style.display = 'none';
+        editProduct(p.id);
+    };
+
+    // Abre o modal
+    document.getElementById('product-preview-modal').style.display = 'flex';
+}
+
 window.handleProductForm = async function(event) {
     event.preventDefault(); 
     const btn = document.getElementById('submit-btn');
     
-    // Funções auxiliares
+    // --- 1. CAPTURA E VALIDAÇÃO ---
+    const elNome = document.getElementById('nome');
+    const elPreco = document.getElementById('preco'); // Campo visual com máscara
+    const elQtd = document.getElementById('quantidade');
+    
+    // Remove formatação (R$ 1.200,00 -> 1200.00) para validar
     const lerValor = (val) => {
         if(!val) return 0;
-        return parseFloat(val.toString().replace(/\./g, '').replace(',', '.')) || 0;
+        return parseFloat(val.toString().replace("R$", "").replace(/\./g, '').replace(',', '.')) || 0;
     };
 
-    // Elementos
+    const nomeProd = elNome ? elNome.value.trim() : "";
+    const preco = lerValor(elPreco.value);
+    const quantidade = elQtd.value; // Pega como string pra ver se está vazio
+
+    // REGRAS DE BLOQUEIO
+    if (nomeProd.length < 2) {
+        showToast("Erro: O Nome do produto é obrigatório.", "error");
+        elNome.focus();
+        elNome.classList.add('input-error'); // Efeito visual de erro
+        setTimeout(() => elNome.classList.remove('input-error'), 2000);
+        return;
+    }
+
+    if (preco <= 0) {
+        showToast("Erro: O Preço de Venda deve ser maior que zero.", "error");
+        elPreco.focus();
+        return;
+    }
+
+    if (quantidade === "" || parseInt(quantidade) < 0) {
+        showToast("Erro: Informe a quantidade atual em estoque.", "error");
+        elQtd.focus();
+        return;
+    }
+
+    // --- 2. PREPARA DADOS ---
     const elCusto = document.getElementById('custo');
     const elFrete = document.getElementById('prodFrete');
     const elMarkup = document.getElementById('prodMarkup');
-    const elPreco = document.getElementById('preco');
-    const elNome = document.getElementById('nome');
-    const elQtd = document.getElementById('quantidade');
     const elMin = document.getElementById('minimo');
-
-    // Captura Valores
+    
     const custo = parseFloat(elCusto ? elCusto.value : 0) || 0;
     const frete = lerValor(elFrete ? elFrete.value : "0");
     const markup = parseFloat(elMarkup ? elMarkup.value : 0) || 0;
-    const preco = lerValor(elPreco ? elPreco.value : "0");
-    
     const custoTotal = custo + frete;
 
+    // Validação extra de segurança
     if (preco < custoTotal) {
-        if(typeof customAlert === 'function') customAlert(`AÇÃO BLOQUEADA - Preço menor que custo.`, "error");
-        else alert("ERRO: Preço menor que o custo.");
-        return; 
+        // Apenas avisa, mas permite se o usuário quiser vender com prejuízo (ex: validade)
+        // Se quiser bloquear, mude para return;
+        showToast("Atenção: O preço está abaixo do custo!", "info");
     }
 
     const switchAuto = document.getElementById('autoMarkupSwitch');
     const isAuto = switchAuto ? switchAuto.checked : true;
     const idInput = document.getElementById('product-id');
     const isEditing = idInput && idInput.value !== '';
-    const nomeProd = elNome ? elNome.value : "Sem Nome";
 
     // Campos Opcionais
     const elCat = document.getElementById('categoria');
     const elEst = document.getElementById('prodEstabelecimento');
     const elBar = document.getElementById('codigoBarras');
-    
-    // --- NOVO: Captura o Código da Nota Editado ---
     const elCProd = document.getElementById('cProd'); 
-    // ----------------------------------------------
-
     const elForn = document.getElementById('prodFornecedor');
     const elImg = document.getElementById('prodImagem');
 
@@ -5618,38 +5859,42 @@ window.handleProductForm = async function(event) {
         nome: nomeProd,
         categoria: elCat ? elCat.value : "Geral",
         estabelecimento: elEst ? elEst.value : (config.establishments ? config.establishments[0] : "Matriz"),
-        
         codigoBarras: elBar ? elBar.value : "",
-        cProd: elCProd ? elCProd.value.trim() : "", // <--- SALVA O CÓDIGO DA NOTA AQUI
-        
+        cProd: elCProd ? elCProd.value.trim() : "",
         grupo: "", 
         preco: preco,
         custo: custo,
         frete: frete,
         markup: markup,
         autoMarkup: isAuto, 
-        quantidade: parseInt(elQtd ? elQtd.value : 0),
+        quantidade: parseInt(quantidade),
         minimo: parseInt(elMin ? elMin.value : 0),
         fornecedor: elForn ? elForn.value : "",
-        imagem: elImg ? elImg.value : ""
+        imagem: elImg ? elImg.value : "",
+        
+        // Novos Campos
+        unidade: document.getElementById('unidade').value || "UN",
+        ncm: document.getElementById('ncm').value || "",
+        localizacao: document.getElementById('localizacao').value || "",
+        maximo: parseInt(document.getElementById('maximo').value || 0),
+        leadTime: parseInt(document.getElementById('leadTime').value || 0),
     };
 
+    // --- 3. ENVIA PARA O FIREBASE ---
     try {
         if(btn) setBtnLoading(btn, true);
 
         if (isEditing) {
             await updateDoc(getUserDocumentRef("products", idInput.value), productData);
-            if(typeof logSystemAction === 'function') await logSystemAction("Edição de Produto", `Alterou: ${nomeProd}`);
+            await logSystemAction("Edição de Produto", `Alterou: ${nomeProd}`);
             showToast("Produto atualizado!", "success");
         } else {
             await addDoc(getUserCollectionRef("products"), productData);
-            if(typeof logSystemAction === 'function') await logSystemAction("Criação de Produto", `Criou: ${nomeProd}`);
+            await logSystemAction("Criação de Produto", `Criou: ${nomeProd}`);
             showToast("Produto cadastrado!", "success");
         }
 
-        if(typeof resetProductForm === 'function') resetProductForm(); 
-        else document.querySelector(".product-form").reset();
-        
+        resetProductForm(); // Limpa tudo (incluindo foto)
         await loadAllData(); 
         if(typeof showTab === 'function') showTab('product-list-tab');
 
@@ -9862,64 +10107,7 @@ window.toggleNavGroup = function(header) {
 }
 
 
-// ARQUIVO: script.js
 
-window.openProductPreview = function(id) {
-    const p = products.find(x => x.id === id);
-    if (!p) return;
-
-    // Elementos da Modal
-    const modal = document.getElementById('product-preview-modal');
-    const imgEl = document.getElementById('preview-img');
-    const noImgEl = document.getElementById('preview-no-img');
-    
-    // 1. Imagem
-    if (p.imagem && p.imagem.length > 10) {
-        imgEl.src = p.imagem;
-        imgEl.style.display = 'block';
-        noImgEl.style.display = 'none';
-    } else {
-        imgEl.style.display = 'none';
-        noImgEl.style.display = 'block';
-    }
-
-    // 2. Textos Básicos
-    document.getElementById('preview-name').textContent = p.nome;
-    document.getElementById('preview-category').textContent = `${p.categoria} ${p.grupo ? ' > ' + p.grupo : ''}`;
-    document.getElementById('preview-price').textContent = `R$ ${parseFloat(p.preco).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    
-    // 3. Códigos
-    document.getElementById('preview-cprod').textContent = p.cProd || "Não informado";
-    document.getElementById('preview-ean').textContent = p.codigoBarras || "Sem GTIN";
-
-    // 4. Financeiro
-    document.getElementById('preview-cost').textContent = `R$ ${parseFloat(p.custo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    
-    const lucro = parseFloat(p.preco) - parseFloat(p.custo);
-    const elProfit = document.getElementById('preview-profit');
-    elProfit.textContent = `R$ ${lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-    elProfit.style.color = lucro >= 0 ? 'var(--color-accent-green)' : '#FF453A';
-
-    // 5. Estoque
-    document.getElementById('preview-stock').textContent = `${p.quantidade} unidades (Min: ${p.minimo})`;
-
-    // 6. Fornecedor (Busca nome pelo ID)
-    let nomeFornecedor = "Não vinculado";
-    if (p.fornecedor) {
-        const f = fornecedoresReais.find(x => x.id === p.fornecedor);
-        if (f) nomeFornecedor = f.nome;
-    }
-    document.getElementById('preview-supplier').textContent = nomeFornecedor;
-
-    // 7. Botão Editar dentro do preview
-    const btnEdit = document.getElementById('btn-edit-preview');
-    btnEdit.onclick = function() {
-        modal.style.display = 'none';
-        editProduct(p.id);
-    };
-
-    modal.style.display = 'flex';
-}
 
 
 async function logSystemAction(acao, detalhe) {
@@ -10476,6 +10664,199 @@ window.confirmarRateioFrete = async function(idNota) {
     }
 }
 
+
+// Variável global
+let produtosFiltradosGlobal = [];
+
+window.aplicarFiltrosAvancados = function() {
+    const input = document.getElementById('universal-search');
+    const termo = input.value.toLowerCase().trim();
+    const btnClear = document.getElementById('clear-search-btn');
+
+    // Mostra/Esconde botão X
+    if(btnClear) btnClear.style.display = termo.length > 0 ? 'block' : 'none';
+
+    // SE A BUSCA ESTIVER VAZIA: Reseta tudo e renderiza a lista completa
+    if (!termo) {
+        produtosFiltradosGlobal = []; // Limpa o filtro global
+        renderProductTable(null); // Renderiza a lista "master" (products)
+        return;
+    }
+    
+    // Se tiver texto, filtra
+    produtosFiltradosGlobal = products.filter(p => {
+        const textoBusca = [
+            p.nome,
+            p.cProd || "",       
+            p.codigoBarras || "", 
+            p.fornecedor || "",
+            p.categoria || "",
+            p.estabelecimento || "",
+            p.id
+        ].join(' ').toLowerCase();
+
+        return textoBusca.includes(termo);
+    });
+
+    renderProductTable(produtosFiltradosGlobal);
+}
+
+// Função para o botão X
+window.limparBuscaProdutos = function() {
+    const input = document.getElementById('universal-search');
+    input.value = "";
+    input.focus();
+    aplicarFiltrosAvancados(); // Chama a lógica de reset acima
+}
+
+// =================================================================
+// 🚨 CORREÇÃO DEFINITIVA: RESET, IMAGEM E LOADING 🚨
+// COLE ISSO NO FINAL DO SEU SCRIPT.JS PARA SOBRESCREVER TUDO
+// =================================================================
+
+// 1. Limpeza da Imagem (Destrói o cache visual)
+window.limparImagemForm = function() {
+    // Limpa inputs de dados
+    const inputHidden = document.getElementById('prodImagem');
+    const inputFile = document.getElementById('prodImagemFile');
+    if(inputHidden) inputHidden.value = "";
+    if(inputFile) inputFile.value = ""; 
+
+    // Força o desaparecimento visual da imagem
+    const preview = document.getElementById('form-image-preview');
+    const placeholder = document.getElementById('form-image-placeholder');
+    
+    if (preview) {
+        preview.src = "data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs="; // Pixel transparente para limpar buffer
+        preview.removeAttribute('src'); 
+        preview.style.cssText = 'display: none !important'; // CSS com prioridade máxima
+    }
+    
+    if (placeholder) {
+        placeholder.style.cssText = 'display: flex !important; flex-direction: column; align-items: center; justify-content: center;';
+    }
+}
+
+// 2. Resetar Formulário (Clica no Cancelar -> Vira Novo Produto)
+window.resetProductForm = function() {
+    const form = document.querySelector(".product-form");
+    if (!form) return;
+
+    console.log("🛠️ FORÇANDO RESET TOTAL DO FORMULÁRIO...");
+
+    // A. Limpa Texto
+    form.reset(); 
+    
+    // B. Mata o ID (Isso garante que o sistema entenda que é NOVO)
+    const idInput = document.getElementById("product-id");
+    if(idInput) idInput.value = "";
+    
+    // C. Força a UI para "Novo Produto"
+    const elTitle = document.getElementById("form-title");
+    const elBtn = document.getElementById("submit-btn");
+    
+    // Usa innerHTML para garantir que o ícone vá junto
+    if(elTitle) elTitle.innerHTML = ' Novo Produto'; 
+    if(elBtn) {
+        elBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Cadastrar Produto';
+        elBtn.className = "submit-btn blue-btn"; // Garante a cor azul
+    }
+    
+    // D. Esconde o botão cancelar
+    const btnCancel = document.getElementById("cancel-edit-btn");
+    if(btnCancel) btnCancel.style.display = "none";
+
+    // E. EXECUTA A LIMPEZA DA IMAGEM
+    window.limparImagemForm();
+
+    // F. Reseta os Selects e Switches
+    if(typeof updateCategorySelect === 'function') updateCategorySelect();
+    
+    const unidade = document.getElementById("unidade");
+    if(unidade) unidade.value = "UN";
+    
+    const markup = document.getElementById("prodMarkup");
+    if(markup) markup.value = "2.0";
+
+    const switchAuto = document.getElementById('autoMarkupSwitch');
+    if(switchAuto) switchAuto.checked = true;
+
+    // G. Zera os calculos de lucro
+    if(typeof calcularPrecificacao === 'function') calcularPrecificacao('reset');
+
+    // H. Rola para o topo
+    const formTab = document.getElementById('product-form-tab');
+    if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 3. Conversor de Imagem (Corrige o Loading Infinito)
+window.converterImagemParaBase64 = function(input) {
+    // Se o usuário cancelar a seleção de arquivo, para tudo e fecha loading
+    if (!input.files || !input.files[0]) {
+        window.hideLoadingScreen();
+        return;
+    }
+
+    const file = input.files[0];
+    window.showLoadingScreen("Processando...", "Otimizando imagem...");
+
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const img = new Image();
+        img.src = e.target.result;
+        
+        img.onload = function() {
+            // Configurações de redimensionamento
+            const maxWidth = 800;
+            const maxHeight = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+            } else {
+                if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+            // Salva no input oculto
+            const inputHidden = document.getElementById('prodImagem');
+            if(inputHidden) inputHidden.value = dataUrl;
+            
+            // Mostra o preview
+            const preview = document.getElementById('form-image-preview');
+            const placeholder = document.getElementById('form-image-placeholder');
+            
+            if (preview && placeholder) {
+                preview.src = dataUrl;
+                preview.style.cssText = 'display: block !important';
+                placeholder.style.cssText = 'display: none !important';
+            }
+
+            window.hideLoadingScreen(); // <--- OBRIGATÓRIO AQUI
+        };
+
+        img.onerror = function() {
+            window.hideLoadingScreen();
+            alert("Imagem corrompida ou formato inválido.");
+        };
+    };
+
+    reader.onerror = function() {
+        window.hideLoadingScreen();
+        alert("Erro ao ler arquivo.");
+    };
+
+    reader.readAsDataURL(file);
+}
 
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
