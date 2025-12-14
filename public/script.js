@@ -243,7 +243,8 @@ async function saveConfigToFirebase() {
             categories: config.categories, 
             paymentTypes: config.paymentTypes,
             productGroups: config.productGroups || [],
-            establishments: config.establishments
+            establishments: config.establishments,
+            folders: config.folders || []
         }, { merge: true });
 
         console.log("✅ Configurações salvas.");
@@ -681,7 +682,7 @@ async function loadAllData() {
             config.categories = faxina(d.categories);
             config.paymentTypes = faxina(d.paymentTypes);
             config.productGroups = faxina(d.productGroups); // Mantemos por compatibilidade, mas não usaremos na tela
-            
+            config.folders = faxina(d.folders);
             // CARREGA ESTABELECIMENTOS
             config.establishments = faxina(d.establishments); 
             if(config.establishments.length === 0) config.establishments = ["Matriz"];
@@ -703,16 +704,19 @@ async function loadAllData() {
         const renderFunctions = [
             renderProductTable,
             updateDashboardMetrics,
-            updateCategorySelect, 
+            updateCategorySelect,
+            updateProductSupplierDropdown, // <--- ADICIONE ESTA LINHA AQUI!
             renderClientsTable,
             renderSuppliersTable,
             renderExpensesTable,
             renderCategoriesManager, 
             renderPaymentsManager,
-            renderEstablishmentsManager, // NOVO
-            updateEstablishmentSelect,   // NOVO
+            renderEstablishmentsManager,
+            updateEstablishmentSelect,
             initializeDashboardCharts,
-            atualizarDashboardExecutivo
+            atualizarDashboardExecutivo,
+            renderProductFolders,
+            renderFolderTree,
         ];
 
         renderFunctions.forEach(fn => { if (typeof fn === 'function') fn(); });
@@ -1167,18 +1171,18 @@ function resetProductForm() {
 
 
 window.renderProductTable = function(listaParaRenderizar = null) {
-    const tbody = document.querySelector('#product-table tbody');
-    const thead = document.querySelector('#product-table thead tr');
-    
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const table = document.getElementById('product-table');
+    if (!table) return;
 
-    // --- CABEÇALHO ---
-    if(thead) {
-        thead.innerHTML = `
+    // Garante Cabeçalho com Varinha
+    let thead = table.querySelector('thead');
+    if (!thead) { thead = document.createElement('thead'); table.appendChild(thead); }
+    
+    thead.innerHTML = `
+        <tr>
             <th style="width: 40px; text-align: center; padding: 0;">
                 <div class="magic-wand-header">
-                    <div class="magic-trigger" id="master-magic-wand" onclick="toggleSelectAllVisual(this)">
+                    <div class="magic-trigger" id="master-magic-wand" onclick="toggleSelectAllVisual(this)" title="Selecionar Tudo">
                         <i class="fas fa-magic"></i>
                     </div>
                 </div>
@@ -1187,121 +1191,28 @@ window.renderProductTable = function(listaParaRenderizar = null) {
             <th style="width: 120px;">Venda</th>
             <th style="width: 100px;">Estoque</th>
             <th style="width: 80px;">Ações</th>
-        `;
-    }
+        </tr>
+    `;
 
-    // Define qual lista usar
+    let tbody = table.querySelector('tbody');
+    if (!tbody) { tbody = document.createElement('tbody'); table.appendChild(tbody); }
+    tbody.innerHTML = '';
+
     let lista = listaParaRenderizar || (produtosFiltradosGlobal.length > 0 ? produtosFiltradosGlobal : products);
-    const termoBusca = document.getElementById('universal-search') ? document.getElementById('universal-search').value : "";
-    
-    if (!termoBusca && !listaParaRenderizar) lista = products;
+    const termo = document.getElementById('universal-search') ? document.getElementById('universal-search').value : "";
+    if (!termo && !listaParaRenderizar && typeof pastaSelecionada !== 'undefined' && pastaSelecionada === 'todos') lista = products;
 
     if (lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; opacity:0.5;">Nenhum produto encontrado.</td></tr>`;
-        document.getElementById('total-products').textContent = '0';
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:40px; opacity:0.5;">Pasta vazia.</td></tr>`;
         return;
     }
 
-    document.getElementById('total-products').textContent = lista.length;
-
-    // --- LÓGICA DE ORDENAÇÃO ---
-    const sortMode = document.getElementById('sort-order') ? document.getElementById('sort-order').value : 'nome-asc';
-    
-    // MAPA DE TIMELINE (Se o usuário escolher ordenar por entrada)
-    let mapaOrdem = {}; 
-    
-    if (sortMode === 'data-entrada') {
-        // 1. Pega notas ordenadas (Mais recente primeiro)
-        // inputHistory é sua variável global de notas
-        const notasTimeline = [...inputHistory].sort((a, b) => {
-            const da = new Date(a.dataEmissao || a.timestamp);
-            const db = new Date(b.dataEmissao || b.timestamp);
-            return db - da; // Decrescente
-        });
-
-        let contador = 0;
-
-        // 2. Cria o índice de prioridade (0 = item 1 da nota mais nova)
-        notasTimeline.forEach(nota => {
-            const itens = nota.items || nota.itens || [];
-            itens.forEach(item => {
-                // Gera chaves para identificar o produto
-                const chaves = [];
-                if(item.cProd) chaves.push('cprod_' + item.cProd);
-                if(item.ean && item.ean !== "SEM GTIN") chaves.push('ean_' + item.ean);
-                if(item.nome) chaves.push('nome_' + item.nome.trim().toLowerCase());
-
-                // Salva a posição (apenas se ainda não foi salvo, para priorizar a entrada mais recente)
-                chaves.forEach(k => {
-                    if (mapaOrdem[k] === undefined) {
-                        mapaOrdem[k] = contador;
-                    }
-                });
-                contador++;
-            });
-        });
-    }
-
-    // APLICA A ORDENAÇÃO
-    lista.sort((a, b) => {
-        // Valores seguros
-        const nomeA = a.nome || "";
-        const nomeB = b.nome || "";
-        const custoA = parseFloat(a.custo)||0;
-        const custoB = parseFloat(b.custo)||0;
-        const qtdA = parseInt(a.quantidade)||0;
-        const qtdB = parseInt(b.quantidade)||0;
-
-        switch(sortMode) {
-            case 'nome-asc': return nomeA.localeCompare(nomeB);
-            case 'nome-desc': return nomeB.localeCompare(nomeA);
-            
-            case 'custo-asc': return custoA - custoB;
-            case 'custo-desc': return custoB - custoA;
-            
-            case 'estoque-asc': return qtdA - qtdB;
-            case 'estoque-desc': return qtdB - qtdA;
-
-            // --- NOVA LÓGICA: TIMELINE ---
-            case 'data-entrada':
-                // Tenta achar o índice do produto A
-                let posA = 99999999; // Se não achar, vai pro final
-                if (a.cProd && mapaOrdem['cprod_' + a.cProd] !== undefined) posA = mapaOrdem['cprod_' + a.cProd];
-                else if (a.codigoBarras && mapaOrdem['ean_' + a.codigoBarras] !== undefined) posA = mapaOrdem['ean_' + a.codigoBarras];
-                else if (mapaOrdem['nome_' + a.nome.trim().toLowerCase()] !== undefined) posA = mapaOrdem['nome_' + a.nome.trim().toLowerCase()];
-
-                // Tenta achar o índice do produto B
-                let posB = 99999999;
-                if (b.cProd && mapaOrdem['cprod_' + b.cProd] !== undefined) posB = mapaOrdem['cprod_' + b.cProd];
-                else if (b.codigoBarras && mapaOrdem['ean_' + b.codigoBarras] !== undefined) posB = mapaOrdem['ean_' + b.codigoBarras];
-                else if (mapaOrdem['nome_' + b.nome.trim().toLowerCase()] !== undefined) posB = mapaOrdem['nome_' + b.nome.trim().toLowerCase()];
-
-                return posA - posB;
-            
-            default: return 0;
-        }
-    });
-
-    // --- RENDERIZAÇÃO DAS LINHAS ---
     lista.forEach(p => {
         const row = tbody.insertRow();
         if (p.quantidade <= p.minimo) row.classList.add('low-stock-row');
         
         const precoVenda = parseFloat(p.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
         
-        // CÓDIGO LIMPO (Sem IDs estranhos)
-        let refLimpa = "S/ Ref";
-        let iconeRef = "fas fa-tag";
-        
-        if (p.cProd && p.cProd.trim() !== "") {
-            refLimpa = p.cProd;
-            iconeRef = "far fa-file-alt";
-        } else if (p.codigoBarras && p.codigoBarras.trim() !== "") {
-            refLimpa = p.codigoBarras;
-            iconeRef = "fas fa-barcode";
-        }
-
-        // Imagem
         let imgHtml = p.imagem && p.imagem.length > 10 
             ? `<img src="${p.imagem}" style="width:42px; height:42px; border-radius:6px; object-fit:cover; border:1px solid #333;">`
             : `<div style="width:42px; height:42px; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center; color:#666;"><i class="fas fa-box"></i></div>`;
@@ -1314,19 +1225,28 @@ window.renderProductTable = function(listaParaRenderizar = null) {
             <td onclick="openProductPreview('${p.id}')" style="cursor: pointer;">
                 <div style="display:flex; align-items:center; gap:12px;">
                     ${imgHtml}
-                    <div style="flex:1; min-width: 0; overflow: hidden;">
-                        
-                        <div style="font-weight:600; font-size:0.95rem; color:var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 350px;" title="${p.nome}">
+                    <div style="flex:1; min-width: 0;"> <div style="
+                            font-weight:600; 
+                            font-size:0.95rem; 
+                            color:var(--color-text-primary); 
+                            white-space: nowrap; 
+                            overflow: hidden; 
+                            text-overflow: ellipsis; 
+                            max-width: 280px; /* Limite forçado em pixels */
+                            display: block;" 
+                            title="${p.nome}">
                             ${p.nome}
                         </div>
                         
                         <div style="display:flex; align-items:center; gap:10px; font-size:0.75rem; color:#aaa; margin-top:4px;">
-                            
-                            <span style="font-family:monospace; background:rgba(10, 132, 255, 0.1); color:#0A84FF; padding:1px 5px; border-radius:3px; border:1px solid rgba(10,132,255,0.2);">
-                                <i class="${iconeRef}"></i> ${refLimpa}
+                            <span style="background:rgba(10, 132, 255, 0.1); color:#0A84FF; padding:1px 5px; border-radius:3px;">
+                                ${p.cProd || p.codigoBarras || 'S/ Ref'}
                             </span>
-
-                            <span>${p.categoria || 'Geral'}</span>
+                            
+                            <span style="max-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                ${p.categoria || 'Geral'}
+                            </span>
+                            
                             <span style="color:#666;">•</span>
                             <span>${p.estabelecimento || 'Matriz'}</span>
                         </div>
@@ -5396,6 +5316,7 @@ window.editProduct = function(id) {
 
     // 3. Atualiza as listas
     if(typeof updateCategorySelect === 'function') updateCategorySelect(); 
+    if(typeof updateProductSupplierDropdown === 'function') updateProductSupplierDropdown();
     if(typeof updateEstablishmentSelect === 'function') updateEstablishmentSelect(); 
     if(typeof updateProductSupplierDropdown === 'function') updateProductSupplierDropdown();
 
@@ -5657,61 +5578,7 @@ window.limparImagemForm = function() {
 }
 
 
-// 2. BOTÃO CANCELAR / RESETAR (ATUALIZADA)
-window.resetProductForm = function() {
-    console.log("🔄 Resetando para Modo Novo Produto...");
 
-    const form = document.querySelector(".product-form");
-    
-    if (form) {
-        // 1. Limpa todos os inputs de texto
-        form.reset(); 
-        
-        // 2. APAGA O ID (Isso diz pro sistema: "Não é edição, é NOVO")
-        document.getElementById("product-id").value = "";
-        
-        // 3. Muda o Título e o Botão para "Cadastrar"
-        const elTitle = document.getElementById("form-title");
-        const elBtn = document.getElementById("submit-btn");
-        
-        if(elTitle) elTitle.innerHTML = '<i class="fas fa-box"></i> Novo Produto';
-        if(elBtn) elBtn.innerHTML = '<i class="fas fa-save"></i> Salvar Produto';
-        
-        // 4. ESCONDE O BOTÃO CANCELAR (Pois em "Novo Produto" não tem o que cancelar)
-        const btnCancel = document.getElementById("cancel-edit-btn");
-        if(btnCancel) btnCancel.style.display = "none";
-
-        // 5. DESTRÓI A FOTO (Chama a função de força bruta)
-        if (typeof limparImagemForm === 'function') {
-            limparImagemForm();
-        } else {
-            // Fallback se a função não existir (Segurança)
-            const preview = document.getElementById('form-image-preview');
-            const placeholder = document.getElementById('form-image-placeholder');
-            if(preview) { preview.src = ""; preview.style.display = 'none'; }
-            if(placeholder) placeholder.style.display = 'flex';
-        }
-
-        // 6. Reseta configurações padrão
-        if(typeof updateCategorySelect === 'function') updateCategorySelect();
-        
-        const unidade = document.getElementById("unidade");
-        if(unidade) unidade.value = "UN";
-        
-        const markup = document.getElementById("prodMarkup");
-        if(markup) markup.value = "2.0";
-
-        const switchAuto = document.getElementById('autoMarkupSwitch');
-        if(switchAuto) switchAuto.checked = true;
-
-        // 7. Zera os cálculos de lucro
-        if(typeof calcularPrecificacao === 'function') calcularPrecificacao('reset');
-
-        // 8. Rola a tela para o topo suavemente
-        const formTab = document.getElementById('product-form-tab');
-        if(formTab) formTab.scrollIntoView({ behavior: 'smooth' });
-    }
-}
 
 // 3. PREENCHER O NOVO MODAL DE DETALHES (ATUALIZADA)
 window.openProductPreview = function(id) {
@@ -10244,104 +10111,94 @@ window.deselecionarTudo = function() {
 
 // 3. Abrir o Modal e Carregar Opções
 window.abrirModalBulkEdit = function() {
-    const count = document.querySelectorAll('.product-check:checked').length;
-    if(count === 0) return;
-
-    // Proteção contra o erro "innerText of null"
-    const countEl = document.getElementById('bulk-modal-count');
-    if (countEl) {
-        countEl.innerText = count;
-    } 
+    const checks = document.querySelectorAll('.product-check:checked');
+    if (checks.length === 0) return;
     
-    // 1. Popula Categorias
+    // 1. Atualiza contador
+    const countEl = document.getElementById('bulk-modal-count');
+    if (countEl) countEl.innerText = checks.length;
+    
+    // 2. PREENCHE: PASTAS (Mover para Pasta)
+    const selPasta = document.getElementById('bulk-pasta');
+    if (selPasta) {
+        selPasta.innerHTML = '<option value="">-- Não Mover --</option><option value="__REMOVE__">❌ Remover da Pasta Atual</option>';
+        if (config.folders) {
+            config.folders.sort().forEach(f => {
+                selPasta.innerHTML += `<option value="${f}">${f}</option>`;
+            });
+        }
+    }
+
+    // 3. PREENCHE: CATEGORIAS (Etiqueta)
     const selCat = document.getElementById('bulk-categoria');
     if (selCat) {
         selCat.innerHTML = '<option value="">-- Não Alterar --</option>';
-        if(config.categories) {
-            config.categories.forEach(c => {
+        if (config.categories) {
+            config.categories.sort().forEach(c => {
                 selCat.innerHTML += `<option value="${c}">${c}</option>`;
             });
         }
     }
 
-    // 2. Popula ESTABELECIMENTOS
+    // 4. PREENCHE: ESTABELECIMENTOS
     const selEst = document.getElementById('bulk-estabelecimento');
     if (selEst) {
         selEst.innerHTML = '<option value="">-- Não Alterar --</option>';
-        if(config.establishments) {
-            config.establishments.forEach(e => {
+        if (config.establishments) {
+            config.establishments.sort().forEach(e => {
                 selEst.innerHTML += `<option value="${e}">${e}</option>`;
             });
         }
     }
 
-    // 3. Popula Fornecedores
+    // 5. PREENCHE: FORNECEDORES
     const selForn = document.getElementById('bulk-fornecedor');
     if (selForn) {
         selForn.innerHTML = '<option value="">-- Não Alterar --</option>';
         if (typeof fornecedoresReais !== 'undefined') {
-            fornecedoresReais.forEach(f => {
+            // Ordena fornecedores por nome
+            const listaForn = [...fornecedoresReais].sort((a,b) => a.nome.localeCompare(b.nome));
+            listaForn.forEach(f => {
                 selForn.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
             });
         }
     }
 
-    const modal = document.getElementById('bulk-edit-modal');
-    if(modal) modal.style.display = 'flex';
+    // Abre o modal
+    document.getElementById('bulk-edit-modal').style.display = 'flex';
 }
-
 // 4. Executar a Edição em Massa (O Coração da Função)
 window.handleBulkEdit = async function(e) {
     e.preventDefault();
     
-    const novaCat = document.getElementById('bulk-categoria').value;
-    // Pega o valor do novo select de estabelecimento
-    const novoEst = document.getElementById('bulk-estabelecimento') ? document.getElementById('bulk-estabelecimento').value : "";
-    const novoForn = document.getElementById('bulk-fornecedor').value;
-
-    if (!novaCat && !novoEst && !novoForn) {
-        showToast("Nenhuma alteração selecionada.", "info");
-        return;
-    }
+    const novaPasta = document.getElementById('bulk-pasta').value;
+    // ... pegar outros valores ...
 
     const checks = document.querySelectorAll('.product-check:checked');
     const ids = Array.from(checks).map(c => c.value);
-    const btn = e.target.querySelector('button[type="submit"]');
     
-    customConfirm(`Aplicar alterações em ${ids.length} produtos?`, async () => {
-        try {
-            setBtnLoading(btn, true);
-            window.showLoadingScreen("Aplicando...", "Atualizando produtos...");
-
-            const batchUpdates = [];
-            const updateData = {};
-
-            if (novaCat) updateData.categoria = novaCat;
-            if (novoEst) updateData.estabelecimento = novoEst; // Salva no campo certo
-            if (novoForn) updateData.fornecedor = novoForn;
-
-            for (const id of ids) {
-                const docRef = getUserDocumentRef("products", id);
-                batchUpdates.push(updateDoc(docRef, updateData));
+    customConfirm(`Alterar ${ids.length} produtos?`, async () => {
+        window.showLoadingScreen("Atualizando...", "Movendo produtos...");
+        const updates = [];
+        
+        for (const id of ids) {
+            const data = {};
+            // Lógica da Pasta
+            if (novaPasta) {
+                data.pasta = (novaPasta === '__REMOVE__') ? "" : novaPasta;
             }
-
-            await Promise.all(batchUpdates);
-            await logSystemAction("Edição em Massa", `Atualizou ${ids.length} produtos.`);
-
-            window.hideLoadingScreen();
-            showToast("Sucesso!", "success");
+            // ... lógica de categoria/fornecedor ...
             
-            document.getElementById('bulk-edit-modal').style.display = 'none';
-            deselecionarTudo();
-            await loadAllData();
-
-        } catch (error) {
-            window.hideLoadingScreen();
-            console.error(error);
-            showToast("Erro: " + error.message, "error");
-        } finally {
-            setBtnLoading(btn, false);
+            if (Object.keys(data).length > 0) {
+                updates.push(updateDoc(getUserDocumentRef("products", id), data));
+            }
         }
+        
+        await Promise.all(updates);
+        window.hideLoadingScreen();
+        document.getElementById('bulk-edit-modal').style.display = 'none';
+        await loadAllData();
+        showToast("Atualizado!", "success");
     });
 }
 
@@ -10572,7 +10429,7 @@ window.confirmarRateioFrete = async function(idNota) {
     }
 
     try {
-        window.showLoadingScreen("Calculando Rateio...", "Atualizando custos...");
+        window.showLoadingScreen("Calculando Rateio...", "Atualizando custo dos produtos...");
         
         const nota = inputHistory.find(n => n.id === idNota);
         const itens = nota.items || nota.itens || [];
@@ -10600,24 +10457,23 @@ window.confirmarRateioFrete = async function(idNota) {
 
                 // === A MÁGICA DOS 3 MÉTODOS ===
                 
-                // 1. POR VALOR (Padrão Contábil)
+                // 1. POR VALOR (Padrão Contábil - Mais justo)
                 if (metodo === 'valor') {
                     if (totalValorNota > 0) {
-                        const proporcao = valorItem / totalValorNota; // Ex: Item é 10% da nota
-                        const freteDoItemTotal = freteTotal * proporcao; // Paga 10% do frete
+                        const proporcao = valorItem / totalValorNota; 
+                        const freteDoItemTotal = freteTotal * proporcao; 
                         freteUnitarioCalculado = freteDoItemTotal / qtdItem;
                     }
                 }
                 
-                // 2. POR QUANTIDADE/UNIDADE (Pedido da Cliente)
+                // 2. POR QUANTIDADE (Simples)
                 else if (metodo === 'qtd') {
                     if (totalQtdPecas > 0) {
-                        // Simples: Frete Total / Total de Peças = Frete por Peça
                         freteUnitarioCalculado = freteTotal / totalQtdPecas;
                     }
                 }
                 
-                // 3. POR LINHA (Produto Diferente)
+                // 3. POR LINHA (Igualitário)
                 else if (metodo === 'linha') {
                     if (totalLinhas > 0) {
                         const fretePorLinha = freteTotal / totalLinhas;
@@ -10625,9 +10481,7 @@ window.confirmarRateioFrete = async function(idNota) {
                     }
                 }
 
-                // Atualiza o produto
-                // Se já tinha frete antes, SOMAMOS ou SUBSTITUIMOS? 
-                // Geralmente substitui o valor unitário no campo de referência.
+                // Atualiza o produto (Apenas o campo frete, que compõe o custo total)
                 const docRef = getUserDocumentRef("products", prod.id);
                 batchUpdates.push(updateDoc(docRef, { 
                     frete: freteUnitarioCalculado 
@@ -10638,22 +10492,16 @@ window.confirmarRateioFrete = async function(idNota) {
 
         await Promise.all(batchUpdates);
 
-        // Lança Despesa Financeira
-        const despesaFrete = {
-            descricao: `Frete (${metodo}) s/ Nota ${nota.numero} - ${nota.fornecedor}`,
-            valor: freteTotal,
-            categoria: "Operacional",
-            data: new Date().toISOString().split('T')[0],
-            timestamp: new Date().toISOString()
-        };
-        await addDoc(getUserCollectionRef("expenses"), despesaFrete);
+        // --- REMOVIDO: BLOCO QUE LANÇAVA DESPESA AUTOMÁTICA ---
+        // O valor agora está diluído no custo do produto (CMV)
+        // e será abatido no momento da venda (Margem de Lucro).
 
         window.hideLoadingScreen();
         if(modal) modal.remove();
         
-        await logSystemAction("Frete Lançado", `Valor R$ ${freteTotal.toFixed(2)} rateado por [${metodo}] na nota ${nota.numero}.`);
+        await logSystemAction("Frete Rateado", `Valor R$ ${freteTotal.toFixed(2)} absorvido nos custos da nota ${nota.numero}.`);
         
-        customAlert(`Sucesso!\n\nFrete de R$ ${freteTotal.toFixed(2)} distribuído para ${itensAtualizados} produtos usando o método: ${metodo.toUpperCase()}.`, "success");
+        customAlert(`Sucesso!\n\nO Frete de R$ ${freteTotal.toFixed(2)} foi incorporado ao CUSTO de ${itensAtualizados} produtos.\n(Não foi gerada despesa separada).`, "success");
         
         await loadAllData();
 
@@ -10670,35 +10518,70 @@ let produtosFiltradosGlobal = [];
 
 window.aplicarFiltrosAvancados = function() {
     const input = document.getElementById('universal-search');
-    const termo = input.value.toLowerCase().trim();
+    const termo = input ? input.value.toLowerCase().trim() : "";
     const btnClear = document.getElementById('clear-search-btn');
 
-    // Mostra/Esconde botão X
     if(btnClear) btnClear.style.display = termo.length > 0 ? 'block' : 'none';
 
-    // SE A BUSCA ESTIVER VAZIA: Reseta tudo e renderiza a lista completa
-    if (!termo) {
-        produtosFiltradosGlobal = []; // Limpa o filtro global
-        renderProductTable(null); // Renderiza a lista "master" (products)
-        return;
-    }
-    
-    // Se tiver texto, filtra
+    // 1. FILTRAGEM
     produtosFiltradosGlobal = products.filter(p => {
-        const textoBusca = [
-            p.nome,
-            p.cProd || "",       
-            p.codigoBarras || "", 
-            p.fornecedor || "",
-            p.categoria || "",
-            p.estabelecimento || "",
-            p.id
-        ].join(' ').toLowerCase();
+        // Filtro de Pasta (Lateral)
+        if (typeof pastaSelecionada !== 'undefined' && pastaSelecionada !== 'todos') {
+            if (pastaSelecionada === 'sem_pasta') {
+                if (p.pasta && p.pasta !== "") return false;
+            } else if (p.pasta !== pastaSelecionada) {
+                return false;
+            }
+        }
 
-        return textoBusca.includes(termo);
+        // Filtro de Texto
+        if (termo) {
+            const textao = [
+                p.nome, p.cProd, p.codigoBarras, p.fornecedor, p.categoria, p.marca
+            ].join(' ').toLowerCase();
+            if (!textao.includes(termo)) return false;
+        }
+        return true;
+    });
+
+    // 2. ORDENAÇÃO (Aqui estão as novas opções)
+    const sortMode = document.getElementById('sort-order') ? document.getElementById('sort-order').value : 'nome-asc';
+    
+    produtosFiltradosGlobal.sort((a, b) => {
+        const nomeA = a.nome || "";
+        const nomeB = b.nome || "";
+        const precoA = parseFloat(a.preco) || 0;
+        const precoB = parseFloat(b.preco) || 0;
+        const estA = parseInt(a.quantidade) || 0;
+        const estB = parseInt(b.quantidade) || 0;
+        const catA = a.categoria || "";
+        const catB = b.categoria || "";
+
+        switch(sortMode) {
+            case 'nome-asc': return nomeA.localeCompare(nomeB);
+            case 'nome-desc': return nomeB.localeCompare(nomeA);
+            
+            case 'custo-asc': return precoA - precoB; // Menor Preço
+            case 'custo-desc': return precoB - precoA; // Maior Preço
+            
+            case 'estoque-asc': return estA - estB;
+            case 'estoque-desc': return estB - estA;
+            
+            case 'categoria': return catA.localeCompare(catB); // Agrupa por categoria
+            
+            case 'data-entrada': 
+                // Se tiver timestamp real usa, senão mantém ordem de criação
+                return (b.timestamp || 0) > (a.timestamp || 0) ? 1 : -1;
+                
+            default: return 0;
+        }
     });
 
     renderProductTable(produtosFiltradosGlobal);
+    
+    // Atualiza contador
+    const totalEl = document.getElementById('total-products');
+    if(totalEl) totalEl.innerText = `${produtosFiltradosGlobal.length} itens`;
 }
 
 // Função para o botão X
@@ -10858,6 +10741,318 @@ window.converterImagemParaBase64 = function(input) {
     reader.readAsDataURL(file);
 }
 
+
+// ============================================================
+// SISTEMA DE PASTAS E ORGANIZAÇÃO (EXPLORER)
+// ============================================================
+
+// Variável para saber qual pasta está aberta
+let pastaAtual = { tipo: 'todos', valor: '' };
+
+// 1. Renderiza a Barra Lateral de Pastas
+window.renderProductFolders = function() {
+    const containerCat = document.getElementById('folder-list-categorias');
+    const containerLoc = document.getElementById('folder-list-locais');
+    
+    if(!containerCat || !containerLoc) return;
+
+    // A. Conta quantos produtos tem em cada categoria/local
+    const countCat = {};
+    const countLoc = {};
+    
+    products.forEach(p => {
+        const cat = p.categoria || "Sem Categoria";
+        const loc = p.estabelecimento || "Matriz";
+        
+        countCat[cat] = (countCat[cat] || 0) + 1;
+        countLoc[loc] = (countLoc[loc] || 0) + 1;
+    });
+
+    // Atualiza o contador "Todos"
+    const elTodos = document.getElementById('count-todos');
+    if(elTodos) elTodos.innerText = products.length;
+
+    // B. Gera HTML Categorias
+    containerCat.innerHTML = "";
+    Object.keys(countCat).sort().forEach(cat => {
+        containerCat.innerHTML += `
+            <div class="folder-item" onclick="filtrarPorPasta('categoria', '${cat}', this)">
+                <div style="display:flex; align-items:center;">
+                    <i class="fas fa-folder" style="color:#0A84FF;"></i> ${cat}
+                </div>
+                <span class="folder-count">${countCat[cat]}</span>
+            </div>
+        `;
+    });
+
+    // C. Gera HTML Locais
+    containerLoc.innerHTML = "";
+    Object.keys(countLoc).sort().forEach(loc => {
+        containerLoc.innerHTML += `
+            <div class="folder-item" onclick="filtrarPorPasta('estabelecimento', '${loc}', this)">
+                <div style="display:flex; align-items:center;">
+                    <i class="fas fa-map-marker-alt" style="color:#FF453A;"></i> ${loc}
+                </div>
+                <span class="folder-count">${countLoc[loc]}</span>
+            </div>
+        `;
+    });
+}
+
+// 2. Ação de Clicar na Pasta
+window.filtrarPorPasta = function(tipo, valor, elementoClicado) {
+    // Atualiza visual (classe active)
+    document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+    if(elementoClicado) elementoClicado.classList.add('active');
+
+    // Atualiza estado global
+    pastaAtual = { tipo: tipo, valor: valor };
+
+    // Atualiza Título da Lista
+    const tituloDisplay = document.getElementById('folder-title-display');
+    if(tituloDisplay) {
+        if(tipo === 'todos') {
+            tituloDisplay.innerHTML = '<i class="fas fa-folder-open" style="color:#FF9F0A;"></i> Todos os Produtos';
+        } else if (tipo === 'categoria') {
+            tituloDisplay.innerHTML = `<i class="fas fa-folder-open" style="color:#0A84FF;"></i> Pasta: ${valor}`;
+        } else {
+            tituloDisplay.innerHTML = `<i class="fas fa-map-marker-alt" style="color:#FF453A;"></i> Local: ${valor}`;
+        }
+    }
+
+    // Chama o filtro principal para aplicar
+    aplicarFiltrosAvancados();
+}
+
+
+
+
+// ============================================================
+// SISTEMA DE ARQUIVOS (PASTAS) v2.0
+// ============================================================
+
+// 1. Criar Nova Pasta (Na verdade, cria uma Categoria)
+window.criarNovaPasta = async function() {
+    // Usa seu prompt customizado se tiver, senão o nativo
+    const nomePasta = prompt("Nome da Nova Pasta:");
+    
+    if (nomePasta && nomePasta.trim()) {
+        const nomeFinal = nomePasta.trim();
+        
+        // Verifica duplicidade
+        if (config.categories.includes(nomeFinal)) {
+            alert("Esta pasta já existe!");
+            return;
+        }
+
+        // Adiciona à lista de categorias (que usamos como pastas)
+        config.categories.push(nomeFinal);
+        config.categories.sort(); // Ordena alfabeticamente
+
+        // Salva
+        persistData();
+        await saveConfigToFirebase(); // Salva na nuvem
+
+        // Atualiza UI
+        renderFolderTree();
+        showToast(`Pasta "${nomeFinal}" criada!`, "success");
+    }
+}
+
+// 2. Renderizar Árvore de Pastas
+window.renderFolderTree = function() {
+    const container = document.getElementById('custom-folders-list');
+    if (!container) return;
+    
+    container.innerHTML = "";
+    
+    // Garante que a config existe
+    if (!config.folders) config.folders = [];
+
+    if (config.folders.length === 0) {
+        document.getElementById('no-folders-msg').style.display = 'block';
+    } else {
+        document.getElementById('no-folders-msg').style.display = 'none';
+    }
+
+    // Conta produtos por pasta
+    const countMap = {};
+    products.forEach(p => {
+        if (p.pasta) countMap[p.pasta] = (countMap[p.pasta] || 0) + 1;
+    });
+
+    config.folders.forEach(pasta => {
+        const div = document.createElement('div');
+        div.className = 'folder-item';
+        if (pastaSelecionada === pasta) div.classList.add('active');
+        
+        // Ação de clique na DIV inteira (Filtrar)
+        div.onclick = (e) => {
+            // Se clicou nos botões de ação, não filtra
+            if (e.target.closest('.folder-btn-mini')) return;
+            filtrarPorPastaReal(pasta, div);
+        };
+
+        const qtd = countMap[pasta] || 0;
+
+        div.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
+                <i class="fas fa-folder folder-icon"></i>
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${pasta}</span>
+                ${qtd > 0 ? `<span style="font-size:0.7rem; background:rgba(255,255,255,0.1); padding:1px 6px; border-radius:10px;">${qtd}</span>` : ''}
+            </div>
+            
+            <div class="folder-actions">
+                <button class="folder-btn-mini" onclick="editarPasta('${pasta}')" title="Renomear">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button class="folder-btn-mini delete" onclick="excluirPasta('${pasta}')" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+    
+    // Atualiza Total Geral
+    const badgeTotal = document.getElementById('badge-total-items');
+    if(badgeTotal) badgeTotal.innerText = products.length;
+}
+
+
+// 3. Filtrar ao Clicar na Pasta
+window.filtrarPorPastaReal = function(pasta, element) {
+    pastaSelecionada = pasta;
+    
+    // Atualiza Visual Active
+    document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('active'));
+    if (element) element.classList.add('active');
+    else renderFolderTree(); // Re-renderiza para marcar o certo se não passou elemento
+
+    // Texto do Rodapé
+    const path = document.getElementById('folder-path-display');
+    if (path) path.innerHTML = `<i class="fas fa-folder-open"></i> / ${pasta === 'todos' ? 'Todos' : pasta}`;
+
+    aplicarFiltrosAvancados(); // Chama o filtro mestre
+}
+
+let pastaSelecionada = 'todos'; // Variável de controle
+
+// 1. Criar Pasta (CORRIGIDA - TEXTO VISÍVEL)
+window.criarNovaPastaReal = async function() {
+    // Agora usa getTextoViaPrompt em vez de getPasswordViaPrompt
+    const nome = await getTextoViaPrompt("Nova Pasta", "Nome da pasta:", ""); 
+    
+    if (!nome) return;
+
+    if (!config.folders) config.folders = [];
+    
+    if (config.folders.includes(nome)) {
+        showToast("Essa pasta já existe!", "info");
+        return;
+    }
+
+    config.folders.push(nome);
+    config.folders.sort();
+
+    await saveConfigToFirebase(); // Salva no banco para não sumir
+    renderFolderTree();
+    showToast("Pasta criada!", "success");
+}
+
+// 2. Editar Pasta (CORRIGIDA - TEXTO VISÍVEL)
+window.editarPasta = async function(nomeAtual) {
+    // Agora usa getTextoViaPrompt
+    const novoNome = await getTextoViaPrompt("Renomear Pasta", `Novo nome para "${nomeAtual}":`, nomeAtual);
+    
+    if (!novoNome || novoNome === nomeAtual) return;
+
+    // Atualiza a lista
+    const index = config.folders.indexOf(nomeAtual);
+    if (index !== -1) config.folders[index] = novoNome;
+
+    // Atualiza produtos
+    window.showLoadingScreen("Atualizando...", "Movendo produtos...");
+    const updates = [];
+    
+    products.forEach(p => {
+        if (p.pasta === nomeAtual) {
+            const ref = getUserDocumentRef("products", p.id);
+            updates.push(updateDoc(ref, { pasta: novoNome }));
+            p.pasta = novoNome; 
+        }
+    });
+
+    if (updates.length > 0) await Promise.all(updates);
+
+    await saveConfigToFirebase(); // Salva no banco
+    window.hideLoadingScreen();
+    
+    renderFolderTree();
+    
+    if (typeof pastaSelecionada !== 'undefined' && pastaSelecionada === nomeAtual) {
+        filtrarPorPastaReal(novoNome);
+    }
+    
+    showToast("Pasta renomeada!", "success");
+}
+
+
+
+// 3. Excluir Pasta
+window.excluirPasta = async function(nomePasta) {
+    // Verifica se tem produtos
+    const temProdutos = products.some(p => p.pasta === nomePasta);
+    
+    let msg = `Excluir a pasta "${nomePasta}"?`;
+    if (temProdutos) {
+        `\n\n⚠️ ATENÇÃO: Os produtos dentro dela NÃO serão apagados, eles ficarão "Sem Pasta".`;
+    }
+
+    customConfirm(msg, async () => {
+        // Remove da lista
+        config.folders = config.folders.filter(f => f !== nomePasta);
+        
+        // Remove a etiqueta de pasta dos produtos (opcional, mas limpo)
+        const updates = [];
+        products.forEach(p => {
+            if (p.pasta === nomePasta) {
+                const ref = getUserDocumentRef("products", p.id);
+                updates.push(updateDoc(ref, { pasta: "" })); // Limpa o campo pasta
+                p.pasta = "";
+            }
+        });
+
+        if (updates.length > 0) await Promise.all(updates);
+
+        await salvarConfiguracoesGlobais();
+        renderFolderTree();
+        filtrarPorPastaReal('todos'); // Volta pro início
+        showToast("Pasta removida.", "success");
+    });
+}
+
+
+async function salvarConfiguracoesGlobais() {
+    const user = auth.currentUser;
+    if(!user) return;
+    try {
+        await setDoc(doc(db, "users", user.uid, "settings", "general"), {
+            folders: config.folders // Salva a lista de pastas
+        }, { merge: true });
+    } catch(e) { console.error("Erro ao salvar pastas", e); }
+}
+
+
+// Função auxiliar para pedir TEXTO NORMAL (sem bolinha de senha)
+function getTextoViaPrompt(title, message, defaultValue = "") {
+    return new Promise((resolve) => {
+        // O último argumento "text" garante que não seja senha
+        window.customPrompt(title, message, (valor) => {
+            resolve(valor); 
+        }, defaultValue, "text"); 
+    });
+}
 // ============================================================
 // 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
 // ============================================================

@@ -6233,3 +6233,379 @@ input:checked + .slider:before {
         border-bottom: 1px solid var(--color-border);
     }
 }
+
+/* ============================================================
+   LAYOUT DE PASTAS (ORGANIZAÇÃO DE ESTOQUE)
+   ============================================================ */
+
+.stock-explorer-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr; /* Barra Lateral Fixa | Tabela Flexível */
+    gap: 20px;
+    align-items: start;
+}
+
+/* Barra Lateral de Pastas */
+.stock-sidebar {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 15px;
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+    position: sticky;
+    top: 20px;
+}
+
+.folder-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    margin: 15px 0 8px 0;
+    padding-left: 10px;
+    letter-spacing: 1px;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--color-text-primary);
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.folder-item:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-accent-blue);
+}
+
+.folder-item.active {
+    background: rgba(10, 132, 255, 0.15);
+    color: var(--color-accent-blue);
+    font-weight: 600;
+}
+
+.folder-item i {
+    margin-right: 10px;
+    font-size: 1.1rem;
+    opacity: 0.7;
+}
+
+.folder-count {
+    background: rgba(255,255,255,0.1);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: #aaa;
+}
+
+.folder-item.active .folder-count {
+    background: var(--color-accent-blue);
+    color: #fff;
+}
+
+/* Responsividade: No celular a barra de pastas some ou vira menu horizontal */
+@media (max-width: 900px) {
+    .stock-explorer-layout {
+        grid-template-columns: 1fr;
+    }
+    .stock-sidebar {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 10px;
+        margin-bottom: 15px;
+        position: static;
+        max-height: none;
+    }
+    .folder-section-title { display: none; }
+    .folder-item { 
+        flex-shrink: 0; 
+        margin-right: 10px; 
+        border: 1px solid var(--color-border); 
+        min-width: 140px;
+    }
+}
+
+/* ============================================================
+   LAYOUT EXPLORER V2 (COMPACTO E INTEGRADO)
+   ============================================================ */
+
+/* Removemos o grid externo para integrar no Card */
+.explorer-container {
+    display: flex;
+    height: calc(100vh - 180px); /* Altura fixa para scroll interno */
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    overflow: hidden;
+}
+
+/* Barra Lateral (Esquerda) */
+.explorer-sidebar {
+    width: 220px; /* Largura fixa menor */
+    background: var(--color-bg-tertiary); /* Levemente mais escuro */
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* Não esmaga */
+}
+
+.explorer-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.explorer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+/* Área Principal (Direita) */
+.explorer-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-secondary);
+    overflow: hidden; /* O scroll será na tabela */
+}
+
+.explorer-toolbar {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    gap: 10px;
+    background: var(--color-bg-secondary);
+}
+
+.explorer-table-wrapper {
+    flex: 1;
+    overflow: auto; /* Scroll apenas na tabela */
+    position: relative;
+}
+
+/* Itens da Pasta */
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+}
+
+.folder-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--color-text-primary);
+}
+
+.folder-item.active {
+    background: rgba(10, 132, 255, 0.15);
+    color: var(--color-accent-blue);
+    font-weight: 600;
+}
+
+.folder-icon {
+    margin-right: 8px;
+    color: #FF9F0A; /* Cor de pasta amarela */
+}
+
+/* Botão Nova Pasta (Estilo sutil) */
+.new-folder-btn {
+    width: 100%;
+    padding: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px dashed var(--color-border);
+    color: var(--color-text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.new-folder-btn:hover {
+    background: rgba(10, 132, 255, 0.1);
+    color: var(--color-accent-blue);
+    border-color: var(--color-accent-blue);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .explorer-container {
+        flex-direction: column;
+        height: auto;
+    }
+    .explorer-sidebar {
+        width: 100%;
+        max-height: 150px;
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
+    }
+}
+
+/* ============================================================
+   UX ENGINE: LAYOUT EXPLORER V3 (CORRIGIDO)
+   ============================================================ */
+
+/* Container Principal - Impede vazar para a direita */
+.explorer-container {
+    display: flex;
+    height: calc(100vh - 140px); /* Altura fixa para caber na tela */
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-secondary);
+    overflow: hidden; /* O segredo para não quebrar o layout */
+    width: 100%;
+    max-width: 100%; /* Trava a largura */
+}
+
+/* Barra Lateral (Esquerda) */
+.explorer-sidebar {
+    width: 260px; /* Um pouco mais larga para caber os botões */
+    background: var(--color-bg-tertiary);
+    border-right: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.explorer-header { padding: 15px; border-bottom: 1px solid var(--color-border); }
+.explorer-body { flex: 1; overflow-y: auto; padding: 10px; }
+
+/* Área Principal (Direita) */
+.explorer-content {
+    flex: 1; /* Ocupa o resto do espaço */
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-secondary);
+    min-width: 0; /* CRÍTICO: Impede o flexbox de estourar a tela */
+}
+
+/* Barra de Ferramentas (Topo da Tabela) */
+.explorer-toolbar {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--color-bg-secondary);
+    width: 100%;
+}
+
+/* SEARCH BOX CORRIGIDO (Grande) */
+.explorer-search-box {
+    flex-grow: 1; /* Cresce para ocupar todo o espaço */
+    position: relative;
+}
+
+.explorer-search-box input {
+    width: 100%;
+    height: 45px; /* Altura confortável */
+    padding-left: 40px;
+    font-size: 1rem;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+}
+
+.explorer-search-box i.fa-search {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666;
+}
+
+/* FILTER BOX (Tamanho Fixo) */
+.explorer-filter-box {
+    width: 200px; /* Tamanho fixo para não ficar gigante */
+    flex-shrink: 0;
+}
+
+.explorer-filter-box select {
+    width: 100%;
+    height: 45px;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    color: var(--color-text-primary);
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+/* Tabela com Scroll Independente */
+.explorer-table-wrapper {
+    flex: 1;
+    overflow: auto; /* Scroll apenas aqui dentro */
+    position: relative;
+    width: 100%;
+}
+
+/* --- ITEM DE PASTA (COM AÇÕES) --- */
+.folder-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.folder-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--color-text-primary);
+    border-color: var(--color-border);
+}
+
+.folder-item.active {
+    background: rgba(10, 132, 255, 0.15);
+    color: var(--color-accent-blue);
+    font-weight: 600;
+    border-color: rgba(10, 132, 255, 0.3);
+}
+
+/* Grupo de botões da pasta (Só aparece no hover) */
+.folder-actions {
+    display: none; /* Escondido por padrão */
+    gap: 5px;
+}
+
+.folder-item:hover .folder-actions {
+    display: flex; /* Aparece quando passa o mouse */
+}
+
+.folder-btn-mini {
+    padding: 4px;
+    border-radius: 3px;
+    border: none;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+}
+
+.folder-btn-mini:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.folder-btn-mini.delete:hover { color: #FF453A; }
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+    .explorer-container { flex-direction: column; height: auto; }
+    .explorer-sidebar { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid var(--color-border); }
+    .explorer-toolbar { flex-direction: column; align-items: stretch; }
+    .explorer-filter-box { width: 100%; }
+}
