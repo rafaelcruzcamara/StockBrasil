@@ -6609,3 +6609,21 @@ input:checked + .slider:before {
     .explorer-toolbar { flex-direction: column; align-items: stretch; }
     .explorer-filter-box { width: 100%; }
 }
+
+/* Correção da Tabela Explorer */
+.explorer-table-wrapper {
+    overflow-x: auto !important; /* Permite rolar para o lado se não couber */
+    padding-bottom: 50px; /* Espaço extra para o scroll não tapar botão */
+}
+
+/* Garante que a coluna de Ações tenha tamanho fixo e não suma */
+#product-table th:last-child, 
+#product-table td:last-child {
+    min-width: 100px;
+    position: sticky;
+    right: 0;
+    background: var(--color-bg-secondary); /* Cor de fundo para tapar o texto atrás ao rolar */
+    z-index: 5;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.2); /* Sombra para dar destaque */
+}
+
