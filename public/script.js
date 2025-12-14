@@ -1,124 +1,37 @@
+//imports
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
-    getAuth, 
-    signInWithEmailAndPassword, 
-    signOut, 
-    onAuthStateChanged,
-    reauthenticateWithCredential,
-    EmailAuthProvider
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyBYHAyzwUgvRJ_AP9ZV9MMrtpPb3s3ENIc",
-  authDomain: "stockbrasil-e06ff.firebaseapp.com",
-  projectId: "stockbrasil-e06ff",
-  storageBucket: "stockbrasil-e06ff.firebasestorage.app",
-  messagingSenderId: "796401246692",
-  appId: "1:796401246692:web:1570c40124165fcef227f1"
-};
+    db, auth, 
+    signInWithEmailAndPassword, signOut, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider,
+    collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, getDoc,
+    query, orderBy, limit, where
+} from './js/firebase-config.js';
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    getDocs, 
-    doc, 
-    updateDoc, 
-    deleteDoc, 
-    setDoc, 
-    getDoc,
-    query,    // <--- O 'query' mora AQUI (Firestore)
-    orderBy,  // <--- O 'orderBy' mora AQUI (Firestore)
-    limit,    // <--- O 'limit' mora AQUI (Firestore)
-    where     // <--- O 'where' mora AQUI (Firestore)
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    setBtnLoading, showLoadingScreen, hideLoadingScreen, updateLoadingMessage, showToast,
+    mascaraCpfCnpj, mascaraCnpj, mascaraTelefone, mascaraData, fmtMoeda,
+    parseDataSegura, converterDataNaMarra
+} from './js/utils.js';
 
-const auth = getAuth(app);
-function setBtnLoading(btn, isLoading) {
-    if (!btn) return;
-    if (isLoading) {
-        if (!btn.dataset.originalText) btn.dataset.originalText = btn.innerHTML;
-        btn.classList.add('loading');
-        btn.disabled = true;
-    } else {
-        btn.classList.remove('loading');
-        btn.disabled = false;
-        if (btn.dataset.originalText) btn.innerHTML = btn.dataset.originalText;
-    }
-}
+import { DEFAULT_CATEGORIES, DEFAULT_PAYMENT_TYPES, DEFAULT_SYSTEM_CONFIG } from './js/config.js';
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // =================================================================
 // 🚨 FUNÇÕES DE CARREGAMENTO (IMPORTANTE: MANTENHA NO TOPO)
 // =================================================================
 
-// Cria a função no escopo global
-window.showLoadingScreen = function(message = "Processando...", submessage = "Aguarde...") {
-    let overlay = document.getElementById('loading-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'loading-overlay';
-        overlay.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div class="loading-text" id="loading-text">${message}</div>
-            <div class="loading-subtext" id="loading-subtext">${submessage}</div>
-        `;
-        document.body.appendChild(overlay);
-    } else {
-        const txt = document.getElementById('loading-text');
-        const sub = document.getElementById('loading-subtext');
-        if (txt) txt.textContent = message;
-        if (sub) sub.textContent = submessage;
-    }
-};
-
-window.updateLoadingMessage = function(message, submessage = "") {
-    const txt = document.getElementById('loading-text');
-    const sub = document.getElementById('loading-subtext');
-    if (txt) txt.textContent = message;
-    if (sub) sub.textContent = submessage;
-};
-
-window.hideLoadingScreen = function() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.remove(), 300);
-    }
-};
-
-function showToast(message, type = 'success') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        document.body.appendChild(container);
-    }
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    // Define o ícone baseado no tipo
-    let iconClass = 'fa-info-circle';
-    if (type === 'success') iconClass = 'fa-check-circle';
-    if (type === 'error') iconClass = 'fa-times-circle'; // Corrigido para times-circle
-    
-    toast.innerHTML = `<i class="fas ${iconClass}"></i> <span>${message}</span>`;
-    
-    // Adiciona ao DOM (A animação CSS 'toastSlideIn' roda automaticamente)
-    container.appendChild(toast);
-
-    // Espera 3.5 segundos e começa a saída
-    setTimeout(() => {
-        toast.classList.add('hide'); // Adiciona classe que dispara 'toastSlideOut'
-        
-        // Espera a animação de saída (0.4s) terminar para remover do HTML
-        toast.addEventListener('animationend', () => {
-            toast.remove();
-        });
-    }, 3500);
-}
 
 // Garante que está global
 window.showToast = showToast;
@@ -209,21 +122,15 @@ let clientes = [];
 let inputHistory = [];
 
 let config = {
-  categories: ["Vestuário", "Eletrônicos", "Brindes", "Serviços", "Outros"],
-  paymentTypes: ["Pix", "Cartão de Crédito", "Dinheiro", "Boleto"],
-  productGroups: [],
+    categories: DEFAULT_CATEGORIES,
+    paymentTypes: DEFAULT_PAYMENT_TYPES,
+    productGroups: [],
+    establishments: ["Matriz"],
+    folders: []
 };
 let clients = [];
-let systemConfig = {
-  alertsEnabled: true,
-  autoSaveInterval: 5,
-  defaultReportPeriod: 30,
-  showProfitMargin: true,
-  defaultPaymentMethod: "Pix",
-  autoPrintReceipt: false,
-  theme: "dark",
-  compactMode: false,
-};
+let systemConfig = DEFAULT_SYSTEM_CONFIG;
+
 
 
 async function saveConfigToFirebase() {
@@ -4704,25 +4611,6 @@ function viewCartDetails(cartId) {
     alert(msg);
 }
 
-function parseDataSegura(input) {
-    if (!input) return null;
-
-    if (input instanceof Date && !isNaN(input.getTime())) return input;
-
-    if (typeof input === 'string') {
-        if (input.includes('/')) {
-            const partes = input.split(' ')[0].split('/');
-            if (partes.length === 3) {
-                return new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
-            }
-        }
-        
-        const d = new Date(input);
-        if (!isNaN(d.getTime())) return d;
-    }
-
-    return null;
-}
 
 function criarNovoArquivo() {
     const confirmacao = confirm("⚠️ ATENÇÃO: Isso vai apagar TODOS os dados atuais para começar do zero.\n\nDeseja fazer um backup automático antes de limpar?");
@@ -4901,27 +4789,6 @@ function normalizarDataParaFiltro(input) {
     }
     if (input instanceof Date && !isNaN(input)) return input;
     
-    return null;
-}
-
-
-function converterDataNaMarra(input) {
-    if (!input) return null;
-    if (input instanceof Date && !isNaN(input)) return input;
-    
-    let str = String(input).trim();
-    if (str.includes(',')) str = str.split(',')[0];
-    else if (str.includes(' ')) str = str.split(' ')[0];
-
-    if (str.includes('/')) {
-        const partes = str.split('/');
-        if (partes.length === 3) {
-            const d = new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0);
-            if (!isNaN(d.getTime())) return d;
-        }
-    }
-    const dISO = new Date(str);
-    if (!isNaN(dISO.getTime())) { dISO.setHours(12, 0, 0, 0); return dISO; }
     return null;
 }
 
@@ -7109,49 +6976,6 @@ function updateProductSupplierDropdown() {
 
 
 
-// ============================================================
-// MÁSCARAS DE INPUT (CPF, CNPJ, TELEFONE)
-// ============================================================
-
-function mascaraCpfCnpj(i) {
-    let v = i.value;
-    v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
-
-    if (v.length <= 11) { // CPF
-        v = v.replace(/(\d{3})(\d)/, "$1.$2");
-        v = v.replace(/(\d{3})(\d)/, "$1.$2");
-        v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-    } else { // CNPJ
-        v = v.replace(/^(\d{2})(\d)/, "$1.$2");
-        v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-        v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
-        v = v.replace(/(\d{4})(\d)/, "$1-$2");
-    }
-    i.value = v;
-}
-
-function mascaraCnpj(i) {
-    let v = i.value;
-    v = v.replace(/\D/g, "");
-    v = v.replace(/^(\d{2})(\d)/, "$1.$2");
-    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-    v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
-    v = v.replace(/(\d{4})(\d)/, "$1-$2");
-    i.value = v;
-}
-
-function mascaraTelefone(i) {
-    let v = i.value;
-    v = v.replace(/\D/g, ""); // Remove tudo o que não é dígito
-    v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); // Coloca parênteses em volta dos dois primeiros dígitos
-    v = v.replace(/(\d)(\d{4})$/, "$1-$2"); // Coloca hífen entre o quarto e o quinto dígitos
-    i.value = v;
-}
-
-// EXPONHA PARA O HTML
-window.mascaraCpfCnpj = mascaraCpfCnpj;
-window.mascaraCnpj = mascaraCnpj;
-window.mascaraTelefone = mascaraTelefone;
 
 // Abre o modal e carrega os produtos
 window.abrirModalEtiquetas = function() {
@@ -9208,16 +9032,6 @@ window.generateProfessionalPDF = function(startDateInput, endDateInput) {
     }
 };
 
-// --- MÁSCARA DE DATA (DD/MM/AAAA) ---
-window.mascaraData = function(input) {
-    let v = input.value.replace(/\D/g, ""); // Remove tudo que não é dígito
-    
-    if (v.length > 2) v = v.replace(/^(\d{2})(\d)/, "$1/$2"); // Coloca a 1ª barra
-    if (v.length > 5) v = v.replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3"); // Coloca a 2ª barra
-    
-    input.value = v.substring(0, 10); // Limita a 10 caracteres
-}
-
 // Função para atualizar o autocomplete de Subcategorias
 window.updateGroupDatalist = function() {
     const listaUL = document.getElementById('lista-grupos-custom');
@@ -9921,10 +9735,6 @@ window.imprimirNotaPDF = function(id) {
 }
 
 
-// Auxiliar simples de moeda
-function fmtMoeda(val) {
-    return parseFloat(val || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-}
 
 function formatarDataPtBr(dateStr) {
     try {
@@ -11084,3 +10894,4 @@ window.renderizarMuralAniversarios = renderizarMuralAniversarios;
 window.toggleNavGroup = toggleNavGroup;
 window.setupNavigation = setupNavigation;
 window.autoOpenActiveGroup = autoOpenActiveGroup;
+window.mascaraData = mascaraData;
