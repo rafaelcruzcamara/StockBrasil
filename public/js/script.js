@@ -5,58 +5,43 @@ import {
     signInWithEmailAndPassword, signOut, onAuthStateChanged, reauthenticateWithCredential, EmailAuthProvider,
     collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, getDoc,
     query, orderBy, limit, where
-} from './js/firebase-config.js';
+} from './firebase-config.js';
 
 import { 
     setBtnLoading, showLoadingScreen, hideLoadingScreen, updateLoadingMessage, showToast,
     mascaraCpfCnpj, mascaraCnpj, mascaraTelefone, mascaraData, fmtMoeda,
     parseDataSegura, converterDataNaMarra
-} from './js/utils.js';
+} from './utils.js';
 
-import { DEFAULT_CATEGORIES, DEFAULT_PAYMENT_TYPES, DEFAULT_SYSTEM_CONFIG } from './js/config.js';
+import { DEFAULT_CATEGORIES, DEFAULT_PAYMENT_TYPES, DEFAULT_SYSTEM_CONFIG } from './config.js';
 
-import { getUserCollectionRef, getUserDocumentRef, logoutSystem } from './js/auth-service.js';
+import { getUserCollectionRef, getUserDocumentRef, logoutSystem } from './auth-service.js';
 
 import { 
     converterImagemParaBase64, limparImagemForm, calcularPrecificacao,
     updateCategorySelect, updateEstablishmentSelect, updateProductSupplierDropdown,
     resetProductForm
-} from './js/product-ui.js';
+} from './product-ui.js';
 
 import { 
     generatePDF, imprimirRelatorioVendas, imprimirRelatorioEstoque, 
     imprimirRelatorioLucro, imprimirNotaPDF, generateProfessionalPDF,
     imprimirTabelaDespesas 
-} from './js/reports.js';
+} from './reports.js';
 
 import { 
     addToCart, updateCartQuantity, removeItemFromCart, clearCart, renderCart,
     checkout, saveCurrentCart, confirmSaveCart, loadSavedCart, deleteSavedCart,
     renderPaymentOptions, renderSavedCarts, aplicarDescontoVisual, concluirVenda
-} from './js/sales.js';
+} from './sales.js';
 
 import { 
     handleClientForm, handleSupplierForm, editClient, editSupplier, deletePartner,
     renderClientsTable, renderSuppliersTable, clearClientForm, clearSupplierForm,
     abrirModalCliente, fecharModalCliente, abrirModalFornecedor, fecharModalFornecedor 
-} from './js/partners.js';
+} from './partners.js';
 
 
-
-
-
-
-
-
-
-// =================================================================
-// 🚨 FUNÇÕES DE CARREGAMENTO (IMPORTANTE: MANTENHA NO TOPO)
-// =================================================================
-
-
-// Garante que está global
-window.showToast = showToast;
-window.setBtnLoading = setBtnLoading;
 
 
 onAuthStateChanged(auth, async (user) => {
@@ -4174,21 +4159,20 @@ window.loadAllData = loadAllData;
 window.handleProductForm = handleProductForm;
 window.deleteProduct = deleteProduct;
 window.editProduct = editProduct;
-window.resetProductForm = resetProductForm;
+
 window.showTab = showTab;
 window.toggleSidebar = toggleSidebar;
 window.toggleAlertsWindow = toggleAlertsWindow;
 window.clearAllAlerts = clearAllAlerts;
 
-window.addToCart = addToCart;
 window.updateCartQuantity = updateCartQuantity; // FUNÇÃO QUE ESTAVA FALTANDO
-window.removeItemFromCart = removeItemFromCart;
-window.clearCart = clearCart;
+
+
 window.checkout = checkout; // FUNÇÃO QUE ESTAVA FALTANDO
 window.saveCurrentCart = saveCurrentCart; // FUNÇÃO QUE ESTAVA FALTANDO
-window.confirmSaveCart = confirmSaveCart;
-window.loadSavedCart = loadSavedCart;
-window.deleteSavedCart = deleteSavedCart;
+
+
+
 window.setupNavigation = setupNavigation; // Para o DOMContentLoaded
 
 window.generatePDF = generatePDF; // FUNÇÃO QUE ESTAVA FALTANDO (Erro Principal)
@@ -4206,10 +4190,10 @@ window.clearAllData = clearAllData;
 window.exportData = exportData;
 window.importData = importData;
 window.updateReportMetrics = updateReportMetrics;
-window.imprimirRelatorioVendas = imprimirRelatorioVendas;
-window.imprimirRelatorioEstoque = imprimirRelatorioEstoque;
-window.imprimirRelatorioLucro = imprimirRelatorioLucro;
-window.resetProductForm = resetProductForm; 
+
+
+
+
 window.openProfileSettings = openProfileSettings;
 window.logout = function() {
     window.customConfirm("Deseja realmente sair?", () => {
@@ -4445,24 +4429,23 @@ window.toggleSidebarProfileMenu = toggleSidebarProfileMenu;
 window.renderProductTable = renderProductTable;
 window.updateDashboardMetrics = updateDashboardMetrics;
 
-window.addToCart = addToCart;
-window.updateCartQuantity = updateCartQuantity;
-window.removeItemFromCart = removeItemFromCart;
-window.clearCart = clearCart;
+
+
+
 window.exportData = exportData;
 window.importData = importData;
-window.checkout = checkout;
-window.saveCurrentCart = saveCurrentCart;
-window.confirmSaveCart = confirmSaveCart;
-window.loadSavedCart = loadSavedCart;
-window.deleteSavedCart = deleteSavedCart;
-window.generatePDF = generatePDF;
+
+
+
+
+
+
 window.viewSaleDetails = viewSaleDetails;
 window.closeSaleDetails = closeSaleDetails;
-window.imprimirRelatorioVendas = imprimirRelatorioVendas;
-window.imprimirRelatorioEstoque = imprimirRelatorioEstoque;
-window.imprimirRelatorioLucro = imprimirRelatorioLucro;
-window.resetProductForm = resetProductForm; 
+
+
+
+
 window.filterPdvProducts = filterPdvProducts;
 
 
@@ -4477,7 +4460,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 // Expor para usar no console ou HTML
-window.showToast = showToast;
 
 document.addEventListener("DOMContentLoaded", () => {
     const inputPreco = document.getElementById('preco');
@@ -8023,18 +8005,9 @@ function getTextoViaPrompt(title, message, defaultValue = "") {
         }, defaultValue, "text"); 
     });
 }
-// ============================================================
-// 👇 COLE ISSO NO FINAL DO ARQUIVO SCRIPT.JS 👇
-// ============================================================
 
-// Expõe as funções de Parceiros para o HTML
-window.handleClientForm = handleClientForm;
-window.handleSupplierForm = handleSupplierForm;
-window.editClient = editClient;
-window.editSupplier = editSupplier;
-window.deletePartner = deletePartner;
-window.clearClientForm = clearClientForm;
-window.clearSupplierForm = clearSupplierForm;
+
+
 window.updateProductSupplierDropdown = updateProductSupplierDropdown;
 window.abrirModalEtiquetas = abrirModalEtiquetas;
 window.filtrarListaEtiquetas = filtrarListaEtiquetas;
@@ -8045,31 +8018,8 @@ window.handleExpenseForm = handleExpenseForm;
 window.deleteExpense = deleteExpense;
 window.loadFinancialDashboard = loadFinancialDashboard;
 window.reverseSale = reverseSale;
-window.abrirModalCliente = abrirModalCliente;
-window.fecharModalCliente = fecharModalCliente;
-window.abrirModalFornecedor = abrirModalFornecedor;
-window.fecharModalFornecedor = fecharModalFornecedor;
 window.abrirMuralAniversarios = abrirMuralAniversarios;
 window.renderizarMuralAniversarios = renderizarMuralAniversarios;
 window.toggleNavGroup = toggleNavGroup;
 window.setupNavigation = setupNavigation;
 window.autoOpenActiveGroup = autoOpenActiveGroup;
-window.mascaraData = mascaraData;
-window.addToCart = addToCart;
-window.updateCartQuantity = updateCartQuantity;
-window.removeItemFromCart = removeItemFromCart;
-window.clearCart = clearCart;
-window.checkout = checkout;
-window.saveCurrentCart = saveCurrentCart;
-window.confirmSaveCart = confirmSaveCart;
-window.loadSavedCart = loadSavedCart;
-window.deleteSavedCart = deleteSavedCart;
-window.renderSavedCarts = renderSavedCarts;
-window.aplicarDescontoVisual = aplicarDescontoVisual;
-window.concluirVenda = concluirVenda; 
-window.handleClientForm = handleClientForm;
-window.handleSupplierForm = handleSupplierForm;
-window.editClient = editClient;
-window.editSupplier = editSupplier;
-window.deletePartner = deletePartner;
-// ... e os modais
